@@ -190,9 +190,9 @@
         // ★여기에 선생님의 Supabase 정보를 입력하세요★
         const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-
+        // 변수 이름을 supabase 대신 db로 변경하여 충돌을 막습니다.
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // 페이지 시작 시 기존 설정 및 데이터 불러오기
         window.onload = async () => {
@@ -206,13 +206,13 @@
         // ==========================================
 
         async function loadTitle() {
-            const { data } = await supabase.from('system_config').select('value').eq('key', 'event_title').single();
+            const { data } = await db.from('system_config').select('value').eq('key', 'event_title').single();
             if (data) document.getElementById('eventTitle').value = data.value;
         }
 
         async function updateTitle() {
             const title = document.getElementById('eventTitle').value;
-            const { error } = await supabase.from('system_config').upsert({ key: 'event_title', value: title });
+            const { error } = await db.from('system_config').upsert({ key: 'event_title', value: title });
             if (!error) alert('행사 타이틀이 변경되었습니다.');
         }
 
@@ -223,7 +223,7 @@
 
             if (!subject_name) return alert('과목명을 입력해주세요.');
 
-            const { error } = await supabase.from('subjects').insert([{ category, subject_name, credits }]);
+            const { error } = await db.from('subjects').insert([{ category, subject_name, credits }]);
             if (!error) {
                 alert('과목이 등록되었습니다.');
                 document.getElementById('subjectName').value = '';
@@ -232,7 +232,7 @@
         }
 
         async function loadSubjects() {
-            const { data, error } = await supabase.from('subjects').select('*').order('category', { ascending: true });
+            const { data, error } = await db.from('subjects').select('*').order('category', { ascending: true });
             const listEl = document.getElementById('subjectList');
             listEl.innerHTML = '';
 
@@ -251,7 +251,7 @@
 
         async function deleteSubject(id) {
             if (!confirm('정말 삭제하시겠습니까?')) return;
-            const { error } = await supabase.from('subjects').delete().eq('id', id);
+            const { error } = await db.from('subjects').delete().eq('id', id);
             if (!error) loadSubjects();
         }
 
@@ -270,7 +270,7 @@
                 return alert('고유번호와 이름은 반드시 입력해야 합니다.');
             }
 
-            const { error } = await supabase.from('students').insert([{
+            const { error } = await db.from('students').insert([{
                 unique_id,
                 name,
                 grade1_id,
@@ -293,7 +293,7 @@
         }
 
         async function loadStudents() {
-            const { data, error } = await supabase.from('students').select('*').order('name', { ascending: true });
+            const { data, error } = await db.from('students').select('*').order('name', { ascending: true });
             const listEl = document.getElementById('studentList');
             listEl.innerHTML = '';
 
@@ -319,7 +319,7 @@
 
         async function deleteStudent(unique_id) {
             if (!confirm('정말 이 학생의 데이터를 삭제하시겠습니까?')) return;
-            const { error } = await supabase.from('students').delete().eq('unique_id', unique_id);
+            const { error } = await db.from('students').delete().eq('unique_id', unique_id);
             if (!error) {
                 loadStudents();
             } else {
@@ -381,7 +381,8 @@
                         });
                     }
 
-                    const { error } = await supabase.from('students').upsert(studentsToInsert, { onConflict: 'unique_id' });
+                    // 여기도 db.from으로 변경
+                    const { error } = await db.from('students').upsert(studentsToInsert, { onConflict: 'unique_id' });
 
                     if (error) {
                         console.error(error);

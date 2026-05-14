@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>학생 관리 시스템</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 모바일 기기 사용성에 맞춘 UI 디자인 */
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 30px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+
+        label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        input {
+            padding: 14px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #0056b3;
+        }
+
+        button {
+            padding: 15px;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background-color: #004494;
+        }
+
+        #result-card {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #e9ecef;
+            display: none;
+        }
+
+        .result-item {
+            margin-bottom: 10px;
+            font-size: 1.05rem;
+            color: #333;
+        }
+
+        .result-item strong {
+            color: #0056b3;
+        }
+
+        #message {
+            color: #dc3545;
+            font-size: 0.95rem;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>학생 정보 검색</h1>
+
+        <div class="form-group">
+            <label for="studentId">학번</label>
+            <input type="text" id="studentId" placeholder="예: 10101" inputmode="numeric">
+        </div>
+        <div class="form-group">
+            <label for="studentName">이름</label>
+            <input type="text" id="studentName" placeholder="예: 홍길동">
+        </div>
+
+        <button onclick="searchStudent()">조회하기</button>
+        <div id="message"></div>
+
+        <div id="result-card">
+            <div class="result-item"><strong>학번:</strong> <span id="res-id"></span></div>
+            <div class="result-item"><strong>이름:</strong> <span id="res-name"></span></div>
+            <div class="result-item"><strong>총 이수학점:</strong> <span id="res-credits"></span>학점</div>
+            <div class="result-item"><strong>점검 결과:</strong> <span id="res-remarks"></span></div>
+        </div>
+    </div>
+
+    <script>
+        // 본인의 Supabase 프로젝트 URL과 API 키를 입력하세요.
+        const SUPABASE_URL = '여기에_프로젝트_URL_입력';
+        const SUPABASE_KEY = '여기에_API_KEY_입력';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function searchStudent() {
+            const studentId = document.getElementById('studentId').value.trim();
+            const studentName = document.getElementById('studentName').value.trim();
+            const messageDiv = document.getElementById('message');
+            const resultCard = document.getElementById('result-card');
+
+            // 입력값 초기화 및 검증
+            messageDiv.innerText = '';
+            resultCard.style.display = 'none';
+
+            if (!studentId || !studentName) {
+                messageDiv.innerText = '학번과 이름을 모두 입력해주세요.';
+                return;
+            }
+
+            try {
+                // 정보 보호 및 실수 방지를 위해 학번과 이름이 동시에 일치할 때만 데이터를 가져옴
+                const { data, error } = await supabase
+                    .from('students')
+                    .select('*')
+                    .eq('student_id', studentId)
+                    .eq('name', studentName)
+                    .single(); // 하나의 결과만 정확히 가져옵니다.
+
+                if (error || !data) {
+                    messageDiv.innerText = '일치하는 학생 정보가 없습니다. 학번과 이름을 다시 확인해주세요.';
+                    return;
+                }
+
+                // 결과를 화면에 표시
+                document.getElementById('res-id').innerText = data.student_id;
+                document.getElementById('res-name').innerText = data.name;
+                document.getElementById('res-credits').innerText = data.total_credits || '정보 없음';
+                document.getElementById('res-remarks').innerText = data.remarks || '특이사항 없음';
+
+                resultCard.style.display = 'block';
+
+            } catch (err) {
+                console.error(err);
+                messageDiv.innerText = '데이터를 불러오는 중 오류가 발생했습니다.';
+            }
+        }
+    </script>
+
+</body>
+
+</html>

@@ -3,179 +3,211 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>학생 관리 시스템</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시스템 환경설정</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 모바일 기기 사용성에 맞춘 UI 디자인 */
+        :root {
+            --primary-color: #4a90e2;
+            --bg-color: #f8f9fa;
+        }
+
         body {
-            font-family: 'Pretendard', -apple-system, sans-serif;
-            background-color: #f4f7f6;
+            font-family: sans-serif;
+            background-color: var(--bg-color);
             margin: 0;
             padding: 20px;
-            display: flex;
-            justify-content: center;
         }
 
-        .container {
-            width: 100%;
-            max-width: 500px;
+        .admin-container {
+            max-width: 600px;
+            margin: 0 auto;
             background: white;
-            padding: 30px 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
         }
 
-        h1 {
-            text-align: center;
+        h2 {
+            border-left: 5px solid var(--primary-color);
+            padding-left: 10px;
             color: #333;
-            font-size: 1.5rem;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
 
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 15px;
-        }
-
-        label {
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-            font-size: 0.9rem;
-        }
-
-        input {
-            padding: 14px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #0056b3;
-        }
-
-        button {
+        .section {
+            margin-bottom: 30px;
             padding: 15px;
-            background-color: #0056b3;
-            color: white;
+            border: 1px solid #eee;
+            border-radius: 10px;
+        }
+
+        .label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
             border: none;
             border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: bold;
             cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
-            transition: 0.2s;
-        }
-
-        button:hover {
-            background-color: #004494;
-        }
-
-        #result-card {
-            margin-top: 25px;
-            padding: 20px;
-            border-radius: 8px;
-            background-color: #e9ecef;
-            display: none;
-        }
-
-        .result-item {
-            margin-bottom: 10px;
-            font-size: 1.05rem;
-            color: #333;
-        }
-
-        .result-item strong {
-            color: #0056b3;
-        }
-
-        #message {
-            color: #dc3545;
-            font-size: 0.95rem;
-            margin-top: 15px;
-            text-align: center;
             font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn-save {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-add {
+            background-color: #34c759;
+            color: white;
+            margin-top: 5px;
+        }
+
+        .btn-save:hover,
+        .btn-add:hover {
+            opacity: 0.8;
+        }
+
+        .subject-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .subject-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .delete-btn {
+            color: #ff3b30;
+            cursor: pointer;
+            font-size: 0.8rem;
+            border: 1px solid #ff3b30;
+            padding: 2px 8px;
+            border-radius: 5px;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="container">
-        <h1>학생 정보 검색</h1>
+    <div class="admin-container">
+        <h2>⚙️ 시스템 환경설정</h2>
 
-        <div class="form-group">
-            <label for="studentId">학번</label>
-            <input type="text" id="studentId" placeholder="예: 10101" inputmode="numeric">
-        </div>
-        <div class="form-group">
-            <label for="studentName">이름</label>
-            <input type="text" id="studentName" placeholder="예: 홍길동">
+        <div class="section">
+            <span class="label">박람회 메인 타이틀</span>
+            <input type="text" id="eventTitle" placeholder="예: 2026 교육과정 박람회">
+            <button class="btn btn-save" onclick="updateTitle()">타이틀 저장</button>
         </div>
 
-        <button onclick="searchStudent()">조회하기</button>
-        <div id="message"></div>
+        <div class="section">
+            <span class="label">새 과목 등록</span>
+            <select id="category">
+                <option value="국어">국어</option>
+                <option value="수학">수학</option>
+                <option value="영어">영어</option>
+                <option value="사회">사회</option>
+                <option value="과학">과학</option>
+            </select>
+            <input type="text" id="subjectName" placeholder="과목명을 입력하세요">
+            <input type="number" id="credits" value="3" placeholder="단위 수">
+            <button class="btn btn-add" onclick="addSubject()">과목 추가하기</button>
+        </div>
 
-        <div id="result-card">
-            <div class="result-item"><strong>학번:</strong> <span id="res-id"></span></div>
-            <div class="result-item"><strong>이름:</strong> <span id="res-name"></span></div>
-            <div class="result-item"><strong>총 이수학점:</strong> <span id="res-credits"></span>학점</div>
-            <div class="result-item"><strong>점검 결과:</strong> <span id="res-remarks"></span></div>
+        <div class="section">
+            <span class="label">현재 등록된 과목 (조회)</span>
+            <ul id="subjectList" class="subject-list">
+            </ul>
         </div>
     </div>
 
     <script>
-        // 본인의 Supabase 프로젝트 URL과 API 키를 입력하세요.
-        const SUPABASE_URL = '여기에_프로젝트_URL_입력';
-        const SUPABASE_KEY = '여기에_API_KEY_입력';
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        async function searchStudent() {
-            const studentId = document.getElementById('studentId').value.trim();
-            const studentName = document.getElementById('studentName').value.trim();
-            const messageDiv = document.getElementById('message');
-            const resultCard = document.getElementById('result-card');
+        // 페이지 시작 시 기존 설정 불러오기
+        window.onload = async () => {
+            loadTitle();
+            loadSubjects();
+        };
 
-            // 입력값 초기화 및 검증
-            messageDiv.innerText = '';
-            resultCard.style.display = 'none';
+        // 타이틀 불러오기
+        async function loadTitle() {
+            const { data } = await supabase.from('system_config').select('value').eq('key', 'event_title').single();
+            if (data) document.getElementById('eventTitle').value = data.value;
+        }
 
-            if (!studentId || !studentName) {
-                messageDiv.innerText = '학번과 이름을 모두 입력해주세요.';
-                return;
+        // 타이틀 수정 저장
+        async function updateTitle() {
+            const title = document.getElementById('eventTitle').value;
+            const { error } = await supabase.from('system_config').upsert({ key: 'event_title', value: title });
+            if (!error) alert('행사 타이틀이 변경되었습니다.');
+        }
+
+        // 과목 추가
+        async function addSubject() {
+            const category = document.getElementById('category').value;
+            const subject_name = document.getElementById('subjectName').value;
+            const credits = document.getElementById('credits').value;
+
+            if (!subject_name) return alert('과목명을 입력해주세요.');
+
+            const { error } = await supabase.from('subjects').insert([{ category, subject_name, credits }]);
+            if (!error) {
+                alert('과목이 등록되었습니다.');
+                document.getElementById('subjectName').value = '';
+                loadSubjects(); // 목록 새로고침
             }
+        }
 
-            try {
-                // 정보 보호 및 실수 방지를 위해 학번과 이름이 동시에 일치할 때만 데이터를 가져옴
-                const { data, error } = await supabase
-                    .from('students')
-                    .select('*')
-                    .eq('student_id', studentId)
-                    .eq('name', studentName)
-                    .single(); // 하나의 결과만 정확히 가져옵니다.
+        // 과목 목록 불러오기
+        async function loadSubjects() {
+            const { data, error } = await supabase.from('subjects').select('*').order('category', { ascending: true });
+            const listEl = document.getElementById('subjectList');
+            listEl.innerHTML = '';
 
-                if (error || !data) {
-                    messageDiv.innerText = '일치하는 학생 정보가 없습니다. 학번과 이름을 다시 확인해주세요.';
-                    return;
-                }
-
-                // 결과를 화면에 표시
-                document.getElementById('res-id').innerText = data.student_id;
-                document.getElementById('res-name').innerText = data.name;
-                document.getElementById('res-credits').innerText = data.total_credits || '정보 없음';
-                document.getElementById('res-remarks').innerText = data.remarks || '특이사항 없음';
-
-                resultCard.style.display = 'block';
-
-            } catch (err) {
-                console.error(err);
-                messageDiv.innerText = '데이터를 불러오는 중 오류가 발생했습니다.';
+            if (data) {
+                data.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'subject-item';
+                    li.innerHTML = `
+                    <span>[${item.category}] <b>${item.subject_name}</b> (${item.credits}단위)</span>
+                    <span class="delete-btn" onclick="deleteSubject(${item.id})">삭제</span>
+                `;
+                    listEl.appendChild(li);
+                });
             }
+        }
+
+        // 과목 삭제
+        async function deleteSubject(id) {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            const { error } = await supabase.from('subjects').delete().eq('id', id);
+            if (!error) loadSubjects();
         }
     </script>
 

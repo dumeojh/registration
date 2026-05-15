@@ -24,10 +24,38 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
+        /* 상단 네비게이션 버튼 영역 */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .nav-btn {
+            padding: 8px 15px;
+            background-color: #f8f9fa;
+            color: #495057;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:hover {
+            background-color: #e9ecef;
+        }
+
         h1 {
             text-align: center;
             color: #333;
             font-size: 1.5em;
+            margin-top: 10px;
         }
 
         h2 {
@@ -109,6 +137,11 @@
 <body>
 
     <div class="form-container">
+        <div class="nav-buttons">
+            <button type="button" class="nav-btn" onclick="history.back()">⬅ 이전 단계로</button>
+            <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
+        </div>
+
         <h1>안성여고 2학년 학업설계서</h1>
         <p style="text-align: center; color: #666;">AI 분석을 위해 아래 내용을 꼼꼼히 작성해 주세요.</p>
 
@@ -132,58 +165,58 @@
             <input type="text" id="studentName" placeholder="이름을 입력하세요" required>
 
             <h2>2. 진로 목표와 현재 강점</h2>
-            <label>희망 계열/학과 [cite: 4]</label>
+            <label>희망 계열/학과</label>
             <input type="text" id="major" placeholder="예: 컴퓨터공학과, 경영학과" required>
 
-            <label>관심 직업/진로 이유 [cite: 4]</label>
+            <label>관심 직업/진로 이유</label>
             <textarea id="careerReason" rows="3" placeholder="이 진로를 선택한 이유를 적어주세요."></textarea>
 
-            <label>강점 과목(흥미·성취) [cite: 4]</label>
+            <label>강점 과목(흥미·성취)</label>
             <input type="text" id="strongSubject" placeholder="예: 수학, 정보">
 
-            <label>보완이 필요한 과목 [cite: 4]</label>
+            <label>보완이 필요한 과목</label>
             <input type="text" id="weakSubject" placeholder="예: 영어, 사회">
 
             <h2>3. 2학년 과목선택 원칙 점검</h2>
             <div class="checkbox-group">
-                <label><input type="checkbox" id="check1"> 사회 교과는 2·3학년 중 최소 1과목 이상 선택 확인 [cite: 4]</label>
-                <label><input type="checkbox" id="check2"> 과학은 기초→심화 위계를 고려해 선택했는가 [cite: 4]</label>
-                <label><input type="checkbox" id="check3"> 국·영·수 선택은 4학기 총 4과목 이내인지 점검 [cite: 4]</label>
-                <label><input type="checkbox" id="check4"> 한 학기 1과목 선택 원칙과 시간표 충돌 여부 확인 [cite: 4]</label>
+                <label><input type="checkbox" id="check1"> 사회 교과는 2·3학년 중 최소 1과목 이상 선택 확인</label>
+                <label><input type="checkbox" id="check2"> 과학은 기초→심화 위계를 고려해 선택했는가</label>
+                <label><input type="checkbox" id="check3"> 국·영·수 선택은 4학기 총 4과목 이내인지 점검</label>
+                <label><input type="checkbox" id="check4"> 한 학기 1과목 선택 원칙과 시간표 충돌 여부 확인</label>
             </div>
 
             <h2>4. 2학년 학기별 선택 계획</h2>
 
             <h3>▶ 2학년 1학기</h3>
-            <p style="font-size: 0.9em; color: #555;">(필수/공통: 문학 / 대수 / 영어I / 스포츠문화) [cite: 6]</p>
-            <label>선택 후보 (1·2·3순위) [cite: 6]</label>
+            <p style="font-size: 0.9em; color: #555;">(필수/공통: 문학 / 대수 / 영어I / 스포츠문화)</p>
+            <label>선택 후보 (1·2·3순위)</label>
             <input type="text" id="sem1_choices" placeholder="예: 1. 물리학I 2. 정보 3. 세계사">
 
-            <label>선택 이유 (진로·흥미·성취) [cite: 6]</label>
+            <label>선택 이유 (진로·흥미·성취)</label>
             <textarea id="sem1_reason" rows="2" placeholder="선택한 이유를 적어주세요."></textarea>
 
-            <label>대안 과목 [cite: 6]</label>
+            <label>대안 과목</label>
             <input type="text" id="sem1_alt" placeholder="원하는 과목을 수강하지 못할 경우 대안">
 
             <h3>▶ 2학년 2학기</h3>
-            <p style="font-size: 0.9em; color: #555;">(필수/공통: 화법과 언어 / 미적분I / 영어II / 스포츠과학) [cite: 6]</p>
-            <label>선택 후보 (1·2·3순위) [cite: 6]</label>
+            <p style="font-size: 0.9em; color: #555;">(필수/공통: 화법과 언어 / 미적분I / 영어II / 스포츠과학)</p>
+            <label>선택 후보 (1·2·3순위)</label>
             <input type="text" id="sem2_choices" placeholder="예: 1. 생명과학I 2. 인공지능기초 3. 동아시아사">
 
-            <label>선택 이유 (진로·흥미·성취) [cite: 6]</label>
+            <label>선택 이유 (진로·흥미·성취)</label>
             <textarea id="sem2_reason" rows="2" placeholder="선택한 이유를 적어주세요."></textarea>
 
-            <label>대안 과목 [cite: 6]</label>
+            <label>대안 과목</label>
             <input type="text" id="sem2_alt" placeholder="원하는 과목을 수강하지 못할 경우 대안">
 
             <h2>5. 학업 실천 계획</h2>
-            <label>학기 목표 성취도 [cite: 7]</label>
+            <label>학기 목표 성취도</label>
             <input type="text" id="targetGrade" placeholder="예: 수학 2등급 달성">
 
-            <label>주간 자기주도학습 계획 [cite: 7]</label>
+            <label>주간 자기주도학습 계획</label>
             <textarea id="studyPlan" rows="3" placeholder="예: 야간자율학습 시간에 매일 수학 20문제 풀기"></textarea>
 
-            <label>연계하고 싶은 창체·독서·활동 [cite: 7]</label>
+            <label>연계하고 싶은 창체·독서·활동</label>
             <textarea id="activityPlan" rows="2" placeholder="예: 프로그래밍 동아리 가입, 관련 도서 읽기"></textarea>
 
             <button type="button" class="submit-btn" onclick="submitToAI()">AI에게 분석 요청하기</button>

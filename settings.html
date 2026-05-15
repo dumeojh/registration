@@ -812,11 +812,17 @@
                         if (!uniqueId || !name) continue;
 
                         insertData.push({
-                            unique_id: uniqueId,
-                            name: name,
-                            grade1_id: idxGrade1 !== -1 && cols[idxGrade1] ? cols[idxGrade1].replace('(비워둠 가능)', '').trim() : null,
-                            grade2_id: idxGrade2 !== -1 && cols[idxGrade2] ? cols[idxGrade2].replace('(비워둠 가능)', '').trim() : null,
-                            grade3_id: idxGrade3 !== -1 && cols[idxGrade3] ? cols[idxGrade3].replace('(비워둠 가능)', '').trim() : null
+                            category: idxCat !== -1 && cols[idxCat] ? cols[idxCat] : '미분류',
+                            subject_name: subjectName,
+                            files: filesString,
+                            // 🚨 아래 6줄이 안전한 텍스트 전송 방식으로 변경되었습니다!
+                            grade: idxGrade !== -1 && cols[idxGrade] ? cols[idxGrade] : null,
+                            semester: idxSem !== -1 && cols[idxSem] ? cols[idxSem] : '1/2학기 공통',
+                            admission_year: idxAdm !== -1 && cols[idxAdm] ? cols[idxAdm] : '',
+                            selection_type: idxType !== -1 && cols[idxType] ? cols[idxType] : '선택교과',
+                            selection_group: idxGroup !== -1 && cols[idxGroup] ? cols[idxGroup] : '',
+                            credits: idxCredit !== -1 && cols[idxCredit] ? cols[idxCredit] : '',
+                            remarks: idxRemark !== -1 && cols[idxRemark] ? cols[idxRemark] : ''
                         });
                     }
 

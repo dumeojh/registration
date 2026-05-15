@@ -430,7 +430,7 @@
         // ==========================================
 
         async function loadTitle() {
-            const { data } = await db.from('system_config').select('value').eq('key', 'event_title').single();
+            const { data } = await db.from('system_config').select('value').eq('key', 'event_title').maybeSingle();
             if (data) document.getElementById('eventTitle').value = data.value;
         }
 

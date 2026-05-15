@@ -27,10 +27,13 @@
         /* 상단 네비게이션 버튼 영역 */
         .nav-buttons {
             display: flex;
-            justify-content: space-between;
+            gap: 10px;
+            /* 버튼 사이 간격 */
             margin-bottom: 20px;
             border-bottom: 1px solid #eee;
             padding-bottom: 15px;
+            flex-wrap: wrap;
+            /* 화면이 좁을 때 줄바꿈 */
         }
 
         .nav-btn {
@@ -49,6 +52,13 @@
 
         .nav-btn:hover {
             background-color: #e9ecef;
+        }
+
+        /* 인쇄 버튼을 오른쪽 끝으로 밀어냅니다 */
+        .print-btn {
+            margin-left: auto;
+            background-color: #e2ece9;
+            font-weight: bold;
         }
 
         h1 {
@@ -83,7 +93,6 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             box-sizing: border-box;
-            /* 패딩이 너비를 넘지 않도록 방지 */
             font-size: 1em;
         }
 
@@ -131,6 +140,38 @@
         .submit-btn:hover {
             background-color: #004494;
         }
+
+        /* =========================================
+           🖨️ 인쇄용 CSS 설정 (종이에 출력될 때만 적용됨)
+           ========================================= */
+        @media print {
+            body {
+                background-color: #ffffff;
+                /* 배경을 흰색으로 */
+                padding: 0;
+            }
+
+            .form-container {
+                box-shadow: none;
+                /* 그림자 제거 */
+                padding: 0;
+                margin: 0;
+                max-width: 100%;
+            }
+
+            /* 인쇄할 때 불필요한 버튼들은 화면에서 숨김 */
+            .nav-buttons,
+            .submit-btn {
+                display: none !important;
+            }
+
+            /* 입력창 테두리를 연하게 처리하여 인쇄 시 깔끔하게 보이도록 함 */
+            input[type="text"],
+            input[type="number"],
+            textarea {
+                border: 1px solid #eee;
+            }
+        }
     </style>
 </head>
 
@@ -140,6 +181,7 @@
         <div class="nav-buttons">
             <button type="button" class="nav-btn" onclick="history.back()">⬅ 이전 단계로</button>
             <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
+            <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 화면 인쇄</button>
         </div>
 
         <h1>안성여고 2학년 학업설계서</h1>

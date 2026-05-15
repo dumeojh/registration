@@ -359,42 +359,36 @@
             }
         }
 
-        // ✨ DB에서 3학년 1학기 선택교과를 불러오는 함수
+        // ✨ DB에서 3학년 1학기 선택교과를 엑셀 데이터 기준으로 불러오는 함수
         async function loadGrade3Subjects() {
             try {
                 document.getElementById('grade3Area').style.display = 'block';
                 const g3Area = document.getElementById('resGrade3Subjects');
 
-                // subjects 테이블에서 '1학기' 또는 '1/2학기 공통' 이면서 '선택교과'인 데이터 조회
+                // ✨ 핵심: 학년(grade)이 '3' 이고, 학기(semester)가 '1'인 데이터만 조회!
                 const { data, error } = await db
                     .from('subjects')
                     .select('*')
-                    .or('semester.eq.1학기,semester.eq.1/2학기 공통')
-                    .eq('selection_type', '선택교과')
-                    .order('category', { ascending: true }); // 교과군 순으로 정렬
+                    .eq('grade', '3')
+                    .in('semester', ['1', '1학기']) // 엑셀에 '1' 또는 '1학기'로 적힌 것 모두 인식
+                    .order('selection_group', { ascending: true }); // [택5], [택2] 등 같은 그룹끼리 모이도록 정렬
 
                 if (error) throw error;
 
                 if (data && data.length > 0) {
-                    // 보라색 태그 형태로 화면에 출력 (학점도 작게 표시)
-                    g3Area.innerHTML = data.map(sub =>
-                        `<span class="subject-tag-future">${sub.subject_name} <span style="font-size:0.85em; opacity:0.7;">(${sub.credits}학점)</span></span>`
-                    ).join('');
+                    // 과목명 뒤에 '선택그룹'을 굵고 선명하게 함께 표시합니다.
+                    g3Area.innerHTML = data.map(sub => {
+                        const groupLabel = sub.selection_group ? `<span style="font-weight:bold; opacity:0.8; margin-left:4px;">${sub.selection_group}</span>` : '';
+                        return `<span class="subject-tag-future">${sub.subject_name} ${groupLabel}</span>`;
+                    }).join('');
                 } else {
-                    g3Area.innerHTML = '<span style="font-size:0.9em; color:#888; font-weight:normal;">등록된 3학년 1학기 선택교과가 없습니다. (환경설정에서 등록해주세요)</span>';
+                    g3Area.innerHTML = '<span style="font-size:0.9em; color:#888; font-weight:normal;">등록된 3학년 1학기 선택교과가 없습니다. (환경설정 엑셀 업로드를 확인해주세요)</span>';
                 }
             } catch (err) {
                 console.error("3학년 과목 불러오기 실패:", err);
                 document.getElementById('resGrade3Subjects').innerHTML = '<span style="color:red;">과목을 불러오는 중 오류가 발생했습니다.</span>';
             }
         }
-
-        document.getElementById('studentIdInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') searchStudent();
-        });
-        document.getElementById('studentNameInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') searchStudent();
-        });
     </script>
 </body>
 

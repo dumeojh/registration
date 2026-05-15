@@ -734,7 +734,85 @@
             reader.readAsText(file, 'utf-8');
         }
 
-        async function uploadCSV() { alert('학생 명단 등록 기능은 아직 준비 중입니다.'); }
+        // ====================================================================
+        // ✨ 학생 기본 명단 엑셀(CSV) 일괄 등록 기능
+        // ====================================================================
+        async function uploadCSV() {
+            const fileInput = document.getElementById('csvFileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                return alert('업로드할 학생 명단 CSV 파일을 먼저 선택해주세요.');
+            }
+
+            const btn = document.getElementById('csvUploadBtn');
+            const originalText = btn.innerText;
+            btn.innerText = '학생 데이터 등록 중... ⏳';
+            btn.disabled = true;
+
+            const reader = new FileReader();
+
+            reader.onload = async function (e) {
+                try {
+                    const text = e.target.result;
+                    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+
+                    if (lines.length < 2) {
+                        throw new Error('데이터가 없거나 파일 형식이 잘못되었습니다.');
+                    }
+
+                    // 쉼표 기준으로 열 제목 분리
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+
+                    // 열 위치 찾기 ('학번' 글자가 없어도 '1학년', '2학년'만으로도 유연하게 인식합니다)
+                    const idxUnique = headers.findIndex(h => h.includes('고유번호'));
+                    const idxName = headers.findIndex(h => h.includes('이름'));
+                    const idxGrade1 = headers.findIndex(h => h.includes('1학년'));
+                    const idxGrade2 = headers.findIndex(h => h.includes('2학년'));
+                    const idxGrade3 = headers.findIndex(h => h.includes('3학년'));
+
+                    if (idxUnique === -1 || idxName === -1) {
+                        throw new Error('CSV 첫 줄에 "고유번호"와 "이름" 열이 반드시 있어야 합니다.');
+                    }
+
+                    const insertData = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+
+                        const uniqueId = cols[idxUnique];
+                        const name = cols[idxName];
+
+                        // 고유번호나 이름이 비어있는 줄은 건너뜁니다
+                        if (!uniqueId || !name) continue;
+
+                        insertData.push({
+                            unique_id: uniqueId,
+                            name: name,
+                            grade1_id: idxGrade1 !== -1 && cols[idxGrade1] ? cols[idxGrade1].replace('(비워둠 가능)', '').trim() : null,
+                            grade2_id: idxGrade2 !== -1 && cols[idxGrade2] ? cols[idxGrade2].replace('(비워둠 가능)', '').trim() : null,
+                            grade3_id: idxGrade3 !== -1 && cols[idxGrade3] ? cols[idxGrade3].replace('(비워둠 가능)', '').trim() : null
+                        });
+                    }
+
+                    // DB에 일괄 등록 (기존에 같은 고유번호가 있으면 똑똑하게 '수정(업데이트)' 처리합니다)
+                    const { error } = await db.from('students').upsert(insertData, { onConflict: 'unique_id' });
+                    if (error) throw error;
+
+                    alert(`🎉 대성공! 총 ${insertData.length}명의 학생이 명단에 등록(또는 수정)되었습니다.`);
+                    fileInput.value = ''; // 완료 후 파일 선택칸 초기화
+                    loadStudents(); // 화면 학생 목록 새로고침
+
+                } catch (error) {
+                    alert('오류 발생: ' + error.message);
+                    console.error('업로드 에러 상세:', error);
+                } finally {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            };
+
+            reader.readAsText(file, 'utf-8');
+        }
         async function uploadGrade1SubjectsCSV() { alert('1학년 수강과목 매칭 기능은 아직 준비 중입니다.'); }
     </script>
 </body>

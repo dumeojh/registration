@@ -555,6 +555,11 @@
             await db.from('system_config').upsert({ key: 'event_title', value: title });
             alert('행사 타이틀이 변경되었습니다.');
         }
+
+
+
+
+
         async function loadSubjects() {
             const { data } = await db.from('subjects').select('*').order('category', { ascending: true });
             const listEl = document.getElementById('subjectList');
@@ -566,15 +571,32 @@
                 listEl.appendChild(li);
             });
         }
+
+
+
+
+
         async function loadStudents() {
             const { data } = await db.from('students').select('*').order('name', { ascending: true });
             const listEl = document.getElementById('studentList');
             listEl.innerHTML = '';
-            if (data) data.forEach(student => {
-                const li = document.createElement('li'); li.className = 'subject-item';
-                let subHtml = student.grade1_subjects ? `<br><span style="color:#0056b3; font-size:0.8rem;">📚 ${student.grade1_subjects.substring(0, 30)}...</span>` : '';
-                li.innerHTML = `<div style="font-size: 0.9rem;"><b>${student.name}</b> <span style="color:#666; font-size:0.8rem;">(${student.unique_id})</span><br><span style="font-size:0.8rem; color:#888;">1학년: ${student.grade1_id || '-'} | 2학년: ${student.grade2_id || '-'}</span>${subHtml}</div><span class="delete-btn" onclick="deleteStudent('${student.unique_id}')">삭제</span>`;
-                listEl.appendChild(li);
+            data.forEach(sub => {
+                // 💡 DB의 숫자(1, 2)를 화면에 보일 때만 '1학기', '2학기'로 변환하는 부분
+                let semesterDisplay = sub.semester;
+                if (sub.semester === '1') semesterDisplay = '1학기';
+                else if (sub.semester === '2') semesterDisplay = '2학기';
+
+                const div = document.createElement('div');
+                div.className = 'subject-item';
+                div.innerHTML = `
+                    <span>
+                        <strong style="color: #0056b3;">[${semesterDisplay}]</strong> 
+                        ${sub.category} - <strong>${sub.subject_name}</strong>
+                        <small style="color: #666; margin-left: 5px;">(${sub.grade}학년 / ${sub.credits}학점)</small>
+                    </span>
+                    <button class="btn btn-danger" onclick="deleteSubject('${sub.id}')">삭제</button>
+                `;
+                listArea.appendChild(div);
             });
         }
         async function deleteSubject(id) { if (confirm('과목을 삭제하시겠습니까?')) { await db.from('subjects').delete().eq('id', id); loadSubjects(); } }
@@ -726,7 +748,7 @@
                             file4: idxFile4 !== -1 ? cols[idxFile4] : null,
                             file5: idxFile5 !== -1 ? cols[idxFile5] : null,
                             grade: gradeVal,
-                            semester: idxSem !== -1 ? cols[idxSem] : '공통', // '1학기', '2학기' 등 텍스트 그대로 저장
+                            semester: idxSem !== -1 && cols[idxSem] ? cols[idxSem].toString().trim() : '공통',
                             admission_year: idxAdm !== -1 ? cols[idxAdm] : '',
                             selection_type: idxType !== -1 ? cols[idxType] : '',
                             selection_group: idxGroup !== -1 ? cols[idxGroup] : '',
@@ -757,8 +779,101 @@
 
 
 
-        async function uploadGrade1SubjectsCSV() { alert('1학년 수강과목 매칭 기능은 아직 준비 중입니다.'); }
-    </script>
-</body>
+        // ====================================================================
+        // 🌱 [1학년 전용] 과목 등록 함수 (학년 강제 지정 버전)
+        // ====================================================================
+        async function uploadGrade1SubjectsCSV() {
+            const fileInput = document.getElementById('csvGrade1SubjectFileInput');
+            const file = fileInput.files[0];
 
-</html>
+            if (!file) return alert('업로드할 1학년 과목 CSV 파일을 선택해주세요.');
+
+            const btn = document.getElementById('csvGrade1SubjectUploadBtn');
+            const originalText = btn.innerText;
+            btn.innerText = '1학년 데이터 등록 중... ⏳';
+            btn.disabled = true;
+
+            const reader = new FileReader();
+
+            reader.onload = async function (e) {
+                try {
+                    const buffer = e.target.result;
+                    let text = new TextDecoder('utf-8').decode(buffer);
+                    if (text.includes('') || !text.includes('교과군')) {
+                        text = new TextDecoder('euc-kr').decode(buffer);
+                    }
+
+                    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+
+                    function parseCSVRow(row) {
+                        let result = [];
+                        let curVal = '';
+                        let inQuotes = false;
+                        for (let i = 0; i < row.length; i++) {
+                            if (row[i] === '"') inQuotes = !inQuotes;
+                            else if (row[i] === ',' && !inQuotes) {
+                                result.push(curVal.trim());
+                                curVal = '';
+                            } else curVal += row[i];
+                        }
+                        result.push(curVal.trim());
+                        return result;
+                    }
+
+                    const headers = parseCSVRow(lines[0]);
+                    const idxCat = headers.findIndex(h => h.includes('교과군'));
+                    const idxName = headers.findIndex(h => h.includes('과목명'));
+                    const idxFile1 = headers.findIndex(h => h.includes('파일1'));
+                    const idxFile2 = headers.findIndex(h => h.includes('파일2'));
+                    const idxFile3 = headers.findIndex(h => h.includes('파일3'));
+                    const idxFile4 = headers.findIndex(h => h.includes('파일4'));
+                    const idxFile5 = headers.findIndex(h => h.includes('파일5'));
+                    const idxSem = headers.findIndex(h => h.includes('학기'));
+                    const idxAdm = headers.findIndex(h => h.includes('입학생'));
+                    const idxType = headers.findIndex(h => h.includes('선택유형'));
+                    const idxGroup = headers.findIndex(h => h.includes('선택그룹'));
+                    const idxCredit = headers.findIndex(h => h.includes('학점'));
+                    const idxRemark = headers.findIndex(h => h.includes('비고'));
+
+                    const insertData = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        const cols = parseCSVRow(lines[i]);
+                        if (!cols[idxName]) continue;
+
+                        insertData.push({
+                            category: idxCat !== -1 ? cols[idxCat] : '미분류',
+                            subject_name: cols[idxName],
+                            file1: idxFile1 !== -1 ? cols[idxFile1] : null,
+                            file2: idxFile2 !== -1 ? cols[idxFile2] : null,
+                            file3: idxFile3 !== -1 ? cols[idxFile3] : null,
+                            file4: idxFile4 !== -1 ? cols[idxFile4] : null,
+                            file5: idxFile5 !== -1 ? cols[idxFile5] : null,
+                            grade: 1, // 1학년 강제 지정
+                            semester: idxSem !== -1 && cols[idxSem] ? cols[idxSem].toString().trim() : '공통',
+                            admission_year: idxAdm !== -1 ? cols[idxAdm] : '2026',
+                            selection_type: idxType !== -1 ? cols[idxType] : '',
+                            selection_group: idxGroup !== -1 ? cols[idxGroup] : '',
+                            credits: idxCredit !== -1 ? (parseInt(cols[idxCredit]) || 0) : 0,
+                            remarks: idxRemark !== -1 ? cols[idxRemark] : ''
+                        });
+                    }
+
+                    const { error } = await db.from('subjects').insert(insertData);
+                    if (error) throw error;
+
+                    alert(`🎉 대성공! 1학년 과목 ${insertData.length}개가 등록되었습니다.`);
+                    fileInput.value = '';
+                    loadSubjects();
+
+                } catch (error) {
+                    alert('오류 발생: ' + error.message);
+                } finally {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+</body >
+
+</html >

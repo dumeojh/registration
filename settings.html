@@ -639,18 +639,14 @@
 
 
 
-
-
         // ====================================================================
-        // ✨ 과목 대량 등록 엑셀(CSV) 업로드 기능 (최종 완벽 버전 🚀)
+        // 🚀 [최종 수정본] 과목 대량 등록 함수 (쉼표 밀림 & 파일 5개 개별 저장)
         // ====================================================================
         async function uploadSubjectCSV() {
             const fileInput = document.getElementById('csvSubjectFileInput');
             const file = fileInput.files[0];
 
-            if (!file) {
-                return alert('업로드할 과목 CSV 파일을 먼저 선택해주세요.');
-            }
+            if (!file) return alert('업로드할 과목 CSV 파일을 먼저 선택해주세요.');
 
             const btn = document.getElementById('csvSubjectUploadBtn');
             const originalText = btn.innerText;
@@ -663,32 +659,26 @@
                 try {
                     const buffer = e.target.result;
 
-                    // 한글 깨짐 방지 (UTF-8 및 EUC-KR 자동 감지)
+                    // 1. 한글 깨짐 방지 (UTF-8 및 EUC-KR 자동 감지)
                     let text = new TextDecoder('utf-8').decode(buffer);
                     if (text.includes('') || !text.includes('교과군')) {
                         text = new TextDecoder('euc-kr').decode(buffer);
                     }
 
                     const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+                    if (lines.length < 2) throw new Error('데이터가 없거나 제목 줄만 존재합니다.');
 
-                    if (lines.length < 2) {
-                        throw new Error('데이터가 없거나 파일 형식이 잘못되었습니다.');
-                    }
-
-                    // 쉼표 밀림 방지 스마트 분리 함수
+                    // 2. 쉼표 밀림 방지 스마트 분리 함수 (따옴표 안의 쉼표는 무시)
                     function parseCSVRow(row) {
                         let result = [];
                         let curVal = '';
                         let inQuotes = false;
                         for (let i = 0; i < row.length; i++) {
-                            if (row[i] === '"') {
-                                inQuotes = !inQuotes;
-                            } else if (row[i] === ',' && !inQuotes) {
+                            if (row[i] === '"') inQuotes = !inQuotes;
+                            else if (row[i] === ',' && !inQuotes) {
                                 result.push(curVal.trim());
                                 curVal = '';
-                            } else {
-                                curVal += row[i];
-                            }
+                            } else curVal += row[i];
                         }
                         result.push(curVal.trim());
                         return result;
@@ -696,6 +686,7 @@
 
                     const headers = parseCSVRow(lines[0]);
 
+                    // 열 번호 찾기
                     const idxCat = headers.findIndex(h => h.includes('교과군'));
                     const idxName = headers.findIndex(h => h.includes('과목명'));
                     const idxFile1 = headers.findIndex(h => h.includes('파일1'));
@@ -711,64 +702,59 @@
                     const idxCredit = headers.findIndex(h => h.includes('학점'));
                     const idxRemark = headers.findIndex(h => h.includes('비고'));
 
-                    if (idxCat === -1 || idxName === -1) {
-                        throw new Error(`첫 줄에서 '교과군'과 '과목명'을 찾을 수 없습니다.`);
-                    }
+                    if (idxCat === -1 || idxName === -1) throw new Error("'교과군' 또는 '과목명' 제목을 찾을 수 없습니다.");
 
                     const insertData = [];
                     for (let i = 1; i < lines.length; i++) {
                         const cols = parseCSVRow(lines[i]);
-
                         const subjectName = cols[idxName];
                         if (!subjectName) continue;
 
-                        let gradeVal = idxGrade !== -1 && cols[idxGrade] ? parseInt(cols[idxGrade]) : null;
+                        // 학년/학점 숫자 변환
+                        let gradeVal = idxGrade !== -1 ? parseInt(cols[idxGrade]) : null;
                         if (isNaN(gradeVal)) gradeVal = null;
-
-                        let creditVal = idxCredit !== -1 && cols[idxCredit] ? parseInt(cols[idxCredit]) : 0;
+                        let creditVal = idxCredit !== -1 ? parseInt(cols[idxCredit]) : 0;
                         if (isNaN(creditVal)) creditVal = 0;
 
-                        // 🚨 문제가 되던 files를 완전히 지우고 file1~5로 예쁘게 나누었습니다.
                         insertData.push({
-                            category: idxCat !== -1 && cols[idxCat] ? cols[idxCat] : '미분류',
+                            category: idxCat !== -1 ? cols[idxCat] : '미분류',
                             subject_name: subjectName,
-                            file1: idxFile1 !== -1 && cols[idxFile1] ? cols[idxFile1] : null,
-                            file2: idxFile2 !== -1 && cols[idxFile2] ? cols[idxFile2] : null,
-                            file3: idxFile3 !== -1 && cols[idxFile3] ? cols[idxFile3] : null,
-                            file4: idxFile4 !== -1 && cols[idxFile4] ? cols[idxFile4] : null,
-                            file5: idxFile5 !== -1 && cols[idxFile5] ? cols[idxFile5] : null,
+                            // 파일 5개 개별 저장
+                            file1: idxFile1 !== -1 ? cols[idxFile1] : null,
+                            file2: idxFile2 !== -1 ? cols[idxFile2] : null,
+                            file3: idxFile3 !== -1 ? cols[idxFile3] : null,
+                            file4: idxFile4 !== -1 ? cols[idxFile4] : null,
+                            file5: idxFile5 !== -1 ? cols[idxFile5] : null,
                             grade: gradeVal,
-                            semester: idxSem !== -1 && cols[idxSem] ? cols[idxSem] : '1/2학기 공통',
-                            admission_year: idxAdm !== -1 && cols[idxAdm] ? cols[idxAdm] : '',
-                            selection_type: idxType !== -1 && cols[idxType] ? cols[idxType] : '선택교과',
-                            selection_group: idxGroup !== -1 && cols[idxGroup] ? cols[idxGroup] : '',
+                            semester: idxSem !== -1 ? cols[idxSem] : '공통', // '1학기', '2학기' 등 텍스트 그대로 저장
+                            admission_year: idxAdm !== -1 ? cols[idxAdm] : '',
+                            selection_type: idxType !== -1 ? cols[idxType] : '',
+                            selection_group: idxGroup !== -1 ? cols[idxGroup] : '',
                             credits: creditVal,
-                            remarks: idxRemark !== -1 && cols[idxRemark] ? cols[idxRemark] : ''
+                            remarks: idxRemark !== -1 ? cols[idxRemark] : ''
                         });
                     }
 
+                    // DB 전송
                     const { error } = await db.from('subjects').insert(insertData);
+                    if (error) throw error;
 
-                    if (error) {
-                        throw new Error(`\n[에러코드: ${error.code}]\n이유: ${error.message}\n상세원인: ${error.details || '열(Column) 이름 확인 필요'}`);
-                    }
-
-                    alert(`🎉 대성공! 총 ${insertData.length}개의 과목이 완벽하게 등록되었습니다.`);
+                    alert(`🎉 대성공! 과목 ${insertData.length}개가 등록되었습니다.`);
                     fileInput.value = '';
                     loadSubjects();
 
                 } catch (error) {
                     alert('오류 발생: ' + error.message);
-                    console.error('업로드 에러 상세:', error);
+                    console.error('상세 에러:', error);
                 } finally {
                     btn.innerText = originalText;
                     btn.disabled = false;
                 }
             };
-
-            // 🚨 원본 데이터(ArrayBuffer)로 읽기
             reader.readAsArrayBuffer(file);
         }
+
+
 
 
         async function uploadGrade1SubjectsCSV() { alert('1학년 수강과목 매칭 기능은 아직 준비 중입니다.'); }

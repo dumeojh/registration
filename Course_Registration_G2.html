@@ -21,7 +21,6 @@
 
         .container {
             max-width: 700px;
-            /* 리스트와 텍스트칸을 위해 너비를 살짝 더 넓혔습니다 */
             width: 100%;
             background: #ffffff;
             padding: 30px;
@@ -186,7 +185,7 @@
             border: 1px solid #c8d8d3;
         }
 
-        /* ✨ 3학년 선택교과 세로 리스트 스타일 */
+        /* 3학년 선택교과 세로 리스트 스타일 */
         .future-subject-list {
             display: flex;
             flex-direction: column;
@@ -196,7 +195,6 @@
 
         .future-subject-item {
             background-color: #f3eef5;
-            /* 보라색 계열 */
             border: 1px solid #d8cce2;
             border-radius: 10px;
             padding: 15px;
@@ -220,7 +218,6 @@
 
         .reason-box {
             display: none;
-            /* 초기에는 숨김 */
             width: 100%;
             margin-top: 12px;
             padding: 10px;
@@ -283,8 +280,6 @@
                 display: block !important;
                 border: 1px solid #ccc;
             }
-
-            /* 인쇄 시 체크 안해도 다 보이게 하려면 수정 가능 */
         }
     </style>
 </head>
@@ -338,9 +333,14 @@
                 <div class="result-label" style="font-size: 1.05em; color:#6f42c1;">🔮 3학년 1학기 선택교과 설계</div>
                 <p style="font-size: 0.85em; color: #666; margin-top: -3px; margin-bottom: 0;">※ 희망 과목을 체크하고 선택 이유를 간략히
                     적어보세요.</p>
+                <div id="resGrade3Subjects" class="future-subject-list"></div>
+            </div>
 
-                <div id="resGrade3Subjects" class="future-subject-list">
-                </div>
+            <div class="subject-area" id="grade3Sem2Area" style="display: none; border-top-color: #d8cce2;">
+                <div class="result-label" style="font-size: 1.05em; color:#6f42c1;">🔮 3학년 2학기 선택교과 설계</div>
+                <p style="font-size: 0.85em; color: #666; margin-top: -3px; margin-bottom: 0;">※ 희망 과목을 체크하고 선택 이유를 간략히
+                    적어보세요.</p>
+                <div id="resGrade3Sem2Subjects" class="future-subject-list"></div>
             </div>
         </div>
     </div>
@@ -385,7 +385,10 @@
                     }
 
                     resultArea.style.display = 'block';
+
+                    // ✨ 1학기와 2학기 과목을 차례대로 불러옵니다.
                     await loadGrade3Subjects();
+                    await loadGrade3Sem2Subjects();
                 } else {
                     alert("입력하신 학번과 이름이 일치하는 학생 정보를 찾을 수 없습니다.");
                     resultArea.style.display = 'none';
@@ -396,6 +399,7 @@
             }
         }
 
+        // 3학년 1학기 불러오기
         async function loadGrade3Subjects() {
             try {
                 document.getElementById('grade3Area').style.display = 'block';
@@ -411,7 +415,6 @@
                 if (error) throw error;
 
                 if (data && data.length > 0) {
-                    // ✨ 세로 1열 리스트 + 체크박스 + 선택이유 입력창 생성
                     g3Area.innerHTML = data.map(sub => {
                         const groupText = sub.selection_group ? ` <small style="color:#888;">(${sub.selection_group})</small>` : '';
                         return `
@@ -428,11 +431,48 @@
                     g3Area.innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 3학년 1학기 선택교과가 없습니다.</span>';
                 }
             } catch (err) {
-                console.error("3학년 과목 불러오기 실패:", err);
+                console.error("3학년 1학기 과목 불러오기 실패:", err);
             }
         }
 
-        // ✨ 체크박스 상태에 따라 텍스트 박스를 보여주거나 숨기는 함수
+        // ✨ 3학년 2학기 불러오기 (새로 추가)
+        async function loadGrade3Sem2Subjects() {
+            try {
+                document.getElementById('grade3Sem2Area').style.display = 'block';
+                const g3Area = document.getElementById('resGrade3Sem2Subjects');
+
+                // 학기(semester)가 '2' 또는 '2학기'인 것만 조회합니다.
+                const { data, error } = await db
+                    .from('subjects')
+                    .select('*')
+                    .eq('grade', '3')
+                    .in('semester', ['2', '2학기'])
+                    .order('selection_group', { ascending: true });
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    g3Area.innerHTML = data.map(sub => {
+                        const groupText = sub.selection_group ? ` <small style="color:#888;">(${sub.selection_group})</small>` : '';
+                        return `
+                        <div class="future-subject-item">
+                            <label class="future-subject-header">
+                                <input type="checkbox" onchange="toggleReason(this)">
+                                <span>${sub.subject_name}${groupText}</span>
+                            </label>
+                            <textarea class="reason-box" placeholder="${sub.subject_name} 과목을 선택하려는 이유를 적어주세요."></textarea>
+                        </div>
+                        `;
+                    }).join('');
+                } else {
+                    g3Area.innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 3학년 2학기 선택교과가 없습니다.</span>';
+                }
+            } catch (err) {
+                console.error("3학년 2학기 과목 불러오기 실패:", err);
+            }
+        }
+
+        // 체크박스 상태에 따라 텍스트 박스를 보여주거나 숨기는 함수
         function toggleReason(checkbox) {
             const reasonBox = checkbox.closest('.future-subject-item').querySelector('.reason-box');
             if (checkbox.checked) {

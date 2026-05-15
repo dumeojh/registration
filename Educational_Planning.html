@@ -144,6 +144,14 @@
         /* =========================================
            🖨️ 인쇄용 CSS 설정 (종이에 출력될 때만 적용됨)
            ========================================= */
+
+        /* 인쇄 방향을 '세로'로 강제 설정 */
+        @page {
+            size: portrait;
+            margin: 15mm;
+            /* 깔끔한 인쇄를 위한 기본 여백 */
+        }
+
         @media print {
             body {
                 background-color: #ffffff;
@@ -169,7 +177,9 @@
             input[type="text"],
             input[type="number"],
             textarea {
-                border: 1px solid #eee;
+                border: 1px solid #ddd;
+                resize: none;
+                /* 인쇄 시 크기 조절 손잡이 숨김 */
             }
         }
     </style>

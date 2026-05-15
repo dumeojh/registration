@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2학년 학업설계서 작성</title>
+    <style>
+        /* 기본 배경 및 폰트 설정 */
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* 폼 전체를 감싸는 하얀색 박스 디자인 */
+        .form-container {
+            max-width: 800px;
+            background: #ffffff;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 상단 네비게이션 버튼 영역 */
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            /* 버튼 사이 간격 */
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            flex-wrap: wrap;
+            /* 화면이 좁을 때 줄바꿈 */
+        }
+
+        .nav-btn {
+            padding: 8px 15px;
+            background-color: #f8f9fa;
+            color: #495057;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        /* 인쇄 버튼을 오른쪽 끝으로 밀어냅니다 */
+        .print-btn {
+            margin-left: auto;
+            background-color: #e2ece9;
+            font-weight: bold;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            font-size: 1.5em;
+            margin-top: 10px;
+        }
+
+        h2 {
+            color: #0056b3;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 5px;
+            margin-top: 30px;
+            font-size: 1.2em;
+        }
+
+        /* 입력 칸을 폰에서 누르기 편하게 큼직하게 만듭니다 */
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+
+        /* 체크박스 디자인 */
+        .checkbox-group {
+            margin-bottom: 15px;
+        }
+
+        .checkbox-group label {
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-group input {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+        }
+
+        /* 한 줄에 여러 입력칸을 놓기 위한 묶음 (학년/반/번호) */
+        .flex-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .flex-row>div {
+            flex: 1;
+        }
+
+        /* 제출 버튼 디자인 */
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            background-color: #004494;
+        }
+
+        /* =========================================
+           🖨️ 인쇄용 CSS 설정 (종이에 출력될 때만 적용됨)
+           ========================================= */
+
+        /* 인쇄 방향을 '세로'로 강제 설정 */
+        @page {
+            size: portrait;
+            margin: 15mm;
+            /* 깔끔한 인쇄를 위한 기본 여백 */
+        }
+
+        @media print {
+            body {
+                background-color: #ffffff;
+                /* 배경을 흰색으로 */
+                padding: 0;
+            }
+
+            .form-container {
+                box-shadow: none;
+                /* 그림자 제거 */
+                padding: 0;
+                margin: 0;
+                max-width: 100%;
+            }
+
+            /* 인쇄할 때 불필요한 버튼들은 화면에서 숨김 */
+            .nav-buttons,
+            .submit-btn {
+                display: none !important;
+            }
+
+            /* 입력창 테두리를 연하게 처리하여 인쇄 시 깔끔하게 보이도록 함 */
+            input[type="text"],
+            input[type="number"],
+            textarea {
+                border: 1px solid #ddd;
+                resize: none;
+                /* 인쇄 시 크기 조절 손잡이 숨김 */
+            }
+        }
+
+        /* 3학년 선택과목 체크박스 및 이유 입력창 스타일 */
+        .subject-check-group {
+            display: flex;
+            align-items: flex-start;
+            background: #fdfdfd;
+            padding: 15px;
+            margin-bottom: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .subject-check-group:hover {
+            border-color: #4a90e2;
+            background: #f4f8ff;
+        }
+
+        .subject-label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0;
+            font-size: 1.05em;
+        }
+
+        .subject-label input[type="checkbox"] {
+            margin-right: 12px;
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+        }
+
+        .reason-textarea {
+            flex: 2;
+            display: none;
+            margin-left: 20px;
+            padding: 12px;
+            border: 2px solid #4a90e2;
+            border-radius: 5px;
+            resize: vertical;
+            min-height: 45px;
+            font-family: 'Malgun Gothic', sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="form-container">
+        <div class="nav-buttons">
+            <button type="button" class="nav-btn" onclick="history.back()">⬅ 이전 단계로</button>
+            <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
+            <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 화면 인쇄</button>
+        </div>
+
+        <h1>(2025년 입학생) 안성여고 3학년 학업설계서</h1>
+        <p style="text-align: center; color: #666;">AI 분석을 위해 아래 내용을 꼼꼼히 작성해 주세요.</p>
+
+        <form id="studyPlanForm">
+            <h2>1. 학생 정보</h2>
+            <div class="flex-row">
+                <div>
+                    <label>학년</label>
+                    <input type="number" id="grade" value="1" readonly>
+                </div>
+                <div>
+                    <label>반</label>
+                    <input type="number" id="classNum" placeholder="예: 3" required>
+                </div>
+                <div>
+                    <label>번호</label>
+                    <input type="number" id="studentNum" placeholder="예: 15" required>
+                </div>
+            </div>
+            <label>이름</label>
+            <input type="text" id="studentName" placeholder="이름을 입력하세요" required>
+
+            <h2>2. 진로 목표와 현재 강점</h2>
+            <label>희망 계열/학과</label>
+            <input type="text" id="major" placeholder="예: 컴퓨터공학과, 경영학과" required>
+
+            <label>관심 직업/진로 이유</label>
+            <textarea id="careerReason" rows="3" placeholder="이 진로를 선택한 이유를 적어주세요."></textarea>
+
+            <label>강점 과목(흥미·성취)</label>
+            <input type="text" id="strongSubject" placeholder="예: 수학, 정보">
+
+            <label>보완이 필요한 과목</label>
+            <input type="text" id="weakSubject" placeholder="예: 영어, 사회">
+
+            <h2>3. 2학년 과목선택 고려(점검) 사항</h2>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="check1"> 사회 교과는 2·3학년 중 최소 1과목 이상 선택 확인</label>
+                <label><input type="checkbox" id="check2"> 과학은 기초→심화 위계를 고려해 선택했는가</label>
+                <label><input type="checkbox" id="check3"> 국·영·수 선택은 4학기 총 4과목 이내인지 점검</label>
+                <label><input type="checkbox" id="check4"> 한 학기 1과목 선택 원칙과 시간표 충돌 여부 확인</label>
+            </div>
+
+            <h2>4. 3학년 학기별 선택 계획</h2>
+
+            <h3>▶ 3학년 1학기</h3>
+            <p style="font-size: 0.9em; color: #555;">( 학교지정 : 독서와 작문(4) / 확률과 통계(4) / 영어독해와 작문(4) / 스포츠 생활1(2) )</p>
+            <label>선택 후보 (1·2·3·4·5순위) 택5</label>
+            <input type="text" id="sem1_choices" placeholder="예: 1. 물리학I 2. 정보 3. 세계사">
+
+            <label>선택 이유 (진로·흥미·성취)</label>
+            <textarea id="sem1_reason" rows="2" placeholder="선택한 이유를 적어주세요."></textarea>
+
+            <label>대안 과목 (소인수, 공동, 경기 이음온)</label>
+            <input type="text" id="sem1_alt" placeholder="원하는 과목을 수강하지 못할 경우 대안">
+
+            <h3>▶ 3학년 2학기</h3>
+            <p style="font-size: 0.9em; color: #555;">( 학교지정 : 주제탐구 독서(3) / 수학과 문화(3) / 심화영어독해와 작문(3) / 스포츠생활2(2) )</p>
+            <label>선택 후보 (1·2·3순위)</label>
+            <input type="text" id="sem2_choices" placeholder="예: 1. 생명과학I 2. 인공지능기초 3. 동아시아사">
+
+            <label>선택 이유 (진로·흥미·성취)</label>
+            <textarea id="sem2_reason" rows="2" placeholder="선택한 이유를 적어주세요."></textarea>
+
+            <label>대안 과목</label>
+            <input type="text" id="sem2_alt" placeholder="원하는 과목을 수강하지 못할 경우 대안">
+
+
+            <h3>▶ 3학년 1학기</h3>
+            <p style="font-size: 0.95em; color: #555; background: #eef2f5; padding: 10px; border-radius: 5px;">
+                <strong>📌 학교지정:</strong> 독서와 작문(4) / 확률과 통계(4) / 영어독해와 작문(4) / 스포츠 생활1(2)
+            </p>
+            <label style="font-size: 1.1em; color:#0056b3; margin-top: 20px;">선택 후보 (1·2·3·4·5순위) - 택5</label>
+            <p style="font-size: 0.85em; color: #d9534f; margin-top: -5px;">※ 희망하는 과목을 체크하면 오른쪽에 선택 이유를 적는 칸이 나타납니다.</p>
+
+
+
+            <div class="checkbox-group" id="grade3_sem1_list">
+                <div class="subject-check-group">
+                    <label class="subject-label">
+                        <input type="checkbox" onchange="toggleReason(this)"> 화법과 매체
+                    </label>
+                    <textarea class="reason-textarea" placeholder="이 과목을 선택한 진로/흥미 관련 이유를 적어주세요."></textarea>
+                </div>
+
+                <h3>▶ 3학년 1학기</h3>
+                <p style="font-size: 0.95em; color: #555; background: #eef2f5; padding: 10px; border-radius: 5px;">
+                    <strong>📌 학교지정:</strong> 독서와 작문(4) / 확률과 통계(4) / 영어독해와 작문(4) / 스포츠 생활1(2)
+                </p>
+                <label style="font-size: 1.1em; color:#0056b3; margin-top: 20px;">선택 후보 (1·2·3·4·5순위) - 택5</label>
+                <p style="font-size: 0.85em; color: #d9534f; margin-top: -5px;">※ 희망하는 과목을 체크하면 오른쪽에 선택 이유를 적는 칸이 나타납니다.
+                </p>
+
+                <div class="checkbox-group" id="grade3_sem1_list">
+                    <p style="color: #888; font-size: 0.9em;">과목 데이터를 불러오는 중입니다... ⏳</p>
+                </div>
+            </div>
+        </form>
+
+
+
+        <h2>5. 학업 실천 계획</h2>
+        <label>학기 목표 성취도</label>
+        <input type="text" id="targetGrade" placeholder="예: 수학 2등급 달성">
+
+        <label>주간 자기주도학습 계획</label>
+        <textarea id="studyPlan" rows="3" placeholder="예: 야간자율학습 시간에 매일 수학 20문제 풀기"></textarea>
+
+        <label>연계하고 싶은 창체·독서·활동</label>
+        <textarea id="activityPlan" rows="2" placeholder="예: 프로그래밍 동아리 가입, 관련 도서 읽기"></textarea>
+
+        <button type="button" class="submit-btn" onclick="submitToAI()">AI에게 분석 요청하기</button>
+        </form>
+
+        <div id="aiResponseArea"
+            style="display:none; margin-top:30px; padding:20px; background-color:#eef7f2; border-radius:10px; border: 1px solid #c3e6cb;">
+            <h2 style="color: #28a745; margin-top:0; border-bottom:none;">💡 AI 진로 상담 결과</h2>
+            <p id="aiResultText">이곳에 AI의 분석 결과가 나타납니다.</p>
+        </div>
+
+    </div>
+    <script>
+
+
+        // 체크박스를 누를 때마다 오른쪽 텍스트 칸을 띄우거나 숨기는 기능
+        function toggleReason(checkbox) {
+            const textarea = checkbox.parentElement.nextElementSibling;
+            if (checkbox.checked) {
+                textarea.style.display = 'block';
+                textarea.focus();
+            } else {
+                textarea.style.display = 'none';
+                textarea.value = '';
+            }
+        }
+        // async 키워드를 붙여서 AI의 답변을 '기다릴 수 있는' 함수로 만듭니다.
+        async function submitToAI() {
+            // 1. 학생이 입력한 데이터 가져오기 (이전과 동일)
+            const grade = document.getElementById('grade').value;
+            const classNum = document.getElementById('classNum').value;
+            const studentNum = document.getElementById('studentNum').value;
+            const studentName = document.getElementById('studentName').value;
+
+            const major = document.getElementById('major').value;
+            const careerReason = document.getElementById('careerReason').value;
+            const strongSubject = document.getElementById('strongSubject').value;
+
+            const sem1_choices = document.getElementById('sem1_choices').value;
+            const sem1_reason = document.getElementById('sem1_reason').value;
+
+            const sem2_choices = document.getElementById('sem2_choices').value;
+            const sem2_reason = document.getElementById('sem2_reason').value;
+
+            if (!classNum || !studentNum || !studentName || !major) {
+                alert("반, 번호, 이름, 희망 계열/학과는 필수 입력 항목입니다!");
+                return;
+            }
+
+            // 2. AI에게 보낼 프롬프트 (이전과 동일)
+            const promptText = `
+너는 고등학교의 친절하고 전문적인 진로진학 상담 교사야. 
+다음은 우리 학교 ${grade}학년 ${classNum}반 ${studentNum}번 ${studentName} 학생이 작성한 2학년 학업설계서 내용이야.
+이 데이터를 분석해서 학생에게 딱 맞는 1:1 맞춤형 피드백을 작성해 줘.
+
+[학생 정보]
+- 희망 진로/학과: ${major}
+- 진로 선택 이유: ${careerReason}
+- 현재 강점 과목: ${strongSubject}
+
+[2학년 1학기 선택 계획]
+- 선택 후보 과목: ${sem1_choices}
+- 선택 이유: ${sem1_reason}
+
+[2학년 2학기 선택 계획]
+- 선택 후보 과목: ${sem2_choices}
+- 선택 이유: ${sem2_reason}
+
+[요청 사항]
+1. 학생의 희망 진로와 선택한 과목들이 잘 연결되는지 칭찬과 함께 분석해 줘.
+2. 진로에 도움이 될 만한 대안 과목이나 놓치고 있는 과목이 있다면 추천해 줘.
+3. 따뜻한 응원의 말로 마무리해 줘.
+`;
+
+            // 3. 화면 준비 및 로딩 메시지 띄우기
+            const responseArea = document.getElementById('aiResponseArea');
+            const resultText = document.getElementById('aiResultText');
+
+            responseArea.style.display = 'block';
+            resultText.innerHTML = "<strong>⏳ AI 진로 상담 교사가 학생의 학업설계서를 꼼꼼히 분석하고 있습니다. 잠시만 기다려주세요...</strong>";
+
+            // ======================================================================
+            // 🚀 4. 여기서부터 진짜 Gemini API를 호출하는 부분입니다!
+            // ======================================================================
+
+            // ★여기에 발급받은 API 키를 꼭 넣어주세요! (따옴표 안에 넣으셔야 합니다)
+            const apiKey = '여기에_발급받은_API_키를_붙여넣으세요';
+
+            // 빠르고 똑똑한 gemini-1.5-flash 모델을 사용합니다.
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+            try {
+                // fetch를 사용해 구글 서버로 질문을 전송합니다.
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: promptText }]
+                        }]
+                    })
+                });
+
+                // 서버에서 온 답변을 데이터로 변환합니다.
+                const data = await response.json();
+
+                // 데이터 중에서 진짜 AI가 작성한 텍스트 알맹이만 쏙 뽑아냅니다.
+                const aiText = data.candidates[0].content.parts[0].text;
+
+                // 화면에 보기 좋게 출력 (줄바꿈 문자인 \n을 HTML의 <br>로 바꿔줌)
+                resultText.innerHTML = aiText.replace(/\n/g, '<br>');
+
+            } catch (error) {
+                // 만약 인터넷이 끊기거나 키가 틀려서 에러가 나면 이 부분이 실행됩니다.
+                console.error("API 호출 중 오류:", error);
+                resultText.innerHTML = "<span style='color:red;'>앗! 분석 중 오류가 발생했습니다. API 키를 다시 한 번 확인해 주세요.</span>";
+            }
+        }
+    </script>
+</body>
+
+</html>

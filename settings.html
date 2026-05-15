@@ -64,9 +64,7 @@
             background: none;
             border: none;
             padding: 10px 5px;
-            /* 탭이 5개로 늘어나 패딩을 줄였습니다 */
             font-size: 0.95rem;
-            /* 탭이 5개로 늘어나 폰트 크기를 약간 줄였습니다 */
             font-weight: bold;
             color: #888;
             cursor: pointer;
@@ -207,6 +205,7 @@
             border-radius: 5px;
             white-space: nowrap;
             margin-left: 10px;
+            align-self: center;
         }
 
         .csv-section {
@@ -592,6 +591,7 @@
             });
         }
 
+        /* ----- 변경된 부분: 학생 목록 렌더링에 1,2,3학년 학번 추가 ----- */
         async function loadStudents() {
             const { data } = await db.from('students').select('*').order('name', { ascending: true });
             const listEl = document.getElementById('studentList');
@@ -601,8 +601,19 @@
                 data.forEach(student => {
                     const li = document.createElement('li');
                     li.className = 'subject-item';
+
+                    // 각 학번이 없으면 '-'로 표시
+                    const g1 = student.grade1_id ? student.grade1_id : '-';
+                    const g2 = student.grade2_id ? student.grade2_id : '-';
+                    const g3 = student.grade3_id ? student.grade3_id : '-';
+
                     li.innerHTML = `
-                        <span><b>${student.unique_id}</b> ${student.name}</span> 
+                        <div style="line-height:1.4;">
+                            <span><b>${student.unique_id}</b> ${student.name}</span><br>
+                            <span style="font-size:0.85em; color:#666;">
+                                1학년: ${g1} | 2학년: ${g2} | 3학년: ${g3}
+                            </span>
+                        </div>
                         <span class="delete-btn" onclick="deleteStudent('${student.unique_id}')">삭제</span>
                     `;
                     listEl.appendChild(li);

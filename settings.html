@@ -552,10 +552,11 @@
         }
 
 
-        /* ----- 업그레이드된 과목별 태그 뷰 렌더링 함수 ----- */
         async function loadGrade1Students() {
-            const { data } = await db.from('students').select('*').order('name', { ascending: true });
-            // 👇 추가된 부분: 만약 DB 통신에 에러가 있다면 콘솔에 빨간 글씨로 출력
+            // 👇 data 옆에 ', error' 를 추가하여 에러 값도 함께 받아옵니다.
+            const { data, error } = await db.from('students').select('*').order('name', { ascending: true });
+
+            // 이제 error가 무엇인지 알기 때문에 정상 작동합니다.
             if (error) {
                 console.error("🚨 DB 불러오기 에러 발생:", error);
             }

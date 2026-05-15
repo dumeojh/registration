@@ -595,14 +595,15 @@
         async function deleteSubject(id) { if (confirm('과목을 삭제하시겠습니까?')) { await db.from('subjects').delete().eq('id', id); loadSubjects(); } }
         async function deleteStudent(unique_id) { if (confirm('학생을 삭제하시겠습니까?')) { await db.from('students').delete().eq('unique_id', unique_id); loadStudents(); loadGrade1Students(); } }
 
-        /* ----- 핵심 변경 부분: CSV 데이터를 파싱하여 '배열(Array)'로 DB에 Upsert ----- */
         async function uploadGrade1SubjectsCSV() {
-            const fileInput = document.getElementById('csvGrade1SubjectFileInput');
+            // 1. 파일 인풋 ID 수정
+            const fileInput = document.getElementById('csvGrade1SubjectInput');
             const file = fileInput.files[0];
 
             if (!file) return alert('업로드할 파이썬 변환본 CSV 파일을 선택해주세요.');
 
-            const btn = document.getElementById('csvGrade1SubjectUploadBtn');
+            // 2. 버튼 ID 수정
+            const btn = document.getElementById('csvGrade1SubjectBtn');
             const originalText = btn.innerText;
             btn.innerText = '배열 데이터 변환 및 등록 중... ⏳';
             btn.disabled = true;

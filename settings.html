@@ -683,7 +683,8 @@
 
                     // 1. 한글 깨짐 방지 (UTF-8 및 EUC-KR 자동 감지)
                     let text = new TextDecoder('utf-8').decode(buffer);
-                    if (text.includes('') || !text.includes('교과군')) {
+                    // 빈칸 확인 코드를 지우고, '교과군' 단어가 없는 경우에만 변환하도록 아주 심플하게 바꿉니다.
+                    if (!text.includes('교과군')) {
                         text = new TextDecoder('euc-kr').decode(buffer);
                     }
 
@@ -799,7 +800,8 @@
                 try {
                     const buffer = e.target.result;
                     let text = new TextDecoder('utf-8').decode(buffer);
-                    if (text.includes('') || !text.includes('교과군')) {
+                    // 빈칸 확인 코드를 지우고, '교과군' 단어가 없는 경우에만 변환하도록 아주 심플하게 바꿉니다.
+                    if (!text.includes('교과군')) {
                         text = new TextDecoder('euc-kr').decode(buffer);
                     }
 

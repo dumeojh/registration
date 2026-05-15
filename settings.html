@@ -635,8 +635,9 @@
         }
 
 
+
         // ====================================================================
-        // ✨ 과목 대량 등록 엑셀(CSV) 업로드 기능 (쉼표 밀림 완벽 해결 버전)
+        // ✨ 과목 대량 등록 엑셀(CSV) 업로드 기능 (한글 깨짐 자동 감지 방탄 버전 🛡️)
         // ====================================================================
         async function uploadSubjectCSV() {
             const fileInput = document.getElementById('csvSubjectFileInput');
@@ -655,23 +656,30 @@
 
             reader.onload = async function (e) {
                 try {
-                    const text = e.target.result;
+                    const buffer = e.target.result;
+
+                    // 🚨 핵심 기술: 먼저 표준(UTF-8)으로 읽고, 글자가 깨졌거나 교과군이 안 보이면 한국 엑셀 방식(EUC-KR)으로 자동 변환하여 읽습니다!
+                    let text = new TextDecoder('utf-8').decode(buffer);
+                    if (text.includes('') || !text.includes('교과군')) {
+                        text = new TextDecoder('euc-kr').decode(buffer);
+                    }
+
                     const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
 
                     if (lines.length < 2) {
                         throw new Error('데이터가 없거나 파일 형식이 잘못되었습니다.');
                     }
 
-                    // 🚨 핵심 수정: 엑셀의 쌍따옴표(") 안에 있는 쉼표(,)는 자르지 않는 스마트 분리 함수
+                    // 쌍따옴표 안의 쉼표는 무시하는 스마트 분리 함수
                     function parseCSVRow(row) {
                         let result = [];
                         let curVal = '';
                         let inQuotes = false;
                         for (let i = 0; i < row.length; i++) {
                             if (row[i] === '"') {
-                                inQuotes = !inQuotes; // 따옴표 안인지 밖인지 상태 변경
+                                inQuotes = !inQuotes;
                             } else if (row[i] === ',' && !inQuotes) {
-                                result.push(curVal.trim()); // 따옴표 밖의 쉼표일 때만 칸을 나눔
+                                result.push(curVal.trim());
                                 curVal = '';
                             } else {
                                 curVal += row[i];
@@ -681,7 +689,6 @@
                         return result;
                     }
 
-                    // 스마트 분리 함수 적용
                     const headers = parseCSVRow(lines[0]);
 
                     const idxCat = headers.findIndex(h => h.includes('교과군'));
@@ -700,18 +707,17 @@
                     const idxRemark = headers.findIndex(h => h.includes('비고'));
 
                     if (idxCat === -1 || idxName === -1) {
-                        throw new Error('CSV 첫 줄에 "교과군"과 "과목명" 열이 없습니다. (엑셀에서 CSV UTF-8로 저장했는지 확인해주세요!)');
+                        // 만약 빈 줄이나 제목 줄이 1번에 들어가 있다면 원인을 바로 알려줍니다.
+                        throw new Error(`첫 줄에서 '교과군'과 '과목명'을 찾을 수 없습니다. (현재 인식된 첫 줄 내용: "${lines[0].substring(0, 20)}...")`);
                     }
 
                     const insertData = [];
                     for (let i = 1; i < lines.length; i++) {
-                        // 스마트 분리 함수 적용
                         const cols = parseCSVRow(lines[i]);
 
                         const subjectName = cols[idxName];
-                        if (!subjectName) continue; // 과목명이 없으면 빈 줄로 간주하고 패스
+                        if (!subjectName) continue;
 
-                        // 파일 1~5 합치기
                         const fileCols = [idxFile1, idxFile2, idxFile3, idxFile4, idxFile5];
                         const validFiles = fileCols
                             .map(idx => (idx !== -1 && cols[idx]) ? cols[idx] : '')
@@ -732,13 +738,12 @@
                         });
                     }
 
-                    // DB에 일괄 등록
                     const { error } = await db.from('subjects').insert(insertData);
                     if (error) throw error;
 
                     alert(`🎉 대성공! 총 ${insertData.length}개의 과목이 완벽하게 등록되었습니다.`);
-                    fileInput.value = ''; // 완료 후 파일 선택칸 초기화
-                    loadSubjects(); // 화면 새로고침
+                    fileInput.value = '';
+                    loadSubjects();
 
                 } catch (error) {
                     alert('오류 발생: ' + error.message);
@@ -749,7 +754,8 @@
                 }
             };
 
-            reader.readAsText(file, 'utf-8');
+            // 🚨 텍스트(Text)가 아닌 컴퓨터의 원본 데이터(ArrayBuffer)로 읽어들이도록 변경했습니다.
+            reader.readAsArrayBuffer(file);
         }
 
 

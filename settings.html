@@ -707,9 +707,11 @@
                         return result;
                     }
 
+
+
+
                     const headers = parseCSVRow(lines[0]);
 
-                    // 열 번호 찾기
                     const idxCat = headers.findIndex(h => h.includes('교과군'));
                     const idxName = headers.findIndex(h => h.includes('과목명'));
                     const idxFile1 = headers.findIndex(h => h.includes('파일1'));
@@ -717,43 +719,54 @@
                     const idxFile3 = headers.findIndex(h => h.includes('파일3'));
                     const idxFile4 = headers.findIndex(h => h.includes('파일4'));
                     const idxFile5 = headers.findIndex(h => h.includes('파일5'));
-                    const idxGrade = headers.findIndex(h => h.includes('학년'));
-                    const idxSem = headers.findIndex(h => h.includes('학기'));
+
+                    // 1학기, 2학기 열 찾기
+                    const idxSem1 = headers.findIndex(h => h.includes('1학기'));
+                    const idxSem2 = headers.findIndex(h => h.includes('2학기'));
+                    const idxSemOld = headers.findIndex(h => h === '학기');
+
                     const idxAdm = headers.findIndex(h => h.includes('입학생'));
                     const idxType = headers.findIndex(h => h.includes('선택유형'));
                     const idxGroup = headers.findIndex(h => h.includes('선택그룹'));
                     const idxCredit = headers.findIndex(h => h.includes('학점'));
                     const idxRemark = headers.findIndex(h => h.includes('비고'));
 
-                    if (idxCat === -1 || idxName === -1) throw new Error("'교과군' 또는 '과목명' 제목을 찾을 수 없습니다.");
-
                     const insertData = [];
                     for (let i = 1; i < lines.length; i++) {
                         const cols = parseCSVRow(lines[i]);
-                        const subjectName = cols[idxName];
-                        if (!subjectName) continue;
+                        if (!cols[idxName]) continue;
 
-                        // 학년/학점 숫자 변환
-                        let gradeVal = idxGrade !== -1 ? parseInt(cols[idxGrade]) : null;
-                        if (isNaN(gradeVal)) gradeVal = null;
-                        let creditVal = idxCredit !== -1 ? parseInt(cols[idxCredit]) : 0;
-                        if (isNaN(creditVal)) creditVal = 0;
+                        // ✨ 핵심 로직: 1학기와 2학기 칸을 비교하여 최종 학기 결정
+                        let finalSemVal = '공통';
+
+                        if (idxSem1 !== -1 || idxSem2 !== -1) {
+                            let val1 = idxSem1 !== -1 && cols[idxSem1] ? cols[idxSem1].toString().trim() : '';
+                            let val2 = idxSem2 !== -1 && cols[idxSem2] ? cols[idxSem2].toString().trim() : '';
+
+                            if (val1 === '1' && val2 === '') finalSemVal = '1';
+                            else if (val1 === '' && val2 === '2') finalSemVal = '2';
+                            else if (val1 === '1' && val2 === '2') finalSemVal = '공통';
+                        } else if (idxSemOld !== -1 && cols[idxSemOld]) {
+                            let val = cols[idxSemOld].toString().trim();
+                            if (val === '1') finalSemVal = '1';
+                            else if (val === '2') finalSemVal = '2';
+                            else if (val.includes('1') && val.includes('2')) finalSemVal = '공통';
+                        }
 
                         insertData.push({
                             category: idxCat !== -1 ? cols[idxCat] : '미분류',
-                            subject_name: subjectName,
-                            // 파일 5개 개별 저장
+                            subject_name: cols[idxName],
                             file1: idxFile1 !== -1 ? cols[idxFile1] : null,
                             file2: idxFile2 !== -1 ? cols[idxFile2] : null,
                             file3: idxFile3 !== -1 ? cols[idxFile3] : null,
                             file4: idxFile4 !== -1 ? cols[idxFile4] : null,
                             file5: idxFile5 !== -1 ? cols[idxFile5] : null,
-                            grade: gradeVal,
-                            semester: idxSem !== -1 && cols[idxSem] ? cols[idxSem].toString().trim() : '공통',
-                            admission_year: idxAdm !== -1 ? cols[idxAdm] : '',
+                            grade: 1,
+                            semester: finalSemVal, // 👈 자동 판단된 값 저장
+                            admission_year: idxAdm !== -1 ? cols[idxAdm] : '2026',
                             selection_type: idxType !== -1 ? cols[idxType] : '',
                             selection_group: idxGroup !== -1 ? cols[idxGroup] : '',
-                            credits: creditVal,
+                            credits: idxCredit !== -1 ? (parseInt(cols[idxCredit]) || 0) : 0,
                             remarks: idxRemark !== -1 ? cols[idxRemark] : ''
                         });
                     }

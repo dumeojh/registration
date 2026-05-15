@@ -63,9 +63,10 @@
         .tab-btn {
             background: none;
             border: none;
-            padding: 12px 10px;
-            /* 탭이 4개로 늘어나 패딩을 약간 줄였습니다 */
-            font-size: 1.05rem;
+            padding: 10px 5px;
+            /* 탭이 5개로 늘어나 패딩을 줄였습니다 */
+            font-size: 0.95rem;
+            /* 탭이 5개로 늘어나 폰트 크기를 약간 줄였습니다 */
             font-weight: bold;
             color: #888;
             cursor: pointer;
@@ -73,6 +74,7 @@
             border-bottom: 3px solid transparent;
             margin-bottom: -2px;
             flex: 1;
+            word-break: keep-all;
         }
 
         .tab-btn:hover {
@@ -317,10 +319,11 @@
         </div>
 
         <div class="tab-menu">
-            <button class="tab-btn active" onclick="switchTab('tab-system', this)">⚙️ 과목 및 환경설정</button>
+            <button class="tab-btn active" onclick="switchTab('tab-system', this)">⚙️ 과목/환경설정</button>
             <button class="tab-btn" onclick="switchTab('tab-student', this)">👩‍🎓 학생 관리</button>
+            <button class="tab-btn" onclick="switchTab('tab-grade1', this)">🪄 1학년 수강신청</button>
             <button class="tab-btn" onclick="switchTab('tab-booth', this)">📍 박람회 배치교실</button>
-            <button class="tab-btn" onclick="switchTab('tab-subject', this)">📚 선택교과 개별 입력</button>
+            <button class="tab-btn" onclick="switchTab('tab-subject', this)">📚 선택교과 입력</button>
         </div>
 
         <div id="tab-system" class="tab-content active">
@@ -416,6 +419,14 @@
                 <button class="btn btn-save" id="csvUploadBtn" onclick="uploadCSV()">학생 기본 명단 일괄 등록</button>
             </div>
 
+            <div class="section">
+                <span class="label">등록된 학생 목록 (조회)</span>
+                <ul id="studentList" class="subject-list"></ul>
+            </div>
+        </div>
+
+        <div id="tab-grade1" class="tab-content">
+            <h2 style="color:#6f42c1;">🪄 1학년 수강신청 관리</h2>
             <div class="section special-csv-section">
                 <span class="label">🪄 1학년 수강신청 결과 자동 매칭</span>
                 <details class="csv-guide">
@@ -441,11 +452,6 @@
                 <input type="file" id="csvGrade1SubjectInput" accept=".csv" style="background: white;">
                 <button class="btn btn-special" id="csvGrade1SubjectBtn" onclick="uploadGrade1SubjectsCSV()">1학년 수강과목 추출
                     & 업데이트</button>
-            </div>
-
-            <div class="section">
-                <span class="label">등록된 학생 목록 (조회)</span>
-                <ul id="studentList" class="subject-list"></ul>
             </div>
         </div>
 

@@ -576,29 +576,29 @@
 
 
 
+        // ✨ 학생 목록 조회 (정상 복구 완료!)
         async function loadStudents() {
             const { data } = await db.from('students').select('*').order('name', { ascending: true });
             const listEl = document.getElementById('studentList');
             listEl.innerHTML = '';
-            data.forEach(sub => {
-                // 💡 DB의 숫자(1, 2)를 화면에 보일 때만 '1학기', '2학기'로 변환하는 부분
-                let semesterDisplay = sub.semester;
-                if (sub.semester === '1') semesterDisplay = '1학기';
-                else if (sub.semester === '2') semesterDisplay = '2학기';
 
-                const div = document.createElement('div');
-                div.className = 'subject-item';
-                div.innerHTML = `
-                    <span>
-                        <strong style="color: #0056b3;">[${semesterDisplay}]</strong> 
-                        ${sub.category} - <strong>${sub.subject_name}</strong>
-                        <small style="color: #666; margin-left: 5px;">(${sub.grade}학년 / ${sub.credits}학점)</small>
-                    </span>
-                    <button class="btn btn-danger" onclick="deleteSubject('${sub.id}')">삭제</button>
-                `;
-                listArea.appendChild(div);
-            });
+            if (data) {
+                data.forEach(student => {
+                    const li = document.createElement('li');
+                    li.className = 'subject-item';
+                    li.innerHTML = `
+                        <span><b>${student.unique_id}</b> ${student.name}</span> 
+                        <span class="delete-btn" onclick="deleteStudent('${student.unique_id}')">삭제</span>
+                    `;
+                    listEl.appendChild(li); // 🚨 listArea가 아니라 listEl 공간에 학생을 추가합니다.
+                });
+            }
         }
+
+
+
+
+
         async function deleteSubject(id) { if (confirm('과목을 삭제하시겠습니까?')) { await db.from('subjects').delete().eq('id', id); loadSubjects(); } }
         async function deleteStudent(unique_id) { if (confirm('학생을 삭제하시겠습니까?')) { await db.from('students').delete().eq('unique_id', unique_id); loadStudents(); } }
         async function addStudent() {

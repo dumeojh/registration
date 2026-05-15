@@ -635,7 +635,7 @@
         }
 
         // ====================================================================
-        // ✨ 과목 대량 등록 엑셀(CSV) 업로드 기능 (새로운 상세 양식 적용 완벽 복구)
+        // ✨ 과목 대량 등록 엑셀(CSV) 업로드 기능 (무한 로딩/멈춤 버그 완벽 해결 버전)
         // ====================================================================
         async function uploadSubjectCSV() {
             const fileInput = document.getElementById('csvSubjectFileInput');
@@ -661,10 +661,11 @@
                         throw new Error('데이터가 없거나 파일 형식이 잘못되었습니다.');
                     }
 
-                    // 따옴표를 무시하고 쉼표 기준으로 열 분리
-                    const headers = lines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(h => h.trim().replace(/^"|"$/g, ''));
+                    // 🚨 수정된 부분: 무한 로딩을 유발하던 복잡한 식을 제거하고, 
+                    // 단순하고 안전하게 쉼표(,) 기준으로만 나누도록 변경했습니다.
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
 
-                    // 이미지 양식에 맞춘 인덱스 찾기
+                    // 열 이름 찾기 (띄어쓰기가 조금 달라도 인식하도록 유연하게 수정)
                     const idxCat = headers.findIndex(h => h.includes('교과군'));
                     const idxName = headers.findIndex(h => h.includes('과목명'));
                     const idxFile1 = headers.findIndex(h => h.includes('파일1'));
@@ -674,24 +675,25 @@
                     const idxFile5 = headers.findIndex(h => h.includes('파일5'));
                     const idxGrade = headers.findIndex(h => h.includes('학년'));
                     const idxSem = headers.findIndex(h => h.includes('학기'));
-                    const idxAdm = headers.findIndex(h => h.includes('입학생 기준') || h.includes('입학생기준'));
+                    const idxAdm = headers.findIndex(h => h.includes('입학생')); // '입학생 기준' 띄어쓰기 무시
                     const idxType = headers.findIndex(h => h.includes('선택유형'));
                     const idxGroup = headers.findIndex(h => h.includes('선택그룹'));
                     const idxCredit = headers.findIndex(h => h.includes('학점'));
                     const idxRemark = headers.findIndex(h => h.includes('비고'));
 
                     if (idxCat === -1 || idxName === -1) {
-                        throw new Error('CSV 첫 줄에 반드시 "교과군"과 "과목명" 열이 있어야 합니다.');
+                        throw new Error('CSV 첫 줄에 "교과군"과 "과목명" 열이 없습니다. (엑셀에서 CSV UTF-8로 저장했는지 확인해주세요!)');
                     }
 
                     const insertData = [];
                     for (let i = 1; i < lines.length; i++) {
-                        const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.trim().replace(/^"|"$/g, ''));
+                        // 🚨 수정된 부분: 데이터 줄도 단순 쉼표 분리 적용
+                        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
 
                         const subjectName = cols[idxName];
-                        if (!subjectName) continue; // 과목명이 비어있으면 건너뜀
+                        if (!subjectName) continue; // 과목명이 없으면 빈 줄로 간주하고 패스
 
-                        // 파일 1~5 합치기 (빈 칸은 무시)
+                        // 파일 1~5 쉼표로 예쁘게 합치기
                         const fileCols = [idxFile1, idxFile2, idxFile3, idxFile4, idxFile5];
                         const validFiles = fileCols
                             .map(idx => (idx !== -1 && cols[idx]) ? cols[idx] : '')
@@ -702,7 +704,7 @@
                             category: idxCat !== -1 && cols[idxCat] ? cols[idxCat] : '미분류',
                             subject_name: subjectName,
                             files: filesString,
-                            grade: idxGrade !== -1 && cols[idxGrade] ? cols[idxGrade] : null,
+                            grade: idxGrade !== -1 && cols[idxGrade] ? parseInt(cols[idxGrade]) || null : null,
                             semester: idxSem !== -1 && cols[idxSem] ? cols[idxSem] : '1/2학기 공통',
                             admission_year: idxAdm !== -1 && cols[idxAdm] ? cols[idxAdm] : '',
                             selection_type: idxType !== -1 && cols[idxType] ? cols[idxType] : '선택교과',
@@ -712,23 +714,24 @@
                         });
                     }
 
-                    // DB에 일괄 삽입
+                    // Supabase DB에 일괄 등록
                     const { error } = await db.from('subjects').insert(insertData);
                     if (error) throw error;
 
                     alert(`🎉 대성공! 총 ${insertData.length}개의 과목이 완벽하게 등록되었습니다.`);
-                    fileInput.value = ''; // 파일 선택 초기화
-                    loadSubjects(); // 화면에 즉시 반영
+                    fileInput.value = ''; // 완료 후 파일 선택칸 초기화
+                    loadSubjects(); // 화면 새로고침
 
                 } catch (error) {
                     alert('오류 발생: ' + error.message);
+                    console.error('업로드 에러 상세:', error);
                 } finally {
                     btn.innerText = originalText;
                     btn.disabled = false;
                 }
             };
 
-            reader.readAsText(file, 'utf-8'); // 엑셀에서 'CSV UTF-8 (쉼표로 분리)'로 저장해야 글자가 깨지지 않습니다.
+            reader.readAsText(file, 'utf-8');
         }
 
         async function uploadCSV() { alert('학생 명단 등록 기능은 아직 준비 중입니다.'); }

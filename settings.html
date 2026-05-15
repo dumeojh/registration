@@ -263,6 +263,49 @@
             padding: 6px;
             color: #666;
         }
+
+        /* --- 개별 입력 폼 아코디언 스타일 --- */
+        .subject-accordion {
+            margin-bottom: 30px;
+            background-color: #eef2f5;
+            border: 1px solid #d1d9e0;
+            border-radius: 10px;
+        }
+
+        .subject-accordion summary {
+            padding: 15px;
+            font-weight: bold;
+            font-size: 1.05rem;
+            color: #2c3e50;
+            cursor: pointer;
+            outline: none;
+            list-style: none;
+            /* 브라우저 기본 화살표 숨김 */
+        }
+
+        .subject-accordion summary::-webkit-details-marker {
+            display: none;
+            /* 사파리용 화살표 숨김 */
+        }
+
+        .subject-accordion summary::after {
+            content: '▼';
+            float: right;
+            font-size: 0.9rem;
+            color: #666;
+            transition: transform 0.3s ease;
+        }
+
+        .subject-accordion[open] summary::after {
+            transform: rotate(180deg);
+        }
+
+        .subject-accordion-content {
+            padding: 0 15px 15px 15px;
+            border-top: 1px dashed #ccc;
+            padding-top: 15px;
+            animation: fadeIn 0.4s;
+        }
     </style>
 </head>
 
@@ -438,51 +481,55 @@
 
         <div id="tab-subject" class="tab-content">
             <h2>📚 선택교과 개별 입력</h2>
-            <div class="section csv-section">
-                <span class="label">교과군</span>
-                <select id="newSubCategory">
-                    <option value="국어">국어</option>
-                    <option value="수학">수학</option>
-                    <option value="영어">영어</option>
-                    <option value="사회">사회</option>
-                    <option value="과학">과학</option>
-                    <option value="체육/예술">체육/예술</option>
-                    <option value="생활/교양">생활/교양</option>
-                </select>
 
-                <span class="label">과목명</span>
-                <input type="text" id="newSubName" placeholder="예: 언어생활 탐구">
+            <details class="subject-accordion">
+                <summary>➕ 새로운 선택교과 개별 등록 폼 열기</summary>
+                <div class="subject-accordion-content">
+                    <span class="label">교과군</span>
+                    <select id="newSubCategory">
+                        <option value="국어">국어</option>
+                        <option value="수학">수학</option>
+                        <option value="영어">영어</option>
+                        <option value="사회">사회</option>
+                        <option value="과학">과학</option>
+                        <option value="체육/예술">체육/예술</option>
+                        <option value="생활/교양">생활/교양</option>
+                    </select>
 
-                <span class="label">학년</span>
-                <input type="number" id="newSubGrade" placeholder="예: 2" min="1" max="3">
+                    <span class="label">과목명</span>
+                    <input type="text" id="newSubName" placeholder="예: 언어생활 탐구">
 
-                <span class="label">학기</span>
-                <select id="newSubSemester">
-                    <option value="1">1학기</option>
-                    <option value="2">2학기</option>
-                    <option value="1/2학기 공통">1/2학기 공통</option>
-                </select>
+                    <span class="label">학년</span>
+                    <input type="number" id="newSubGrade" placeholder="예: 2" min="1" max="3">
 
-                <span class="label">입학생 기준</span>
-                <input type="text" id="newSubAdmission" placeholder="예: 2025·2026">
+                    <span class="label">학기</span>
+                    <select id="newSubSemester">
+                        <option value="1">1학기</option>
+                        <option value="2">2학기</option>
+                        <option value="1/2학기 공통">1/2학기 공통</option>
+                    </select>
 
-                <span class="label">선택유형</span>
-                <input type="text" id="newSubType" placeholder="예: 진로선택">
+                    <span class="label">입학생 기준</span>
+                    <input type="text" id="newSubAdmission" placeholder="예: 2025·2026">
 
-                <span class="label">선택그룹</span>
-                <input type="text" id="newSubGroup" placeholder="예: [택5]">
+                    <span class="label">선택유형</span>
+                    <input type="text" id="newSubType" placeholder="예: 진로선택">
 
-                <span class="label">운영 학점(단위)</span>
-                <input type="number" id="newSubCredits" value="3" placeholder="예: 3">
+                    <span class="label">선택그룹</span>
+                    <input type="text" id="newSubGroup" placeholder="예: [택5]">
 
-                <span class="label">관련 파일 (파일1~5, 쉼표로 구분)</span>
-                <input type="text" id="newSubFiles" placeholder="예: 46.jpg, T046_page_1.jpg">
+                    <span class="label">운영 학점(단위)</span>
+                    <input type="number" id="newSubCredits" value="3" placeholder="예: 3">
 
-                <span class="label">비고</span>
-                <input type="text" id="newSubRemarks" placeholder="예: 확인용">
+                    <span class="label">관련 파일 (파일1~5, 쉼표로 구분)</span>
+                    <input type="text" id="newSubFiles" placeholder="예: 46.jpg, T046_page_1.jpg">
 
-                <button class="btn btn-save" onclick="addNewSubjectDetailed()">과목 상세 등록하기</button>
-            </div>
+                    <span class="label">비고</span>
+                    <input type="text" id="newSubRemarks" placeholder="예: 확인용">
+
+                    <button class="btn btn-save" onclick="addNewSubjectDetailed()">과목 상세 등록하기</button>
+                </div>
+            </details>
 
             <div class="section">
                 <span class="label">현재 등록된 교과 목록</span>
@@ -601,6 +648,9 @@
                 document.getElementById('newSubFiles').value = '';
                 document.getElementById('newSubRemarks').value = '';
                 loadSubjects();
+
+                // 등록 후 아코디언 자동으로 닫기 (원치 않으시면 아래 한 줄 삭제)
+                document.querySelector('.subject-accordion').removeAttribute('open');
             } else {
                 alert('DB 저장 오류: ' + error.message);
                 console.error(error);

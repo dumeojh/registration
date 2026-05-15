@@ -634,8 +634,9 @@
             }
         }
 
+
         // ====================================================================
-        // ✨ 과목 대량 등록 엑셀(CSV) 업로드 기능 (무한 로딩/멈춤 버그 완벽 해결 버전)
+        // ✨ 과목 대량 등록 엑셀(CSV) 업로드 기능 (쉼표 밀림 완벽 해결 버전)
         // ====================================================================
         async function uploadSubjectCSV() {
             const fileInput = document.getElementById('csvSubjectFileInput');
@@ -661,11 +662,28 @@
                         throw new Error('데이터가 없거나 파일 형식이 잘못되었습니다.');
                     }
 
-                    // 🚨 수정된 부분: 무한 로딩을 유발하던 복잡한 식을 제거하고, 
-                    // 단순하고 안전하게 쉼표(,) 기준으로만 나누도록 변경했습니다.
-                    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                    // 🚨 핵심 수정: 엑셀의 쌍따옴표(") 안에 있는 쉼표(,)는 자르지 않는 스마트 분리 함수
+                    function parseCSVRow(row) {
+                        let result = [];
+                        let curVal = '';
+                        let inQuotes = false;
+                        for (let i = 0; i < row.length; i++) {
+                            if (row[i] === '"') {
+                                inQuotes = !inQuotes; // 따옴표 안인지 밖인지 상태 변경
+                            } else if (row[i] === ',' && !inQuotes) {
+                                result.push(curVal.trim()); // 따옴표 밖의 쉼표일 때만 칸을 나눔
+                                curVal = '';
+                            } else {
+                                curVal += row[i];
+                            }
+                        }
+                        result.push(curVal.trim());
+                        return result;
+                    }
 
-                    // 열 이름 찾기 (띄어쓰기가 조금 달라도 인식하도록 유연하게 수정)
+                    // 스마트 분리 함수 적용
+                    const headers = parseCSVRow(lines[0]);
+
                     const idxCat = headers.findIndex(h => h.includes('교과군'));
                     const idxName = headers.findIndex(h => h.includes('과목명'));
                     const idxFile1 = headers.findIndex(h => h.includes('파일1'));
@@ -675,7 +693,7 @@
                     const idxFile5 = headers.findIndex(h => h.includes('파일5'));
                     const idxGrade = headers.findIndex(h => h.includes('학년'));
                     const idxSem = headers.findIndex(h => h.includes('학기'));
-                    const idxAdm = headers.findIndex(h => h.includes('입학생')); // '입학생 기준' 띄어쓰기 무시
+                    const idxAdm = headers.findIndex(h => h.includes('입학생'));
                     const idxType = headers.findIndex(h => h.includes('선택유형'));
                     const idxGroup = headers.findIndex(h => h.includes('선택그룹'));
                     const idxCredit = headers.findIndex(h => h.includes('학점'));
@@ -687,13 +705,13 @@
 
                     const insertData = [];
                     for (let i = 1; i < lines.length; i++) {
-                        // 🚨 수정된 부분: 데이터 줄도 단순 쉼표 분리 적용
-                        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+                        // 스마트 분리 함수 적용
+                        const cols = parseCSVRow(lines[i]);
 
                         const subjectName = cols[idxName];
                         if (!subjectName) continue; // 과목명이 없으면 빈 줄로 간주하고 패스
 
-                        // 파일 1~5 쉼표로 예쁘게 합치기
+                        // 파일 1~5 합치기
                         const fileCols = [idxFile1, idxFile2, idxFile3, idxFile4, idxFile5];
                         const validFiles = fileCols
                             .map(idx => (idx !== -1 && cols[idx]) ? cols[idx] : '')
@@ -714,7 +732,7 @@
                         });
                     }
 
-                    // Supabase DB에 일괄 등록
+                    // DB에 일괄 등록
                     const { error } = await db.from('subjects').insert(insertData);
                     if (error) throw error;
 
@@ -733,6 +751,8 @@
 
             reader.readAsText(file, 'utf-8');
         }
+
+
 
         // ====================================================================
         // ✨ 학생 기본 명단 엑셀(CSV) 일괄 등록 기능

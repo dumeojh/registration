@@ -171,8 +171,6 @@
             margin-top: 5px;
         }
 
-        /* 박람회 배치용 오렌지색 버튼 */
-
         .btn-save:hover,
         .btn-add:hover,
         .btn-special:hover,
@@ -222,8 +220,6 @@
             background-color: #fff6e5;
             border-color: #ffe0b2;
         }
-
-        /* 박람회 배치용 섹션 */
 
         .two-column-layout {
             display: flex;
@@ -451,8 +447,8 @@
                 </div>
 
                 <div class="col">
-                    <h2 style="color:#6f42c1; border-left-color: #6f42c1;">📚 선택교과 입력</h2>
-                    <div class="section" style="border: 2px solid #e0d4eb; background-color: #faf7fc;">
+                    <h2>📚 선택교과 개별 입력</h2>
+                    <div class="section csv-section">
                         <span class="label">교과군</span>
                         <select id="newSubCategory">
                             <option value="국어">국어</option>
@@ -464,27 +460,38 @@
                             <option value="생활/교양">생활/교양</option>
                         </select>
 
-                        <span class="label">이수 구분 (학교지정/선택교과)</span>
-                        <select id="newSubType">
-                            <option value="선택교과">선택교과</option>
-                            <option value="학교지정">학교지정</option>
-                        </select>
+                        <span class="label">과목명</span>
+                        <input type="text" id="newSubName" placeholder="예: 언어생활 탐구">
+
+                        <span class="label">학년</span>
+                        <input type="number" id="newSubGrade" placeholder="예: 2" min="1" max="3">
 
                         <span class="label">학기</span>
                         <select id="newSubSemester">
-                            <option value="1학기">1학기</option>
-                            <option value="2학기">2학기</option>
+                            <option value="1">1학기</option>
+                            <option value="2">2학기</option>
                             <option value="1/2학기 공통">1/2학기 공통</option>
                         </select>
 
-                        <span class="label">과목명</span>
-                        <input type="text" id="newSubName" placeholder="예: 심화 국어">
+                        <span class="label">입학생 기준</span>
+                        <input type="text" id="newSubAdmission" placeholder="예: 2025·2026">
+
+                        <span class="label">선택유형</span>
+                        <input type="text" id="newSubType" placeholder="예: 진로선택">
+
+                        <span class="label">선택그룹</span>
+                        <input type="text" id="newSubGroup" placeholder="예: [택5]">
 
                         <span class="label">운영 학점(단위)</span>
                         <input type="number" id="newSubCredits" value="3" placeholder="예: 3">
 
-                        <button class="btn btn-special" style="background-color: #6f42c1;"
-                            onclick="addNewSubjectDetailed()">과목 상세 등록하기</button>
+                        <span class="label">관련 파일 (파일1~5, 쉼표로 구분)</span>
+                        <input type="text" id="newSubFiles" placeholder="예: 46.jpg, T046_page_1.jpg">
+
+                        <span class="label">비고</span>
+                        <input type="text" id="newSubRemarks" placeholder="예: 확인용">
+
+                        <button class="btn btn-save" onclick="addNewSubjectDetailed()">과목 상세 등록하기</button>
                     </div>
 
                     <div class="section">
@@ -519,7 +526,6 @@
             loadStudents();
         };
 
-        // ... 기존 함수들 생략 (완전 동일) ...
         async function loadTitle() {
             const { data } = await db.from('system_config').select('value').eq('key', 'event_title').maybeSingle();
             if (data) document.getElementById('eventTitle').value = data.value;
@@ -564,15 +570,48 @@
             const { error } = await db.from('students').upsert([{ unique_id, name, grade1_id, grade2_id, grade3_id, grade1_subjects }], { onConflict: 'unique_id' });
             if (!error) { alert('학생이 등록(수정)되었습니다.');['uniqueId', 'studentName', 'grade1', 'grade2', 'grade3', 'grade1Subjects'].forEach(id => document.getElementById(id).value = ''); loadStudents(); }
         }
+
+        // ✨ 새로 추가된 완벽한 상세 등록 함수
         async function addNewSubjectDetailed() {
+            // 새로 추가된 모든 입력칸의 값을 가져옵니다.
             const category = document.getElementById('newSubCategory').value;
-            const selection_type = document.getElementById('newSubType').value;
-            const semester = document.getElementById('newSubSemester').value;
             const subject_name = document.getElementById('newSubName').value.trim();
+            const grade = document.getElementById('newSubGrade').value;
+            const semester = document.getElementById('newSubSemester').value;
+            const admission_year = document.getElementById('newSubAdmission').value.trim();
+            const selection_type = document.getElementById('newSubType').value.trim();
+            const selection_group = document.getElementById('newSubGroup').value.trim();
             const credits = document.getElementById('newSubCredits').value;
+            const files = document.getElementById('newSubFiles').value.trim();
+            const remarks = document.getElementById('newSubRemarks').value.trim();
+
             if (!subject_name) return alert('과목명을 입력해주세요.');
-            const { error } = await db.from('subjects').insert([{ category, selection_type, semester, subject_name, credits }]);
-            if (!error) { alert('선택교과가 완벽하게 등록되었습니다.'); document.getElementById('newSubName').value = ''; loadSubjects(); }
+
+            // DB(subjects 테이블)로 전송
+            const { error } = await db.from('subjects').insert([{
+                category: category,
+                subject_name: subject_name,
+                grade: grade,
+                semester: semester,
+                admission_year: admission_year,
+                selection_type: selection_type,
+                selection_group: selection_group,
+                credits: credits || 0,
+                files: files,
+                remarks: remarks
+            }]);
+
+            if (!error) {
+                alert('선택교과가 상세 정보와 함께 완벽하게 등록되었습니다.');
+                // 입력칸 초기화
+                document.getElementById('newSubName').value = '';
+                document.getElementById('newSubFiles').value = '';
+                document.getElementById('newSubRemarks').value = '';
+                loadSubjects();
+            } else {
+                alert('DB 저장 오류: ' + error.message);
+                console.error(error);
+            }
         }
 
         // ====================================================================
@@ -603,7 +642,6 @@
                     }
 
                     // 1. 헤더 분석 (선생님의 복잡한 엑셀에서 필요한 열이 몇 번째인지 찾습니다)
-                    // CSV 특성상 따옴표가 묶여있을 수 있어 안전하게 분리
                     const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
 
                     const idxCat = headers.findIndex(h => h.includes('교과군'));
@@ -619,7 +657,6 @@
                     // 2. 데이터 정리 (파일1, 비고 같은 불필요한 열은 무시합니다)
                     const insertData = [];
                     for (let i = 1; i < lines.length; i++) {
-                        // 쉼표로 분리 (과목명 등에 쉼표가 있을 경우를 대비한 간단한 처리)
                         const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
 
                         const subjectName = cols[idxName];
@@ -650,11 +687,9 @@
                 }
             };
 
-            // 한글 깨짐 방지를 위해 euc-kr이 아닌 utf-8로 읽기 (엑셀 저장 시 UTF-8 CSV 권장)
             reader.readAsText(file, 'utf-8');
         }
 
-        // 나머지 학생 명단, 1학년 수강과목 업로드 등은 추후 필요하실 때 채워넣을 수 있도록 껍데기만 둡니다.
         async function uploadCSV() { alert('학생 명단 등록 기능은 아직 준비 중입니다.'); }
         async function uploadGrade1SubjectsCSV() { alert('1학년 수강과목 매칭 기능은 아직 준비 중입니다.'); }
     </script>

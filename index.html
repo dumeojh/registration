@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>안성여고 2026 교육과정 박람회</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* 기본 배경 및 폰트 설정 */
         body {
@@ -16,6 +17,8 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
+            position: relative;
+            /* 모달창 배치를 위한 기준점 */
         }
 
         .container {
@@ -24,10 +27,35 @@
             width: 100%;
             max-width: 900px;
             box-sizing: border-box;
+            position: relative;
+        }
+
+        /* ✨ 오른쪽 상단 '배치 장소 조회' 작은 박스 (버튼) */
+        .lookup-btn {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background-color: #6f42c1;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+
+        .lookup-btn:hover {
+            background-color: #59339d;
+            transform: translateY(-2px);
         }
 
         h1 {
             color: #0056b3;
+            margin-top: 40px;
+            /* 버튼 공간 확보 */
             margin-bottom: 10px;
             font-size: 1.8em;
             word-break: keep-all;
@@ -43,27 +71,22 @@
         .card-container {
             display: flex;
             flex-direction: column;
-            /* 모바일에서는 세로 배치 */
             gap: 20px;
         }
 
-        /* 화면이 넓어지면(태블릿/PC) 가로 2개씩 배치되도록 변경 */
         @media (min-width: 600px) {
             .card-container {
                 flex-direction: row;
                 flex-wrap: wrap;
-                /* 공간이 부족하면 다음 줄로 넘어감 */
                 justify-content: center;
             }
 
             .card {
-                /* 한 줄에 2개씩 들어가도록 너비 조정 */
                 flex: 1 1 calc(50% - 20px);
                 max-width: 400px;
             }
         }
 
-        /* 개별 카드 디자인 */
         .card {
             background: #ffffff;
             border-radius: 15px;
@@ -79,7 +102,6 @@
             justify-content: center;
             border: 2px solid transparent;
             box-sizing: border-box;
-            /* 패딩이 너비에 포함되도록 설정 */
         }
 
         .card:hover {
@@ -106,12 +128,127 @@
             word-break: keep-all;
             line-height: 1.4;
         }
+
+        /* =========================================
+           ✨ 모달창 (팝업) 스타일 설정
+           ========================================= */
+        .modal-overlay {
+            display: none;
+            /* 평소에는 숨겨둠 */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: popIn 0.3s ease-out;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .modal-title {
+            margin-top: 0;
+            color: #6f42c1;
+            font-size: 1.3em;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.1em;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .modal-search-btn {
+            background-color: #6f42c1;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .modal-search-btn:hover {
+            background-color: #59339d;
+        }
+
+        #modalResult {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f3eef5;
+            border-radius: 8px;
+            border: 1px solid #d8cce2;
+            display: none;
+            text-align: left;
+        }
+
+        .result-row {
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .result-row strong {
+            color: #59339d;
+            display: inline-block;
+            width: 65px;
+        }
+
+        .result-val {
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 </head>
 
 <body>
 
     <div class="container">
+        <button class="lookup-btn" onclick="openModal()">🔍 내 부스 조회</button>
+
         <h1>안성여고 2026 교육과정 박람회</h1>
         <p class="subtitle">원하시는 접속 메뉴를 선택해 주세요.</p>
 
@@ -148,6 +285,91 @@
         </div>
     </div>
 
+    <div id="boothModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">×</span>
+            <h2 class="modal-title">📍 박람회 교실 찾기</h2>
+            <p style="font-size: 0.9em; color: #666;">본인의 학번을 입력해 주세요.</p>
+
+            <input type="text" id="boothStudentId" class="modal-input" placeholder="예: 20315" maxlength="5"
+                onkeypress="if(event.key === 'Enter') searchBooth()">
+            <button class="modal-search-btn" onclick="searchBooth()">교실 조회하기</button>
+
+            <div id="modalResult">
+                <div class="result-row"><strong>학번</strong> <span id="resBoothId" class="result-val"></span></div>
+                <div class="result-row"><strong>이름</strong> <span id="resBoothName" class="result-val"></span></div>
+                <div class="result-row"><strong>상담과목</strong> <span id="resBoothSubject" class="result-val"></span>
+                </div>
+                <div class="result-row" style="margin-bottom:0;"><strong>배치교실</strong> <span id="resBoothRoom"
+                        class="result-val" style="color: #d9534f; font-size:1.1em;"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase 연결 설정
+        const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // 모달창 열고 닫는 함수
+        function openModal() {
+            document.getElementById('boothModal').style.display = 'flex';
+            document.getElementById('boothStudentId').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('boothModal').style.display = 'none';
+            document.getElementById('modalResult').style.display = 'none';
+            document.getElementById('boothStudentId').value = '';
+        }
+
+        // 팝업창 바깥 영역을 클릭하면 모달 닫히기
+        window.onclick = function (event) {
+            const modal = document.getElementById('boothModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // DB에서 학번으로 배치 교실 검색하는 함수
+        async function searchBooth() {
+            const studentId = document.getElementById('boothStudentId').value.trim();
+            const resultBox = document.getElementById('modalResult');
+
+            if (!studentId) {
+                alert("학번을 입력해 주세요.");
+                return;
+            }
+
+            try {
+                // booth_assignments 테이블에서 학번(student_id) 검색
+                const { data, error } = await db
+                    .from('booth_assignments')
+                    .select('*')
+                    .eq('student_id', studentId)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (data) {
+                    // 데이터가 있으면 화면에 결과 표시
+                    document.getElementById('resBoothId').innerText = data.student_id;
+                    document.getElementById('resBoothName').innerText = data.name;
+                    document.getElementById('resBoothSubject').innerText = data.subject;
+                    document.getElementById('resBoothRoom').innerText = data.classroom;
+
+                    resultBox.style.display = 'block';
+                } else {
+                    alert("해당 학번의 배치 정보가 없습니다. 진행 요원에게 문의해 주세요.");
+                    resultBox.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("조회 오류:", err);
+                alert("데이터를 조회하는 중 오류가 발생했습니다.");
+            }
+        }
+    </script>
 </body>
 
 </html>

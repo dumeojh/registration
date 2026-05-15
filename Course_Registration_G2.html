@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2학년 수강신청 정보 조회</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 기존 페이지들과 통일된 스타일 */
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 상단 네비게이션 버튼 */
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .nav-btn {
+            padding: 8px 15px;
+            background-color: #f8f9fa;
+            color: #495057;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        .print-btn {
+            margin-left: auto;
+            background-color: #e2ece9;
+            font-weight: bold;
+        }
+
+        h1 {
+            color: #0056b3;
+            text-align: center;
+            font-size: 1.6em;
+            margin-bottom: 30px;
+        }
+
+        /* 입력 및 결과 영역 */
+        .search-box {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        input[type="text"]:focus {
+            border-color: #4a90e2;
+            outline: none;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .action-btn:hover {
+            background-color: #004494;
+        }
+
+        /* 결과 창 디자인 */
+        #resultArea {
+            display: none;
+            /* 초기에는 숨김 */
+            margin-top: 20px;
+            padding: 20px;
+            border: 2px solid #c3e6cb;
+            background-color: #f0fdf4;
+            border-radius: 10px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .result-item {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #c3e6cb;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .result-label {
+            font-size: 0.9em;
+            color: #155724;
+            margin-bottom: 5px;
+        }
+
+        .result-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #000;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 인쇄 시 스타일 */
+        @media print {
+
+            .nav-buttons,
+            .search-box,
+            .action-btn {
+                display: none !important;
+            }
+
+            body {
+                padding: 0;
+                background-color: white;
+            }
+
+            .container {
+                box-shadow: none;
+                border: none;
+                max-width: 100%;
+            }
+
+            #resultArea {
+                display: block !important;
+                border: 1px solid #000;
+                background: white;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="nav-buttons">
+            <button type="button" class="nav-btn" onclick="history.back()">⬅ 이전 단계로</button>
+            <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
+            <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 정보 인쇄</button>
+        </div>
+
+        <h1>2학년 수강신청 정보 조회</h1>
+
+        <div class="search-box">
+            <label for="grade2Input">2학년 학번을 입력하세요</label>
+            <input type="text" id="grade2Input" placeholder="예: 20315" maxlength="5">
+            <button class="action-btn" onclick="searchStudent()">학생 정보 조회하기</button>
+        </div>
+
+        <div id="resultArea">
+            <div class="result-item">
+                <div class="result-label">이름</div>
+                <div id="resName" class="result-value">-</div>
+            </div>
+            <div class="result-item">
+                <div class="result-label">1학년 학번</div>
+                <div id="resGrade1" class="result-value">-</div>
+            </div>
+            <div class="result-item">
+                <div class="result-label">학생 고유번호</div>
+                <div id="resUniqueId" class="result-value">-</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase 설정 유지
+        const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function searchStudent() {
+            const inputVal = document.getElementById('grade2Input').value.trim();
+            const resultArea = document.getElementById('resultArea');
+
+            if (!inputVal) {
+                alert("조회할 학번을 입력해 주세요.");
+                return;
+            }
+
+            try {
+                // students 테이블에서 grade2_id가 입력값과 일치하는 데이터 조회
+                const { data, error } = await db
+                    .from('students')
+                    .select('name, grade1_id, unique_id')
+                    .eq('grade2_id', inputVal)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (data) {
+                    // 데이터가 있는 경우 화면에 표시
+                    document.getElementById('resName').innerText = data.name;
+                    document.getElementById('resGrade1').innerText = data.grade1_id || "기록 없음";
+                    document.getElementById('resUniqueId').innerText = data.unique_id;
+                    resultArea.style.display = 'block';
+                } else {
+                    // 데이터가 없는 경우
+                    alert("해당 학번으로 등록된 학생 정보를 찾을 수 없습니다.");
+                    resultArea.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("조회 중 오류:", err);
+                alert("데이터 조회 중 오류가 발생했습니다.");
+            }
+        }
+
+        // 엔터키 입력 시 조회 버튼 클릭과 동일하게 작동
+        document.getElementById('grade2Input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                searchStudent();
+            }
+        });
+    </script>
+
+</body>
+
+</html>

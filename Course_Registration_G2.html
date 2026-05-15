@@ -21,7 +21,6 @@
 
         .container {
             max-width: 650px;
-            /* 가로 배치를 위해 창 너비를 살짝 넓혔습니다 */
             width: 100%;
             background: #ffffff;
             padding: 30px;
@@ -85,7 +84,6 @@
             color: #333;
         }
 
-        /* 입력칸 가로 배치용 */
         .input-group {
             display: flex;
             gap: 10px;
@@ -124,7 +122,6 @@
             background-color: #004494;
         }
 
-        /* 결과 창 기본 설정 */
         #resultArea {
             display: none;
             margin-top: 20px;
@@ -135,11 +132,9 @@
             animation: fadeIn 0.3s ease-in;
         }
 
-        /* ✨ 정보 가로 배치 (그리드) 설정 */
         .info-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            /* 4칸으로 일정하게 나눔 */
             gap: 10px;
             margin-bottom: 20px;
             text-align: center;
@@ -167,19 +162,20 @@
             word-break: break-all;
         }
 
-        /* 수강과목 영역 설정 */
         .subject-area {
             border-top: 1px dashed #c3e6cb;
             padding-top: 20px;
+            margin-top: 15px;
         }
 
         .subject-tags {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin-top: 5px;
+            margin-top: 10px;
         }
 
+        /* 1학년 수강과목 태그 (파란색) */
         .subject-tag {
             background-color: #e2ece9;
             color: #0056b3;
@@ -188,6 +184,17 @@
             font-size: 0.85em;
             font-weight: normal;
             border: 1px solid #c8d8d3;
+        }
+
+        /* ✨ 3학년 선택교과 태그 (보라색) */
+        .subject-tag-future {
+            background-color: #f3eef5;
+            color: #6f42c1;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: normal;
+            border: 1px solid #d8cce2;
         }
 
         @keyframes fadeIn {
@@ -202,7 +209,6 @@
             }
         }
 
-        /* 모바일에서는 2줄(2x2)로 자동 변환 */
         @media (max-width: 500px) {
             .info-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -211,8 +217,6 @@
             .input-group {
                 flex-direction: column;
             }
-
-            /* 모바일은 입력칸 세로로 */
         }
 
         @media print {
@@ -284,8 +288,17 @@
             </div>
 
             <div class="subject-area">
-                <div class="result-label" style="font-size: 1em;">📚 1학년 수강 신청 과목</div>
+                <div class="result-label" style="font-size: 1.05em; color:#0056b3;">📘 1학년 수강 신청 과목</div>
                 <div id="resSubjects" class="result-value subject-tags"></div>
+            </div>
+
+            <div class="subject-area" id="grade3Area" style="display: none; border-top-color: #d8cce2;">
+                <div class="result-label" style="font-size: 1.05em; color:#6f42c1;">🔮 3학년 1학기 선택교과 (선택 가능 목록)</div>
+                <p style="font-size: 0.85em; color: #666; margin-top: -3px; margin-bottom: 0;">※ 아래 과목들 중에서 3학년 수강과목을
+                    설계할 수 있습니다.</p>
+                <div id="resGrade3Subjects" class="result-value subject-tags">
+                    <span style="font-size:0.9em; color:#888; font-weight:normal;">과목을 불러오는 중입니다... ⏳</span>
+                </div>
             </div>
         </div>
     </div>
@@ -297,19 +310,17 @@
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function searchStudent() {
-            // 학번과 이름 두 가지를 모두 가져옵니다.
             const idVal = document.getElementById('studentIdInput').value.trim();
             const nameVal = document.getElementById('studentNameInput').value.trim();
             const resultArea = document.getElementById('resultArea');
 
-            // 둘 중 하나라도 입력하지 않으면 안내 메시지 띄움
             if (!idVal || !nameVal) {
                 alert("조회할 학번과 이름을 모두 입력해 주세요.");
                 return;
             }
 
             try {
-                // ✨ DB에서 2학년 학번과 이름이 '모두' 일치하는 데이터를 찾습니다.
+                // 1. 학생 정보 가져오기
                 const { data, error } = await db
                     .from('students')
                     .select('name, grade1_id, grade2_id, unique_id, grade1_subjects')
@@ -320,7 +331,6 @@
                 if (error) throw error;
 
                 if (data) {
-                    // 가로 4칸에 각각 데이터 채워넣기
                     document.getElementById('resName').innerText = data.name;
                     document.getElementById('resGrade1').innerText = data.grade1_id || "-";
                     document.getElementById('resGrade2').innerText = data.grade2_id || "-";
@@ -335,6 +345,10 @@
                     }
 
                     resultArea.style.display = 'block';
+
+                    // ✨ 2. 학생 정보 조회가 성공하면, DB에서 3학년 1학기 선택교과 목록도 불러옵니다.
+                    await loadGrade3Subjects();
+
                 } else {
                     alert("입력하신 학번과 이름이 일치하는 학생 정보를 찾을 수 없습니다.");
                     resultArea.style.display = 'none';
@@ -345,7 +359,36 @@
             }
         }
 
-        // 엔터키를 치면 자동으로 검색되게 하는 기능 (학번, 이름 칸 모두 적용)
+        // ✨ DB에서 3학년 1학기 선택교과를 불러오는 함수
+        async function loadGrade3Subjects() {
+            try {
+                document.getElementById('grade3Area').style.display = 'block';
+                const g3Area = document.getElementById('resGrade3Subjects');
+
+                // subjects 테이블에서 '1학기' 또는 '1/2학기 공통' 이면서 '선택교과'인 데이터 조회
+                const { data, error } = await db
+                    .from('subjects')
+                    .select('*')
+                    .or('semester.eq.1학기,semester.eq.1/2학기 공통')
+                    .eq('selection_type', '선택교과')
+                    .order('category', { ascending: true }); // 교과군 순으로 정렬
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    // 보라색 태그 형태로 화면에 출력 (학점도 작게 표시)
+                    g3Area.innerHTML = data.map(sub =>
+                        `<span class="subject-tag-future">${sub.subject_name} <span style="font-size:0.85em; opacity:0.7;">(${sub.credits}학점)</span></span>`
+                    ).join('');
+                } else {
+                    g3Area.innerHTML = '<span style="font-size:0.9em; color:#888; font-weight:normal;">등록된 3학년 1학기 선택교과가 없습니다. (환경설정에서 등록해주세요)</span>';
+                }
+            } catch (err) {
+                console.error("3학년 과목 불러오기 실패:", err);
+                document.getElementById('resGrade3Subjects').innerHTML = '<span style="color:red;">과목을 불러오는 중 오류가 발생했습니다.</span>';
+            }
+        }
+
         document.getElementById('studentIdInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') searchStudent();
         });

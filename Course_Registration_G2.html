@@ -7,7 +7,7 @@
     <title>2학년 수강신청 정보 조회</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 기존 페이지들과 통일된 스타일 */
+        /* 기본 스타일 유지 */
         body {
             font-family: 'Malgun Gothic', sans-serif;
             background-color: #f4f7f6;
@@ -28,7 +28,6 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
-        /* 상단 네비게이션 버튼 */
         .nav-buttons {
             display: flex;
             gap: 10px;
@@ -59,6 +58,8 @@
             margin-left: auto;
             background-color: #e2ece9;
             font-weight: bold;
+            color: #155724;
+            border-color: #c3e6cb;
         }
 
         h1 {
@@ -68,7 +69,6 @@
             margin-bottom: 30px;
         }
 
-        /* 입력 및 결과 영역 */
         .search-box {
             background-color: #f8f9fa;
             padding: 20px;
@@ -110,7 +110,7 @@
             font-size: 1.1em;
             font-weight: bold;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: 0.2s;
         }
 
         .action-btn:hover {
@@ -120,7 +120,6 @@
         /* 결과 창 디자인 */
         #resultArea {
             display: none;
-            /* 초기에는 숨김 */
             margin-top: 20px;
             padding: 20px;
             border: 2px solid #c3e6cb;
@@ -131,25 +130,45 @@
 
         .result-item {
             margin-bottom: 15px;
-            padding-bottom: 10px;
+            padding-bottom: 15px;
             border-bottom: 1px dashed #c3e6cb;
         }
 
         .result-item:last-child {
             border-bottom: none;
             margin-bottom: 0;
+            padding-bottom: 0;
         }
 
         .result-label {
-            font-size: 0.9em;
+            font-size: 0.95em;
             color: #155724;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            font-weight: bold;
         }
 
         .result-value {
-            font-size: 1.3em;
+            font-size: 1.2em;
             font-weight: bold;
             color: #000;
+        }
+
+        /* ✨ 과목명을 예쁜 배지(태그) 형태로 보여주기 위한 CSS */
+        .subject-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .subject-tag {
+            background-color: #e2ece9;
+            color: #0056b3;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: normal;
+            border: 1px solid #c8d8d3;
         }
 
         @keyframes fadeIn {
@@ -164,7 +183,6 @@
             }
         }
 
-        /* 인쇄 시 스타일 */
         @media print {
 
             .nav-buttons,
@@ -223,11 +241,16 @@
                 <div class="result-label">학생 고유번호</div>
                 <div id="resUniqueId" class="result-value">-</div>
             </div>
+            <div class="result-item">
+                <div class="result-label">📚 1학년 수강 신청 과목</div>
+                <div id="resSubjects" class="result-value subject-tags">
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // Supabase 설정 유지
+        // 선생님의 Supabase 접속 정보
         const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -242,23 +265,33 @@
             }
 
             try {
-                // students 테이블에서 grade2_id가 입력값과 일치하는 데이터 조회
+                // ✨ DB에서 이름, 1학년학번, 고유번호, '1학년수강과목' 까지 4개를 가져옵니다.
                 const { data, error } = await db
                     .from('students')
-                    .select('name, grade1_id, unique_id')
+                    .select('name, grade1_id, unique_id, grade1_subjects')
                     .eq('grade2_id', inputVal)
                     .maybeSingle();
 
                 if (error) throw error;
 
                 if (data) {
-                    // 데이터가 있는 경우 화면에 표시
                     document.getElementById('resName').innerText = data.name;
                     document.getElementById('resGrade1').innerText = data.grade1_id || "기록 없음";
                     document.getElementById('resUniqueId').innerText = data.unique_id;
+
+                    // ✨ 과목 데이터를 쪼개서 예쁜 태그(배지) 모양으로 만들기
+                    const subjectsArea = document.getElementById('resSubjects');
+                    if (data.grade1_subjects && data.grade1_subjects.trim() !== '') {
+                        // 쉼표(,)를 기준으로 과목명을 잘라서 배열로 만듭니다.
+                        const subjectArray = data.grade1_subjects.split(',');
+                        // 각각의 과목명에 <span> 태그를 입혀서 HTML로 합칩니다.
+                        subjectsArea.innerHTML = subjectArray.map(sub => `<span class="subject-tag">${sub.trim()}</span>`).join('');
+                    } else {
+                        subjectsArea.innerHTML = '<span style="font-size:0.9em; color:#888; font-weight:normal;">등록된 수강 신청 데이터가 없습니다.</span>';
+                    }
+
                     resultArea.style.display = 'block';
                 } else {
-                    // 데이터가 없는 경우
                     alert("해당 학번으로 등록된 학생 정보를 찾을 수 없습니다.");
                     resultArea.style.display = 'none';
                 }
@@ -268,14 +301,12 @@
             }
         }
 
-        // 엔터키 입력 시 조회 버튼 클릭과 동일하게 작동
         document.getElementById('grade2Input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 searchStudent();
             }
         });
     </script>
-
 </body>
 
 </html>

@@ -586,6 +586,10 @@
         }
 
 
+
+
+
+        //////////////////////////////////////////////////////////////////////
         /* ----- 화면 중복 렌더링 방지 및 초기화가 보완된 함수 ----- */
         async function loadGrade1Students() {
             const { data, error } = await db.from('students').select('*').order('name', { ascending: true });
@@ -797,10 +801,76 @@
         // 과목 CSV (더미 구현용)
         async function uploadSubjectCSV() { alert('과목 업로드 기능 생략됨 (테스트용)'); }
         async function uploadCSV() { alert('기본 명단 업로드 기능 생략됨 (테스트용)'); }
-        async function uploadBoothCSV() { alert('배치교실 업로드 기능 생략됨 (테스트용)'); }
         async function addNewSubjectDetailed() { alert('추가 기능 생략됨'); }
 
+        // [기능 3] 박람회 배치교실 CSV 덮어쓰기 업로드 (학번, 이름, 과목, 배치교실)
+        async function uploadBoothCSV() {
+            const fileInput = document.getElementById('csvBoothInput');
+            if (!fileInput.files[0]) {
+                alert('박람회 배치교실 CSV 파일을 선택해 주세요.');
+                return;
+            }
 
+            const btn = document.getElementById('csvBoothBtn');
+            const originalText = btn.innerText;
+            btn.innerText = '기존 데이터 비우고 덮어쓰는 중... ⏳';
+            btn.disabled = true;
+
+            Papa.parse(fileInput.files[0], {
+                complete: async function (results) {
+                    try {
+                        const data = results.data;
+                        const boothsToInsert = [];
+
+                        // 첫 줄(index 0)은 '학번, 이름, 과목, 배치교실' 제목이므로 index 1부터 시작
+                        for (let i = 1; i < data.length; i++) {
+                            const row = data[i];
+
+                            // A열(row[0])에 학번이 없으면 건너뜀
+                            if (!row[0] || String(row[0]).trim() === '') continue;
+
+                            boothsToInsert.push({
+                                student_id: String(row[0]).trim(),
+                                student_name: String(row[1]).trim(),
+                                subject_name: String(row[2]).trim(),
+                                booth_location: String(row[3]).trim()
+                            });
+                        }
+
+                        if (boothsToInsert.length === 0) {
+                            alert('업로드할 유효한 데이터가 없습니다.');
+                            return;
+                        }
+
+                        // 1. 기존에 있던 배치교실 데이터 싹 비우기 (안전한 덮어쓰기를 위해)
+                        const { error: deleteErr } = await db
+                            .from('expo_booths')
+                            .delete()
+                            .neq('student_id', ''); // 학번이 비어있지 않은 모든 데이터를 삭제 (전체삭제)
+
+                        if (deleteErr) throw deleteErr;
+
+                        // 2. 새 엑셀 데이터 통째로 밀어넣기
+                        const { error: insertErr } = await db
+                            .from('expo_booths')
+                            .insert(boothsToInsert);
+
+                        if (insertErr) throw insertErr;
+
+                        alert(`🎉 총 ${boothsToInsert.length}명의 배치교실 데이터가 성공적으로 덮어쓰기 되었습니다!`);
+                        fileInput.value = ''; // 파일 선택창 초기화
+
+                    } catch (err) {
+                        console.error("🚨 업로드 에러:", err);
+                        alert('업로드 중 오류가 발생했습니다: ' + err.message);
+                    } finally {
+                        // 버튼 원상복구
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }
+                }
+            });
+        }
 
         // 1. [기능 1] 학생관리2: 4개 컬럼 양식 업로드 (supabase -> db로 수정 완료)
         function uploadStudents2() {
@@ -847,7 +917,6 @@
                 }
             });
         }
-
         // [기능 2] 수강신청: 제목줄에서 과목명을 읽고, 학생 칸이 '1'일 때만 저장하는 방식
         function uploadEnrollments() {
             const fileInput = document.getElementById('enrollmentFile');

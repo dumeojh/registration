@@ -346,7 +346,7 @@
         <div class="tab-menu">
             <button class="tab-btn active" onclick="switchTab('tab-system', this)">⚙️ 과목/환경설정</button>
             <button class="tab-btn" onclick="switchTab('tab-student', this)">👩‍🎓 학생 관리</button>
-            <button class="tab-btn" onclick="switchTab('students2',this)">학생관리2 (신규)</button>
+            <button class="tab-btn" onclick="switchTab('tab-student2', this)">👥 학생관리2 (신규)</button>
             <button class="tab-btn" onclick="switchTab('tab-grade1', this)">🪄 1학년 수강신청</button>
             <button class="tab-btn" onclick="switchTab('tab-booth', this)">📍 박람회 배치교실</button>
             <button class="tab-btn" onclick="switchTab('tab-subject', this)">📚 선택교과 입력</button>
@@ -408,7 +408,7 @@
             </div>
         </div>
 
-        <div id="students2" class="tab-content" style="display: none;">
+        <div id="tab-student2" class="tab-content">
             <div class="card">
                 <h3>👥 1. 학생 명단 일괄 등록 (마스터키: 2학년 학번)</h3>
                 <p style="color: #666; font-size: 0.9rem;">양식: [1학년 학번, 2학년 학번, 3학년 학번, 이름] 순서의 CSV 파일</p>
@@ -499,14 +499,26 @@
     </div>
 
     <script>
+
         function switchTab(tabId, btnElement) {
+            // 1. 모든 컨텐츠 화면에서 active 클래스를 제거하여 숨깁니다.
             const contents = document.querySelectorAll('.tab-content');
             contents.forEach(content => content.classList.remove('active'));
+
+            // 2. 모든 탭 버튼에서 active 클래스를 제거하여 불을 끕니다.
             const buttons = document.querySelectorAll('.tab-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
 
-            document.getElementById(tabId).classList.add('active');
-            btnElement.classList.add('active');
+            // 3. 현재 클릭된 메뉴에 해당하는 화면 상자를 찾아 active 클래스를 붙여 띄웁니다.
+            const targetContent = document.getElementById(tabId);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+
+            // 4. 클릭된 버튼 자기 자신(this)에 active 클래스를 붙여 하이라이트 효과를 줍니다.
+            if (btnElement) {
+                btnElement.classList.add('active');
+            }
         }
 
         const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
@@ -786,6 +798,118 @@
         async function uploadCSV() { alert('기본 명단 업로드 기능 생략됨 (테스트용)'); }
         async function uploadBoothCSV() { alert('배치교실 업로드 기능 생략됨 (테스트용)'); }
         async function addNewSubjectDetailed() { alert('추가 기능 생략됨'); }
+
+
+
+        // 1. [기능 1] 학생관리2: 4개 컬럼 양식 업로드 (supabase -> db로 수정 완료)
+        function uploadStudents2() {
+            const fileInput = document.getElementById('studentFile2');
+            if (!fileInput.files[0]) {
+                alert('CSV 파일을 선택해 주세요.');
+                return;
+            }
+
+            Papa.parse(fileInput.files[0], {
+                complete: async function (results) {
+                    const data = results.data;
+                    const studentsToInsert = [];
+
+                    for (let i = 1; i < data.length; i++) {
+                        const row = data[i];
+                        if (!row[1] || String(row[1]).trim() === '' || !row[3] || String(row[3]).trim() === '') continue;
+
+                        studentsToInsert.push({
+                            student_id: String(row[1]).trim(),
+                            grade1_num: row[0] ? String(row[0]).trim() : null,
+                            grade2_num: String(row[1]).trim(),
+                            grade3_num: row[2] ? String(row[2]).trim() : null,
+                            name: String(row[3]).trim()
+                        });
+                    }
+
+                    if (studentsToInsert.length === 0) {
+                        alert('업로드할 유효한 학생 데이터가 없습니다.');
+                        return;
+                    }
+
+                    // ★ 이 부분의 supabase를 db로 수정했습니다.
+                    const { error } = await db
+                        .from('students')
+                        .upsert(studentsToInsert, { onConflict: 'student_id' });
+
+                    if (error) {
+                        console.error(error);
+                        alert('학생 등록 실패: ' + error.message);
+                    } else {
+                        alert(`총 ${studentsToInsert.length}명의 학생 등록이 완료되었습니다!`);
+                    }
+                }
+            });
+        }
+
+        // 2. [기능 2] 수강신청: E열 ~ ED열 범위 확장 업로드 (supabase -> db로 수정 완료)
+        function uploadEnrollments() {
+            const fileInput = document.getElementById('enrollmentFile');
+            if (!fileInput.files[0]) {
+                alert('수강신청 CSV 파일을 선택해 주세요.');
+                return;
+            }
+
+            const subjectRanges = [
+                { start: 4, end: 23, category: '1학년 1학기 선택' },
+                { start: 24, end: 43, category: '1학년 2학기 선택' },
+                { start: 44, end: 53, category: '1학년 1학기 공통' },
+                { start: 54, end: 63, category: '1학년 2학기 공통' },
+                { start: 64, end: 79, category: '2학년 1학기 선택' },
+                { start: 80, end: 95, category: '2학년 2학기 선택' },
+                { start: 96, end: 114, category: '3학년 1학기 선택' },
+                { start: 115, end: 133, category: '3학년 2학기 선택' }
+            ];
+
+            Papa.parse(fileInput.files[0], {
+                complete: async function (results) {
+                    const data = results.data;
+                    const enrollmentsToInsert = [];
+
+                    for (let i = 1; i < data.length; i++) {
+                        const row = data[i];
+                        const studentId = row[1] ? String(row[1]).trim() : null;
+
+                        if (!studentId) continue;
+
+                        subjectRanges.forEach(range => {
+                            for (let j = range.start; j <= range.end; j++) {
+                                const subjectName = row[j];
+                                if (subjectName && String(subjectName).trim() !== '') {
+                                    enrollmentsToInsert.push({
+                                        student_id: studentId,
+                                        subject_name: String(subjectName).trim(),
+                                        category: range.category
+                                    });
+                                }
+                            }
+                        });
+                    }
+
+                    if (enrollmentsToInsert.length === 0) {
+                        alert('업로드할 유효한 수강신청 데이터가 없습니다.');
+                        return;
+                    }
+
+                    // ★ 이 부분의 supabase를 db로 수정했습니다.
+                    const { error } = await db
+                        .from('student_enrollments')
+                        .insert(enrollmentsToInsert);
+
+                    if (error) {
+                        console.error(error);
+                        alert('수강신청 등록 실패: ' + error.message);
+                    } else {
+                        alert(`총 ${enrollmentsToInsert.length}건의 수강신청 내역이 성공적으로 등록되었습니다!`);
+                    }
+                }
+            });
+        }
     </script>
 </body>
 

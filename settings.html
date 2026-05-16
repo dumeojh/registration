@@ -631,43 +631,47 @@
 
 
 
-
-        /* ----- 기존 데이터를 초기화하고 새로 등록하는 업로드 함수 ----- */
+        /* ----- 바코드 보존 + 이름/학번 이중 검증 + 중복 청소 업로드 함수 ----- */
         async function uploadGrade1SubjectsCSV() {
             const fileInput = document.getElementById('csvGrade1SubjectInput');
             const file = fileInput.files[0];
 
             if (!file) return alert('업로드할 수강신청결과 CSV 파일을 선택해주세요.');
 
-            // 사용자에게 한 번 더 확인 (데이터가 지워지므로 중요!)
-            if (!confirm('기존의 1학년 수강신청 데이터를 모두 삭제하고, 현재 파일의 내용으로 새로 등록하시겠습니까?')) {
-                return;
-            }
+            if (!confirm('기존의 1학년 수강과목 정보를 초기화하고 다시 등록하시겠습니까? (바코드 등 기본 정보는 안전하게 유지됩니다)')) return;
 
             const btn = document.getElementById('csvGrade1SubjectBtn');
             const originalText = btn.innerText;
-            btn.innerText = '데이터 초기화 및 재등록 중... ⏳';
+            btn.innerText = '데이터 이중 검증 및 재등록 중... ⏳';
             btn.disabled = true;
 
             const reader = new FileReader();
 
             reader.onload = async function (e) {
                 try {
-                    // 1. [초기화 작업] 먼저 수강과목 데이터가 있는 컬럼들만 비워버립니다.
-                    // (학생 전체 삭제가 아니라, 수강신청 정보만 초기화하여 다른 데이터와의 연결을 유지합니다)
-                    const { error: resetErr } = await db.from('students')
-                        .update({
-                            grade1_sem1_elective: [],
-                            grade1_sem2_elective: [],
-                            grade1_sem1_common: [],
-                            grade1_sem2_common: [],
-                            grade1_subjects: ''
-                        })
-                        .neq('unique_id', ''); // 모든 학생 대상
+                    // 1. 기존 DB 학생 전체 가져오기
+                    const { data: existingStudents, error: fetchErr } = await db.from('students').select('*');
+                    if (fetchErr) throw fetchErr;
 
-                    if (resetErr) throw resetErr;
+                    // 2. 잘못 생성된 찌꺼기 데이터 자동 청소 (바코드 형식이 아닌 단순 4~5자리 중복 데이터)
+                    const deleteIds = existingStudents.filter(s =>
+                        (s.unique_id.length === 4 || s.unique_id.length === 5) &&
+                        !s.unique_id.includes('M') && s.grade1_id === null
+                    ).map(s => s.unique_id);
 
-                    // 2. 파일 분석 시작
+                    if (deleteIds.length > 0) {
+                        await db.from('students').delete().in('unique_id', deleteIds);
+                    }
+
+                    // 3. 학생 정보는 살려두고 수강과목 데이터만 안전하게 비우기
+                    await db.from('students').update({
+                        grade1_sem1_elective: [],
+                        grade1_sem2_elective: [],
+                        grade1_sem1_common: [],
+                        grade1_sem2_common: []
+                    }).neq('unique_id', '');
+
+                    // 4. 파일 분석 시작
                     const buffer = e.target.result;
                     let text = new TextDecoder('euc-kr').decode(buffer);
                     if (!text.includes('번호') && !text.includes('이름')) {
@@ -698,15 +702,28 @@
                         const cols = parseCSVRow(lines[i]);
                         if (!cols[0] || !cols[1]) continue;
 
-                        const unique_id = cols[0].replace('.0', '').trim(); // 4자리 학번
-                        const name = cols[1].trim();
+                        const csvId = cols[0].replace('.0', '').trim(); // 4자리 학번
+                        const csvName = cols[1].trim();
+
+                        // 🔥 핵심 안전장치: 동명이인 오류 및 타인 데이터 덮어쓰기 방지를 위해 '학번'과 '이름'이 모두 일치할 때만 매칭
+                        let target = existingStudents.find(s =>
+                            s.grade1_id === csvId && s.name === csvName && !deleteIds.includes(s.unique_id)
+                        );
+
+                        if (!target) {
+                            target = existingStudents.find(s =>
+                                s.unique_id === csvId && s.name === csvName && !deleteIds.includes(s.unique_id)
+                            );
+                        }
+
+                        // 매칭된 바코드가 있으면 유지, 없으면 엑셀의 학번을 임시 고유번호로 사용
+                        const finalUniqueId = target ? target.unique_id : csvId;
 
                         const sem1Elec = [];
                         const sem2Elec = [];
                         const sem1Comm = [];
                         const sem2Comm = [];
 
-                        // 엑셀 열 번호에 맞춰 과목 추출 (C~V:1학기선택, W~AP:2학기선택, AQ~AZ:1학기공통, BA~BJ:2학기공통)
                         for (let c = 2; c <= 21; c++) { if (cols[c] === '1' || cols[c] === '1.0') sem1Elec.push(headers[c]); }
                         for (let c = 22; c <= 41; c++) { if (cols[c] === '1' || cols[c] === '1.0') sem2Elec.push(headers[c]); }
                         for (let c = 42; c <= 51; c++) { if (cols[c] === '1' || cols[c] === '1.0') sem1Comm.push(headers[c]); }
@@ -719,8 +736,8 @@
                         }
 
                         insertData.push({
-                            unique_id: unique_id,
-                            name: name,
+                            unique_id: finalUniqueId,
+                            name: csvName,
                             grade1_sem1_elective: sem1Elec,
                             grade1_sem2_elective: sem2Elec,
                             grade1_sem1_common: sem1Comm,
@@ -728,14 +745,13 @@
                         });
                     }
 
-                    // 3. 4자리 학번 기준으로 DB에 덮어쓰기(upsert)
+                    // DB에 최종 병합 (기존 바코드 정보는 건드리지 않고 과목만 업데이트)
                     const { error: upsertErr } = await db.from('students').upsert(insertData, { onConflict: 'unique_id' });
                     if (upsertErr) throw upsertErr;
 
-                    alert(`✅ 성공! 기존 정보를 초기화하고 ${insertData.length}명의 데이터를 새로 등록했습니다.`);
+                    alert(`✅ 성공! ${insertData.length}명의 수강 데이터를 기존 명단과 정확히 매칭하여 업데이트했습니다.`);
                     fileInput.value = '';
 
-                    // 화면 갱신
                     loadStudents();
                     loadGrade1Students();
 
@@ -749,6 +765,8 @@
             };
             reader.readAsArrayBuffer(file);
         }
+
+
 
 
         // 과목 CSV (더미 구현용)

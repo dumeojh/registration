@@ -848,7 +848,6 @@
             });
         }
 
-        // 2. [기능 2] 수강신청: E열 ~ ED열 범위 확장 업로드 (supabase -> db로 수정 완료)
         function uploadEnrollments() {
             const fileInput = document.getElementById('enrollmentFile');
             if (!fileInput.files[0]) {
@@ -872,11 +871,23 @@
                     const data = results.data;
                     const enrollmentsToInsert = [];
 
+                    // [진단 1] 첫 번째 데이터 줄을 꺼내서 구조를 콘솔창에 보여줍니다.
+                    if (data.length > 1) {
+                        console.log("📌 수강신청 파일의 첫 학생 데이터 예시:", data[1]);
+                        console.log("📌 현재 코드상의 학번 위치(row[1]):", data[1][1]);
+                    }
+
                     for (let i = 1; i < data.length; i++) {
                         const row = data[i];
+
+                        // ★ 만약 수강신청 파일의 학번이 A열(첫번째 칸)에 있다면 row[1]을 row[0]으로 고쳐야 합니다!
                         const studentId = row[1] ? String(row[1]).trim() : null;
 
-                        if (!studentId) continue;
+                        if (!studentId) {
+                            // 학번이 비어있어서 건너뛰는 경우 콘솔에 기록합니다.
+                            console.warn(`행 번호 ${i}: 학번 데이터가 없어서 건너뜁니다.`, row);
+                            continue;
+                        }
 
                         subjectRanges.forEach(range => {
                             for (let j = range.start; j <= range.end; j++) {
@@ -892,21 +903,24 @@
                         });
                     }
 
+                    // [진단 2] 추출된 과목이 총 몇 건인지 알려줍니다.
+                    console.log(`📌 추출된 수강신청 내역 총 개수: ${enrollmentsToInsert.length}건`);
+
                     if (enrollmentsToInsert.length === 0) {
-                        alert('업로드할 유효한 수강신청 데이터가 없습니다.');
+                        alert('⚠️ 파일에서 읽어온 수강신청 과목이 0건입니다.\n\n파일의 학번 위치나 데이터 시작점(E열)이 맞는지 엑셀 파일 구조를 확인해 주세요.');
                         return;
                     }
 
-                    // ★ 이 부분의 supabase를 db로 수정했습니다.
+                    // DB에 저장 시도
                     const { error } = await db
                         .from('student_enrollments')
                         .insert(enrollmentsToInsert);
 
                     if (error) {
-                        console.error(error);
-                        alert('수강신청 등록 실패: ' + error.message);
+                        console.error("❌ 수파베이스 저장 에러 상세:", error);
+                        alert('수강신청 등록 실패 에러 메시지: ' + error.message);
                     } else {
-                        alert(`총 ${enrollmentsToInsert.length}건의 수강신청 내역이 성공적으로 등록되었습니다!`);
+                        alert(`🎉 총 ${enrollmentsToInsert.length}건의 수강신청 내역이 성공적으로 등록되었습니다!`);
                     }
                 }
             });

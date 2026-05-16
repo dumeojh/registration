@@ -552,51 +552,44 @@
         }
 
 
+        /* ----- 화면 중복 렌더링 방지 및 초기화가 보완된 함수 ----- */
         async function loadGrade1Students() {
-            // 👇 data 옆에 ', error' 를 추가하여 에러 값도 함께 받아옵니다.
             const { data, error } = await db.from('students').select('*').order('name', { ascending: true });
 
-            // 이제 error가 무엇인지 알기 때문에 정상 작동합니다.
             if (error) {
                 console.error("🚨 DB 불러오기 에러 발생:", error);
+                return;
             }
-            // 👇 추가된 부분: DB에서 가져온 진짜 데이터를 콘솔에 출력해서 눈으로 확인!
             console.log("📌 DB에서 가져온 1학년 학생 데이터:", data);
 
             const listEl = document.getElementById('grade1StudentList');
             if (!listEl) return;
+
+            // 💡 핵심: 새로운 데이터를 그리기 전에 기존 화면에 채워져 있던 목록을 깨끗하게 청소합니다.
             listEl.innerHTML = '';
 
             if (data) {
                 data.forEach(student => {
-                    // 💡 핵심: DB 데이터가 문자열이든 배열이든 무조건 자바스크립트 배열로 안전하게 분석/변환하는 함수
+                    // 학번 정보가 없거나 바코드/4자리 학번 등 형태가 비어있으면 건너뜀
+                    if (!student.unique_id) return;
+
                     const safeArray = (val) => {
                         if (!val) return [];
                         if (Array.isArray(val)) return val;
                         if (typeof val === 'string') {
-                            // 1. JSON 문자열 형태일 경우 '["과목", "과목"]'
-                            if (val.startsWith('[')) {
-                                try { return JSON.parse(val); } catch (e) { }
-                            }
-                            // 2. Postgres DB 배열 형태일 경우 '{과목, 과목}'
-                            if (val.startsWith('{')) {
-                                return val.replace(/^{|}$/g, '').split(',').map(s => s.trim().replace(/^"|"$/g, ''));
-                            }
-                            // 3. 단순 쉼표 구분 문자열일 경우 '과목, 과목'
+                            if (val.startsWith('[')) { try { return JSON.parse(val); } catch (e) { } }
+                            if (val.startsWith('{')) { return val.replace(/^{|}$/g, '').split(',').map(s => s.trim().replace(/^"|"$/g, '')); }
                             return val.split(',').map(s => s.trim());
                         }
                         return [];
                     };
 
-                    // 데이터를 배열로 추출
                     const comm1 = safeArray(student.grade1_sem1_common);
                     const comm2 = safeArray(student.grade1_sem2_common);
                     const elec1 = safeArray(student.grade1_sem1_elective);
                     const elec2 = safeArray(student.grade1_sem2_elective);
 
-                    // 태그 생성기 (중복 과목 제거 기능 추가)
                     const createTags = (arr, tagClass) => {
-                        // Set을 사용하여 1학기와 2학기에 겹치는 과목(예: 공통수학1, 2가 아닌 '국어'처럼 동일한 이름) 중복 제거
                         const uniqueArr = [...new Set(arr)].filter(sub => sub !== '');
                         return uniqueArr.map(sub => `<span class="tag ${tagClass}">${sub}</span>`).join('');
                     };
@@ -623,8 +616,6 @@
                 });
             }
         }
-
-
 
         async function deleteSubject(id) { if (confirm('과목을 삭제하시겠습니까?')) { await db.from('subjects').delete().eq('id', id); loadSubjects(); } }
         async function deleteStudent(unique_id) { if (confirm('학생을 삭제하시겠습니까?')) { await db.from('students').delete().eq('unique_id', unique_id); loadStudents(); loadGrade1Students(); } }
@@ -752,7 +743,7 @@
                     alert(`✅ 성공! ${insertData.length}명의 수강 데이터를 기존 명단과 정확히 매칭하여 업데이트했습니다.`);
                     fileInput.value = '';
 
-                    loadStudents();
+
                     loadGrade1Students();
 
                 } catch (error) {

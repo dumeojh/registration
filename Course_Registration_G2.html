@@ -483,30 +483,62 @@
                             badgesHtml = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';
                         }
 
-                        // 5. 💡 1,2학년 수강 내역 기반 3학년 진단 시스템 로직 (이전과 동일)
-                        let diagnosticHtml = `<div style="margin-top:20px; padding:15px; background:#f8f9fa; border-radius:8px; border:1px solid #dee2e6; font-size:0.95em; line-height:1.6; color:#333;">`;
-                        diagnosticHtml += `<h4 style="margin:0 0 10px 0; color:#0056b3;">📊 나의 1·2학년 이수 현황 및 3학년 필수조건 진단</h4>`;
 
-                        let hasWarning = false;
+                        // 5. 💡 1,2학년 수강 내역 기반 3학년 진단 시스템 로직 (4대 점검사항 반영)
+                        let diagnosticHtml = `<div style="margin-top:20px; padding:18px; background:#fdfdfe; border-radius:10px; border:1px solid #c8d8d3; font-size:0.95em; line-height:1.6; color:#333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">`;
+                        diagnosticHtml += `<h4 style="margin:0 0 15px 0; color:#155724; border-bottom: 2px solid #c3e6cb; padding-bottom: 8px;">🎯 3학년 선택교과 설계 전 필수 점검사항 (4가지)</h4>`;
 
+                        // [점검 1] 사회교과 필수
                         if (groupCounts["사회"] === 0) {
-                            diagnosticHtml += `<div style="color:#d9534f; margin-bottom:5px;">⚠️ <b>사회교과 필수:</b> 1, 2학년 중 사회 과목 이수 내역이 없습니다. <br>&nbsp;&nbsp;&nbsp;👉 <b>3학년 1, 2학기 중 사회 1과목 이상을 반드시 선택</b>해야 합니다.</div>`;
-                            hasWarning = true;
+                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;">
+                                <b style="color:#d9534f;">1. 사회교과 필수 선택</b><br>
+                                2학년에서 사회교과를 선택하지 않았으므로, <b>3학년 1, 2학기 중 사회교과 한 과목은 필수적으로 선택</b>해야 합니다.
+                            </div>`;
+                        } else {
+                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;">
+                                <b style="color:#28a745;">1. 사회교과 (이수 충족)</b><br>
+                                이미 1·2학년 중 사회교과를 이수하여 필수 조건이 충족되었습니다.
+                            </div>`;
                         }
 
+                        // [점검 2] 국, 영, 수 초과 금지
+                        diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #0056b3;">
+                            <b style="color:#0056b3;">2. 기초교과(국·영·수) 선택 제한</b><br>
+                            국, 영, 수 교과는 4학기 동안 <b>총 4개 과목이 초과되지 않도록 선택</b>해야 합니다. (한 학기에 1과목 선택 권장)<br>
+                            <span style="font-size:0.9em; color:#666;">👉 나의 1·2학년 누적 수강: 국어(${groupCounts["국어"] || 0}개), 영어(${groupCounts["영어"] || 0}개), 수학(${groupCounts["수학"] || 0}개)</span>
+                        </div>`;
+
+                        // [점검 3] 예술교과 필수 (문학 감상과 비평 / 문학과 매체)
                         if (groupCounts["예술"] === 0) {
-                            diagnosticHtml += `<div style="color:#d9534f; margin-bottom:5px;">⚠️ <b>예술교과 필수:</b> 1, 2학년 중 예술 과목 이수 내역이 없습니다. <br>&nbsp;&nbsp;&nbsp;👉 <b>3학년 때 [문학 감상과 비평] 또는 [문학과 매체] 중 1과목을 필수로 선택</b>해야 합니다.</div>`;
-                            hasWarning = true;
+                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;">
+                                <b style="color:#d9534f;">3. 예술교과 필수 이수 조건</b><br>
+                                2학년 때 음악/미술/공예일반/연극을 수강하지 않았으므로, <b>3학년 때 [문학 감상과 비평] 또는 [문학과 매체] 중 1과목을 필수로 선택</b>해야 합니다.
+                            </div>`;
+                        } else {
+                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;">
+                                <b style="color:#28a745;">3. 예술교과 (이수 충족)</b><br>
+                                이미 1·2학년 중 예술교과를 이수하여 대체 과목 필수 선택 대상이 아닙니다.
+                            </div>`;
                         }
 
-                        if (!hasWarning) {
-                            diagnosticHtml += `<div style="color:#28a745;">✅ <b>필수 이수 요건(사회/예술) 방어 완료:</b> 기본 필수 조건이 잘 채워져 있습니다. 진로에 맞춰 자유롭게 3학년 과목을 설계하세요!</div>`;
+                        // [점검 4] 교양교과 중복 금지 및 6학점
+                        let liberalArtsWarning = "";
+                        if (groupCounts["교양"] === 0) {
+                            liberalArtsWarning = `<br><span style="color:#d9534f; font-weight:bold;">⚠️ 필수이수조건[선택과목 6학점]에 따라 1, 2학기 중 2과목 이상을 필수로 선택해야 합니다. (현재 제2외국어/정보/보건 등 미이수 상태)</span>`;
                         }
+                        diagnosticHtml += `<div style="margin-bottom:0; padding-left:12px; border-left:4px solid #ff9500;">
+                            <b style="color:#d35400;">4. 교양교과 중복 유의 및 6학점 채우기</b><br>
+                            교양은 1, 2학기 동일하게 편성되어 있으므로 <b>같은 과목을 중복되지 않게 선택</b>해야 합니다.${liberalArtsWarning}
+                        </div>`;
 
                         diagnosticHtml += `</div>`;
 
                         // 조립된 과목 그룹 + 진단 창 화면에 표시
                         subjectsArea.innerHTML = badgesHtml + diagnosticHtml;
+
+
+
+
 
                     } else {
                         subjectsArea.innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';

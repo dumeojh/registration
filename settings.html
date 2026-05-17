@@ -351,15 +351,59 @@
             </div>
         </div>
 
+
         <div id="tab-enrollment" class="tab-content">
             <h2 style="color:#34c759;">📝 수강신청 데이터 일괄 등록 (확장 양식)</h2>
             <div class="section csv-section">
                 <span class="label">📝 수강신청 결과 엑셀(CSV) 등록</span>
                 <p style="color: #666; font-size: 0.85rem; margin-top:0;">E열부터 ED열까지의 수강신청 데이터가 담긴 CSV 파일을 선택하세요.</p>
-                <input type="file" id="enrollmentFile" accept=".csv" style="background: white;" />
+
+                <details class="csv-guide">
+                    <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
+                    <div style="overflow-x: auto;">
+                        <table class="csv-table">
+                            <thead>
+                                <tr>
+                                    <th>A열(기타)</th>
+                                    <th>B열(학번)</th>
+                                    <th>C열(이름 등)</th>
+                                    <th>D열(기타)</th>
+                                    <th>E열(1-1선택)</th>
+                                    <th>F열(과목명...)</th>
+                                    <th>...</th>
+                                    <th>ED열(3-2선택)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>20101</td>
+                                    <td>김안성</td>
+                                    <td>-</td>
+                                    <td>1</td>
+                                    <td></td>
+                                    <td>...</td>
+                                    <td>O</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="8"
+                                        style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
+                                        💡 <b>작성 가이드</b><br>
+                                        - <b>1행(헤더)</b>: E열부터 ED열까지 정확한 과목명이 기재되어 있어야 합니다.<br>
+                                        - <b>B열(2번째 열)</b>: 학생 식별을 위한 <b>학번</b>이 반드시 입력되어야 합니다.<br>
+                                        - <b>E열 ~ ED열</b>: 수강하는 과목의 셀에 <b>1, O, Y</b> 중 하나를 입력합니다. (해당 과목을 수강하지 않으면 빈칸)
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+                <input type="file" id="enrollmentFile" accept=".csv" style="background: white; margin-top: 10px;" />
                 <button onclick="uploadEnrollments()" class="btn btn-add">수강신청 업로드</button>
             </div>
         </div>
+
+
 
         <div id="tab-booth" class="tab-content">
             <h2 style="color:#d9534f;">📍 박람회 배치교실 관리</h2>

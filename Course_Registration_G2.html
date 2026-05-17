@@ -7,7 +7,6 @@
     <title>2학년 수강신청 정보 조회</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* 기본 스타일 유지 */
         body {
             font-family: 'Malgun Gothic', sans-serif;
             background-color: #f4f7f6;
@@ -166,6 +165,19 @@
             border-top: 1px dashed #c3e6cb;
             padding-top: 20px;
             margin-top: 15px;
+            display: block;
+        }
+
+        /* 아코디언 제목 스타일 */
+        summary.result-label {
+            cursor: pointer;
+            outline: none;
+            padding: 5px 0;
+            transition: color 0.2s;
+        }
+
+        summary.result-label:hover {
+            opacity: 0.8;
         }
 
         .subject-tags {
@@ -185,7 +197,6 @@
             border: 1px solid #c8d8d3;
         }
 
-        /* 3학년 선택교과 세로 리스트 스타일 */
         .future-subject-list {
             display: flex;
             flex-direction: column;
@@ -280,6 +291,15 @@
                 display: block !important;
                 border: 1px solid #ccc;
             }
+
+            /* 프린트 시 아코디언 강제 전체 해제 및 노출 */
+            details {
+                display: block !important;
+            }
+
+            details>*:not(summary) {
+                display: block !important;
+            }
         }
     </style>
 </head>
@@ -325,24 +345,37 @@
                 </div>
             </div>
 
-            <div class="subject-area">
-                <div class="result-label" style="font-size: 1.05em; color:#0056b3;">📘 1학년 수강 신청 과목</div>
-                <div id="resSubjects" class="result-value subject-tags"></div>
-            </div>
+            <details class="subject-area" id="subjectsSection" open>
+                <summary class="result-label" style="font-size: 1.05em; color:#0056b3;">📘 1학년 수강 신청 과목 (접기/펼치기)
+                </summary>
+                <div id="resSubjects" class="result-value" style="margin-top: 15px;"></div>
+            </details>
 
-            <div class="subject-area" id="grade3Area" style="display: none; border-top-color: #d8cce2;">
-                <div class="result-label" style="font-size: 1.05em; color:#6f42c1;">🔮 3학년 1학기 선택교과 설계</div>
-                <p style="font-size: 0.85em; color: #666; margin-top: -3px; margin-bottom: 0;">※ 희망 과목을 체크하고 선택 이유를 간략히
-                    적어보세요.</p>
-                <div id="resGrade3Subjects" class="future-subject-list"></div>
-            </div>
+            <details class="subject-area" id="diagnosticArea" style="display: none; border-top-color: #c8d8d3;" open>
+                <summary class="result-label" style="font-size: 1.05em; color:#155724;">🎯 3학년 선택교과 설계 전 필수 점검사항
+                    (접기/펼치기)</summary>
+                <div id="resDiagnostic" class="result-value" style="margin-top: 15px;"></div>
+            </details>
 
-            <div class="subject-area" id="grade3Sem2Area" style="display: none; border-top-color: #d8cce2;">
-                <div class="result-label" style="font-size: 1.05em; color:#6f42c1;">🔮 3학년 2학기 선택교과 설계</div>
-                <p style="font-size: 0.85em; color: #666; margin-top: -3px; margin-bottom: 0;">※ 희망 과목을 체크하고 선택 이유를 간략히
-                    적어보세요.</p>
-                <div id="resGrade3Sem2Subjects" class="future-subject-list"></div>
-            </div>
+            <details class="subject-area" id="grade3Area" style="display: none; border-top-color: #d8cce2;">
+                <summary class="result-label" style="font-size: 1.05em; color:#6f42c1;">🔮 3학년 1학기 선택교과 설계 (접기/펼치기)
+                </summary>
+                <div style="margin-top: 10px;">
+                    <p style="font-size: 0.85em; color: #666; margin-top: 0; margin-bottom: 10px;">※ 희망 과목을 체크하고 선택 이유를
+                        간략히 적어보세요.</p>
+                    <div id="resGrade3Subjects" class="future-subject-list"></div>
+                </div>
+            </details>
+
+            <details class="subject-area" id="grade3Sem2Area" style="display: none; border-top-color: #d8cce2;">
+                <summary class="result-label" style="font-size: 1.05em; color:#6f42c1;">🔮 3학년 2학기 선택교과 설계 (접기/펼치기)
+                </summary>
+                <div style="margin-top: 10px;">
+                    <p style="font-size: 0.85em; color: #666; margin-top: 0; margin-bottom: 10px;">※ 희망 과목을 체크하고 선택 이유를
+                        간략히 적어보세요.</p>
+                    <div id="resGrade3Sem2Subjects" class="future-subject-list"></div>
+                </div>
+            </details>
         </div>
     </div>
 
@@ -350,8 +383,6 @@
         const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-
 
         async function searchStudent() {
             const idVal = document.getElementById('studentIdInput').value.trim();
@@ -362,6 +393,11 @@
                 alert("조회할 학번과 이름을 모두 입력해 주세요.");
                 return;
             }
+
+            // 검색 시작 시 이전 상태 아코디언 숨김 처리
+            document.getElementById('diagnosticArea').style.display = 'none';
+            document.getElementById('grade3Area').style.display = 'none';
+            document.getElementById('grade3Sem2Area').style.display = 'none';
 
             try {
                 // 1. 학생 기본 정보 조회
@@ -388,7 +424,7 @@
 
                     if (enrollErr) throw enrollErr;
 
-                    // 3. ✨ 3학년 전체 과목 한 번에 가져오기 (교양과 일반 과목 분리를 위해)
+                    // 3. 3학년 전체 과목 한 번에 가져오기
                     const { data: g3Data, error: g3Err } = await db
                         .from('subjects')
                         .select('*')
@@ -397,14 +433,9 @@
 
                     if (g3Err) throw g3Err;
 
-                    // 💡 3학년 과목을 '교양'과 '일반(1, 2학기)'으로 완벽하게 분류
                     const liberalArtsSubjects = g3Data ? g3Data.filter(sub => sub.subject_group === '교양') : [];
                     const regularSem1 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester1 && sub.semester1.trim() !== '') : [];
                     const regularSem2 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester2 && sub.semester2.trim() !== '') : [];
-
-
-                    const subjectsArea = document.getElementById('resSubjects');
-                    subjectsArea.classList.remove('subject-tags');
 
                     if (enrollments && enrollments.length > 0) {
                         const subjectNames = [...new Set(enrollments.map(e => e.subject_name))];
@@ -472,9 +503,10 @@
                         if (catGrade2.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 2학년 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catGrade2].join('')}</div></div>`;
                         if (!badgesHtml) badgesHtml = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';
 
-                        // 4. 💡 3학년 진단 시스템 로직 생성
-                        let diagnosticHtml = `<div style="margin-top:20px; padding:18px; background:#fdfdfe; border-radius:10px; border:1px solid #c8d8d3; font-size:0.95em; line-height:1.6; color:#333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">`;
-                        diagnosticHtml += `<h4 style="margin:0 0 15px 0; color:#155724; border-bottom: 2px solid #c3e6cb; padding-bottom: 8px;">🎯 3학년 선택교과 설계 전 필수 점검사항 (4가지)</h4>`;
+                        document.getElementById('resSubjects').innerHTML = badgesHtml;
+
+                        // 4. 💡 3학년 진단 시스템 로직 생성 (중복 배정 레이아웃)
+                        let diagnosticHtml = `<div style="margin-top:5px; padding:18px; background:#fdfdfe; border-radius:10px; border:1px solid #c8d8d3; font-size:0.95em; line-height:1.6; color:#333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">`;
 
                         // [점검 1] 사회
                         if (groupCounts["사회"] === 0) {
@@ -499,7 +531,7 @@
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;"><b style="color:#28a745;">3. 예술교과 (이수 충족)</b><br>이미 1·2학년 중 예술교과를 이수하여 대체 과목 필수 선택 대상이 아닙니다.<br><div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">✅ <b>나의 이수 내역:</b><br>&nbsp;&nbsp;· ${artListStr}</div></div>`;
                         }
 
-                        // ✨ [점검 4] 교양교과 전용 상호배타적 선택 UI 동적 생성
+                        // [점검 4] 교양교과 전용 라디오 버튼 제어 구조
                         let liberalArtsWarning = groupCounts["교양"] === 0 ? `<br><span style="color:#d9534f; font-weight:bold;">⚠️ 필수이수조건[선택과목 6학점]에 따라 1, 2학기 중 2과목 이상을 필수로 선택해야 합니다.</span>` : '';
 
                         let liberalArtsTable = `<div style="overflow-x:auto; margin-top:12px;">
@@ -513,7 +545,7 @@
 
                         liberalArtsSubjects.forEach((sub, idx) => {
                             const creditText = sub.credits ? ` <span style="font-size:0.85em; color:#e83e8c;">[${sub.credits}학점]</span>` : '';
-                            const radioName = `lib_radio_${idx}`; // 동일한 name으로 묶어 상호배타적 선택 구현
+                            const radioName = `lib_radio_${idx}`;
                             liberalArtsTable += `
                                 <tr style="border-bottom: 1px solid #ffe0b2; background-color: #fff;">
                                     <td style="padding: 10px; text-align: left; font-weight: bold; color: #495057;">${sub.subject_name}${creditText}</td>
@@ -531,15 +563,18 @@
                         </div>`;
 
                         diagnosticHtml += `</div>`;
-                        subjectsArea.innerHTML = badgesHtml + diagnosticHtml;
+
+                        document.getElementById('resDiagnostic').innerHTML = diagnosticHtml;
+                        document.getElementById('diagnosticArea').style.display = 'block';
 
                     } else {
-                        subjectsArea.innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';
+                        document.getElementById('resSubjects').innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';
+                        document.getElementById('diagnosticArea').style.display = 'none';
                     }
 
                     resultArea.style.display = 'block';
 
-                    // 5. 💡 하단 3학년 일반 과목 리스트 출력 (교양 제외됨)
+                    // 5. 하단 3학년 일반 과목 리스트 아코디언 출력
                     renderSubjectsList(regularSem1, 'resGrade3Subjects');
                     renderSubjectsList(regularSem2, 'resGrade3Sem2Subjects');
                     document.getElementById('grade3Area').style.display = 'block';
@@ -555,7 +590,7 @@
             }
         }
 
-        // 일반 과목 리스트를 화면에 그려주는 공통 함수
+        // 일반 과목 리스트 마운트 공통 함수
         function renderSubjectsList(subjects, containerId) {
             const container = document.getElementById(containerId);
             if (subjects && subjects.length > 0) {
@@ -577,7 +612,7 @@
             }
         }
 
-        // 체크박스 상태에 따라 텍스트 박스를 보여주거나 숨기는 함수
+        // 체크박스 제어 활성화 바인딩 함수
         function toggleReason(checkbox) {
             const reasonBox = checkbox.closest('.future-subject-item').querySelector('.reason-box');
             if (checkbox.checked) {
@@ -585,21 +620,17 @@
                 reasonBox.focus();
             } else {
                 reasonBox.style.display = 'none';
-                reasonBox.value = ''; // 체크 해제 시 내용 지움
+                reasonBox.value = '';
             }
         }
 
-
-        // 엔터키 입력 이벤트
+        // 엔터키 입력 이벤트 바인딩
         document.getElementById('studentIdInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') searchStudent();
         });
         document.getElementById('studentNameInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') searchStudent();
         });
-
-
-
     </script>
 </body>
 

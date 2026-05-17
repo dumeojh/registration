@@ -168,7 +168,6 @@
             display: block;
         }
 
-        /* 아코디언 제목 스타일 */
         summary.result-label {
             cursor: pointer;
             outline: none;
@@ -292,7 +291,6 @@
                 border: 1px solid #ccc;
             }
 
-            /* 프린트 시 아코디언 강제 전체 해제 및 노출 */
             details {
                 display: block !important;
             }
@@ -316,7 +314,7 @@
         <h1>2학년 수강신청 정보 조회</h1>
 
         <div class="search-box">
-            <label>학번과 이름을 모두 입력하세요</label>
+            <label>학번 and 이름을 모두 입력하세요</label>
             <div class="input-group">
                 <input type="text" id="studentIdInput" placeholder="2학년 학번 (예: 20105)" maxlength="5">
                 <input type="text" id="studentNameInput" placeholder="이름 (예: 황경서)">
@@ -345,13 +343,13 @@
                 </div>
             </div>
 
-            <details class="subject-area" id="subjectsSection" open>
+            <details class="subject-area" id="subjectsSection">
                 <summary class="result-label" style="font-size: 1.05em; color:#0056b3;">📘 1학년 수강 신청 과목 (접기/펼치기)
                 </summary>
                 <div id="resSubjects" class="result-value" style="margin-top: 15px;"></div>
             </details>
 
-            <details class="subject-area" id="diagnosticArea" style="display: none; border-top-color: #c8d8d3;" open>
+            <details class="subject-area" id="diagnosticArea" style="display: none; border-top-color: #c8d8d3;">
                 <summary class="result-label" style="font-size: 1.05em; color:#155724;">🎯 3학년 선택교과 설계 전 필수 점검사항
                     (접기/펼치기)</summary>
                 <div id="resDiagnostic" class="result-value" style="margin-top: 15px;"></div>
@@ -394,7 +392,12 @@
                 return;
             }
 
-            // 검색 시작 시 이전 상태 아코디언 숨김 처리
+            // 새로운 검색 시 이전의 open 속성들을 모두 리셋하여 닫힘 상태로 초기화
+            document.getElementById('subjectsSection').removeAttribute('open');
+            document.getElementById('diagnosticArea').removeAttribute('open');
+            document.getElementById('grade3Area').removeAttribute('open');
+            document.getElementById('grade3Sem2Area').removeAttribute('open');
+
             document.getElementById('diagnosticArea').style.display = 'none';
             document.getElementById('grade3Area').style.display = 'none';
             document.getElementById('grade3Sem2Area').style.display = 'none';
@@ -505,7 +508,7 @@
 
                         document.getElementById('resSubjects').innerHTML = badgesHtml;
 
-                        // 4. 💡 3학년 진단 시스템 로직 생성 (중복 배정 레이아웃)
+                        // 4. 💡 3학년 진단 시스템 로직 생성
                         let diagnosticHtml = `<div style="margin-top:5px; padding:18px; background:#fdfdfe; border-radius:10px; border:1px solid #c8d8d3; font-size:0.95em; line-height:1.6; color:#333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">`;
 
                         // [점검 1] 사회
@@ -527,11 +530,11 @@
                         if (groupCounts["예술"] === 0) {
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;"><b style="color:#d9534f;">3. 예술교과 필수 이수 조건</b><br>2학년 때 음악/미술/공예일반/연극을 수강하지 않았으므로, <b>3학년 때 [문학 감상과 비평] 또는 [문학과 매체] 중 1과목을 필수로 선택</b>해야 합니다.</div>`;
                         } else {
-                            const artListStr = takenArtSubjects.join('<br>&nbsp;&nbsp;· ');
+                            const artListStr = artListStr = takenArtSubjects.join('<br>&nbsp;&nbsp;· ');
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;"><b style="color:#28a745;">3. 예술교과 (이수 충족)</b><br>이미 1·2학년 중 예술교과를 이수하여 대체 과목 필수 선택 대상이 아닙니다.<br><div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">✅ <b>나의 이수 내역:</b><br>&nbsp;&nbsp;· ${artListStr}</div></div>`;
                         }
 
-                        // [점검 4] 교양교과 전용 라디오 버튼 제어 구조
+                        // [점검 4] 교양교과
                         let liberalArtsWarning = groupCounts["교양"] === 0 ? `<br><span style="color:#d9534f; font-weight:bold;">⚠️ 필수이수조건[선택과목 6학점]에 따라 1, 2학기 중 2과목 이상을 필수로 선택해야 합니다.</span>` : '';
 
                         let liberalArtsTable = `<div style="overflow-x:auto; margin-top:12px;">

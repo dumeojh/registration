@@ -530,7 +530,7 @@
                         if (groupCounts["예술"] === 0) {
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;"><b style="color:#d9534f;">3. 예술교과 필수 이수 조건</b><br>2학년 때 음악/미술/공예일반/연극을 수강하지 않았으므로, <b>3학년 때 [문학 감상과 비평] 또는 [문학과 매체] 중 1과목을 필수로 선택</b>해야 합니다.</div>`;
                         } else {
-                            const artListStr = artListStr = takenArtSubjects.join('<br>&nbsp;&nbsp;· ');
+                            const artListStr = takenArtSubjects.join('<br>&nbsp;&nbsp;· ');
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;"><b style="color:#28a745;">3. 예술교과 (이수 충족)</b><br>이미 1·2학년 중 예술교과를 이수하여 대체 과목 필수 선택 대상이 아닙니다.<br><div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">✅ <b>나의 이수 내역:</b><br>&nbsp;&nbsp;· ${artListStr}</div></div>`;
                         }
 

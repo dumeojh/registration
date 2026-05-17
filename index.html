@@ -333,6 +333,8 @@
             }
         }
 
+
+
         // DB에서 학번으로 배치 교실 검색하는 함수
         async function searchBooth() {
             const studentId = document.getElementById('boothStudentId').value.trim();
@@ -344,19 +346,17 @@
             }
 
             try {
-
-
-                // ▼ 이렇게 바꾸시면 됩니다! ▼
-                const { data, error } = await db.from('expo_booths').select('*').eq('student_id', studentId);
+                // 1. 끝에 .maybeSingle()을 붙여서 한 명의 데이터만 정확히 가져옵니다.
+                const { data, error } = await db.from('expo_booths').select('*').eq('student_id', studentId).maybeSingle();
 
                 if (error) throw error;
 
                 if (data) {
-                    // 데이터가 있으면 화면에 결과 표시
+                    // 2. 저장된 컬럼명(student_name, subject_name, booth_location)과 정확히 맞춥니다.
                     document.getElementById('resBoothId').innerText = data.student_id;
-                    document.getElementById('resBoothName').innerText = data.name;
-                    document.getElementById('resBoothSubject').innerText = data.subject;
-                    document.getElementById('resBoothRoom').innerText = data.classroom;
+                    document.getElementById('resBoothName').innerText = data.student_name;
+                    document.getElementById('resBoothSubject').innerText = data.subject_name;
+                    document.getElementById('resBoothRoom').innerText = data.booth_location;
 
                     resultBox.style.display = 'block';
                 } else {

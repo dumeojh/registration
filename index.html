@@ -51,28 +51,6 @@
             transform: translateY(-2px);
         }
 
-        /* ✨ 왼쪽 상단 '관리자용 미달성 점검' 작은 박스 (버튼) */
-        .admin-btn {
-            position: absolute;
-            top: 10px;
-            left: 20px;
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.2s, transform 0.2s;
-        }
-
-        .admin-btn:hover {
-            background-color: #c82333;
-            transform: translateY(-2px);
-        }
-
         h1 {
             color: #0056b3;
             margin-top: 40px;
@@ -102,15 +80,17 @@
             }
 
             .card {
-                flex: 1 1 calc(50% - 20px);
-                max-width: 400px;
+                flex: 1 1 calc(33.333% - 20px);
+                /* 카드 너비를 3단으로 조정하여 정렬 */
+                min-width: 250px;
+                max-width: 350px;
             }
         }
 
         .card {
             background: #ffffff;
             border-radius: 15px;
-            padding: 40px 20px;
+            padding: 30px 20px;
             flex: 1;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             text-decoration: none;
@@ -131,19 +111,19 @@
         }
 
         .icon {
-            font-size: 3.5em;
+            font-size: 3em;
             margin-bottom: 15px;
         }
 
         .card h2 {
             color: #333;
             margin: 0 0 10px 0;
-            font-size: 1.4em;
+            font-size: 1.25em;
         }
 
         .card p {
             margin: 0;
-            font-size: 0.95em;
+            font-size: 0.9em;
             color: #777;
             word-break: keep-all;
             line-height: 1.4;
@@ -165,16 +145,27 @@
             align-items: center;
         }
 
-        .modal-content {
+        .modal-content,
+        .admin-modal-content {
             background: white;
             padding: 30px;
             border-radius: 15px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
             position: relative;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             animation: popIn 0.3s ease-out;
+            text-align: center;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .admin-modal-content {
+            width: 95%;
+            max-width: 650px;
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
         @keyframes popIn {
@@ -261,21 +252,7 @@
             color: #333;
         }
 
-        /* 관리자 모달 스타일 추가 */
-        .admin-modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            width: 95%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-            text-align: center;
-            position: relative;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            animation: popIn 0.3s ease-out;
-        }
-
+        /* 관리자 모달 테이블 스타일 */
         .admin-table {
             width: 100%;
             border-collapse: collapse;
@@ -301,6 +278,7 @@
             color: #d9534f;
             font-weight: bold;
             text-align: left;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -309,7 +287,6 @@
 
     <div class="container">
         <button class="lookup-btn" onclick="openModal()">🔍 내 부스 조회</button>
-        <button class="admin-btn" onclick="openAdminModal()">🚨 점검 미달성 학생 조회</button>
 
         <h1>안성여고 2026 교육과정 박람회</h1>
         <p class="subtitle">원하시는 접속 메뉴를 선택해 주세요.</p>
@@ -317,20 +294,26 @@
         <div class="card-container">
             <a href="Educational_Planning_G1.html" class="card">
                 <div class="icon">🌱</div>
-                <h2>1학년 학업설계서(2026년 입학생)</h2>
-                <p>고교 생활의 시작! 나만의 교육과정을 그려보세요.</p>
+                <h2>1학년 학업설계서</h2>
+                <p>고교 생활의 시작! 나만의 교육과정을 그려보세요. (2026년 입학)</p>
             </a>
 
             <a href="Educational_Planning_G2.html" class="card">
                 <div class="icon">📘</div>
-                <h2>2학년 학업설계서(2025년 입학생)</h2>
-                <p>전공 심화와 진로 구체화를 위한 과목을 선택하세요.</p>
+                <h2>2학년 학업설계서</h2>
+                <p>전공 심화와 진로 구체화를 위한 과목을 선택하세요. (2025년 입학)</p>
             </a>
 
             <a href="Course_Registration_G2.html" class="card">
                 <div class="icon">📝</div>
-                <h2>2학년 수강신청 정보(2025년 입학생)</h2>
+                <h2>2학년 수강신청 정보</h2>
                 <p>실제 수강신청을 위한 세부 정보 및 양식을 확인하세요.</p>
+            </a>
+
+            <a href="settings.html" class="card">
+                <div class="icon">⚙️</div>
+                <h2>시스템 환경설정</h2>
+                <p>과목 및 학생 데이터를 관리하는 관리자 전용 메뉴입니다.</p>
             </a>
 
             <a href="https://dumeojh.github.io/high/" class="card" target="_blank" rel="noopener noreferrer">
@@ -339,10 +322,11 @@
                 <p>관련 홈페이지로 이동하여 추가 정보를 확인하세요.</p>
             </a>
 
-            <a href="settings.html" class="card">
-                <div class="icon">⚙️</div>
-                <h2>시스템 환경설정</h2>
-                <p>과목 및 학생 데이터를 관리하는 관리자 전용 메뉴입니다.</p>
+            <a href="#" class="card" onclick="openAdminModal(); return false;"
+                style="border: 2px dashed #dc3545; background-color: #fffafb;">
+                <div class="icon">🚨</div>
+                <h2 style="color: #dc3545;">1·2학년 미달성 점검</h2>
+                <p>사회/예술 필수교과 미이수 학생(3학년 필수 수강 대상자)을 조회합니다.</p>
             </a>
         </div>
     </div>
@@ -352,12 +336,9 @@
             <span class="close-btn" onclick="closeModal()">×</span>
             <h2 class="modal-title">📍 박람회 교실 찾기</h2>
             <p style="font-size: 0.9em; color: #666;">본인의 학번을 입력해 주세요.</p>
-
             <input type="text" id="boothStudentId" class="modal-input" placeholder="예: 20105" maxlength="5"
                 onkeypress="if(event.key === 'Enter') searchBooth()">
-
             <button class="modal-search-btn" onclick="searchBooth()">교실 조회하기</button>
-
             <div id="modalResult">
                 <div class="result-row"><strong>학번</strong> <span id="resBoothId" class="result-val"></span></div>
                 <div class="result-row"><strong>이름</strong> <span id="resBoothName" class="result-val"></span></div>
@@ -372,13 +353,13 @@
     <div id="adminModal" class="modal-overlay">
         <div class="admin-modal-content">
             <span class="close-btn" onclick="closeAdminModal()">×</span>
-            <h2 class="modal-title" style="color: #dc3545;">🚨 필수 점검 미달성 학생 명단</h2>
+            <h2 class="modal-title" style="color: #dc3545;">🚨 1·2학년 필수교과 미달성 학생 명단</h2>
             <p style="font-size: 0.9em; color: #666; word-break: keep-all;">
-                사회/예술 필수 교과 미이수 및 수강 데이터 누락(5과목 미만)이 의심되는 학생 목록입니다.
+                2학년까지의 수강 내역을 바탕으로 <b>사회교과 및 예술교과 필수 이수 조건</b>을 달성하지 못한 학생(3학년 필수 지정 대상)을 찾아냅니다.
             </p>
 
-            <button class="modal-search-btn" style="background-color: #28a745;" onclick="runBatchCheck()"
-                id="runCheckBtn">
+            <button class="modal-search-btn" style="background-color: #28a745; margin-top: 10px;"
+                onclick="runBatchCheck()" id="runCheckBtn">
                 ▶ 데이터 일괄 스캔 시작
             </button>
 
@@ -390,9 +371,9 @@
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th style="width: 25%;">학번</th>
-                            <th style="width: 25%;">이름</th>
-                            <th style="width: 50%;">미달성 사유</th>
+                            <th style="width: 20%;">학번</th>
+                            <th style="width: 20%;">이름</th>
+                            <th style="width: 60%;">미달성 항목 및 3학년 필수 선택 조건</th>
                         </tr>
                     </thead>
                     <tbody id="adminTableBody">
@@ -431,7 +412,6 @@
 
             try {
                 const { data, error } = await db.from('expo_booths').select('*').eq('student_id', studentId).maybeSingle();
-
                 if (error) throw error;
 
                 if (data) {
@@ -439,7 +419,6 @@
                     document.getElementById('resBoothName').innerText = data.student_name;
                     document.getElementById('resBoothSubject').innerText = data.subject_name;
                     document.getElementById('resBoothRoom').innerText = data.booth_location;
-
                     resultBox.style.display = 'block';
                 } else {
                     alert("해당 학번의 배치 정보가 없습니다. 진행 요원에게 문의해 주세요.");
@@ -454,7 +433,6 @@
         // ==========================================
         // ✨ [관리자용] 필수 점검 미달성 학생 일괄 조회 로직
         // ==========================================
-
         function openAdminModal() {
             document.getElementById('adminModal').style.display = 'flex';
             document.getElementById('adminResultArea').style.display = 'none';
@@ -465,7 +443,7 @@
             document.getElementById('adminModal').style.display = 'none';
         }
 
-        // 모달 바깥 클릭 시 닫기 로직 (중복 제거 후 병합됨)
+        // 모달 바깥 클릭 시 닫기
         window.onclick = function (event) {
             const boothModal = document.getElementById('boothModal');
             const adminModal = document.getElementById('adminModal');
@@ -510,7 +488,6 @@
                     const myEnrollments = enrollments.filter(e => e.student_id === student.student_id);
                     const groupCounts = { "사회": 0, "예술": 0 };
 
-                    // 수강한 과목의 교과군 카운트
                     myEnrollments.forEach(e => {
                         const group = groupMap[e.subject_name] || "기타";
                         if (groupCounts[group] !== undefined) groupCounts[group]++;
@@ -518,17 +495,24 @@
 
                     let issues = [];
 
-                    if (groupCounts["사회"] === 0) issues.push("사회교과 필수 미선택");
-                    if (groupCounts["예술"] === 0) issues.push("예술교과 미이수");
-                    if (myEnrollments.length < 5) issues.push("수강 데이터 누락 의심(5과목 미만)");
+                    // ✨ 사용자 요청사항 반영 로직
+                    if (groupCounts["사회"] === 0) {
+                        issues.push("<b>[사회교과 미이수]</b><br><span style='font-size:0.9em; color:#666;'>➔ 3학년 1, 2학기 중 <b>사회교과 한 과목 필수 선택</b> 요망</span>");
+                    }
+                    if (groupCounts["예술"] === 0) {
+                        issues.push("<b>[예술교과 미이수]</b><br><span style='font-size:0.9em; color:#666;'>➔ 3학년 때 <b>'문학 감상과 비평'</b> 또는 <b>'문학과 매체'</b> 중 1과목 필수 선택 요망</span>");
+                    }
+                    if (myEnrollments.length > 0 && myEnrollments.length < 5) {
+                        issues.push("<span style='font-size:0.9em; color:#856404;'>※ 수강 데이터 입력 누락 의심 (5과목 미만)</span>");
+                    }
 
                     if (issues.length > 0) {
                         issueCount++;
                         failedStudentsHtml += `
                             <tr>
-                                <td>${student.student_id || '-'}</td>
+                                <td style="font-weight:bold;">${student.student_id || '-'}</td>
                                 <td>${student.name || '-'}</td>
-                                <td class="issue-text">• ${issues.join('<br>• ')}</td>
+                                <td class="issue-text">• ${issues.join('<br><br>• ')}</td>
                             </tr>
                         `;
                     }
@@ -536,7 +520,7 @@
 
                 // 5. 화면 출력
                 if (issueCount === 0) {
-                    tbody.innerHTML = `<tr><td colspan="3" style="color:#28a745; font-weight:bold; padding:20px;">🎉 모든 학생이 점검 사항을 정상적으로 충족했습니다!</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="3" style="color:#28a745; font-weight:bold; padding:20px;">🎉 1, 2학년 필수교과 미이수 학생이 없습니다!</td></tr>`;
                 } else {
                     tbody.innerHTML = failedStudentsHtml;
                 }

@@ -344,10 +344,12 @@
             }
 
             try {
-
-
-                // ▼ 이렇게 바꾸시면 됩니다! ▼
-                const { data, error } = await db.from('expo_booths').select('*').eq('student_id', studentId);
+                // booth_assignments 테이블에서 학번(student_id) 검색
+                const { data, error } = await db
+                    .from('booth_assignments')
+                    .select('*')
+                    .eq('student_id', studentId)
+                    .maybeSingle();
 
                 if (error) throw error;
 

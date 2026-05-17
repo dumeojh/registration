@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2학년 수강신청 정보 조회</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 기본 스타일 유지 */
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .nav-btn {
+            padding: 8px 15px;
+            background-color: #f8f9fa;
+            color: #495057;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        .print-btn {
+            margin-left: auto;
+            background-color: #e2ece9;
+            font-weight: bold;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        h1 {
+            color: #0056b3;
+            text-align: center;
+            font-size: 1.6em;
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        input[type="text"]:focus {
+            border-color: #4a90e2;
+            outline: none;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .action-btn:hover {
+            background-color: #004494;
+        }
+
+        #resultArea {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border: 2px solid #c3e6cb;
+            background-color: #f0fdf4;
+            border-radius: 10px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .info-box {
+            background: #ffffff;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 15px 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+        }
+
+        .result-label {
+            font-size: 0.85em;
+            color: #155724;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .result-value {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #000;
+            word-break: break-all;
+        }
+
+        .subject-area {
+            border-top: 1px dashed #c3e6cb;
+            padding-top: 20px;
+            margin-top: 15px;
+        }
+
+        .subject-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .subject-tag {
+            background-color: #e2ece9;
+            color: #0056b3;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: normal;
+            border: 1px solid #c8d8d3;
+        }
+
+        /* 3학년 선택교과 세로 리스트 스타일 */
+        .future-subject-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .future-subject-item {
+            background-color: #f3eef5;
+            border: 1px solid #d8cce2;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.2s;
+        }
+
+        .future-subject-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: bold;
+            color: #6f42c1;
+        }
+
+        .future-subject-header input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+
+        .reason-box {
+            display: none;
+            width: 100%;
+            margin-top: 12px;
+            padding: 10px;
+            border: 1px solid #c8b8e0;
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 0.9em;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 500px) {
+            .info-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+        }
+
+        @media print {
+
+            .nav-buttons,
+            .search-box,
+            .action-btn {
+                display: none !important;
+            }
+
+            body {
+                padding: 0;
+                background-color: white;
+            }
+
+            .container {
+                box-shadow: none;
+                border: none;
+                max-width: 100%;
+            }
+
+            #resultArea {
+                display: block !important;
+                border: 1px solid #000;
+                background: white;
+            }
+
+            .reason-box {
+                display: block !important;
+                border: 1px solid #ccc;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="nav-buttons">
+            <button type="button" class="nav-btn" onclick="history.back()">⬅ 이전 단계로</button>
+            <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
+            <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 정보 인쇄</button>
+        </div>
+
+        <h1>2학년 수강신청 정보 조회</h1>
+
+        <div class="search-box">
+            <label>학번과 이름을 모두 입력하세요</label>
+            <div class="input-group">
+                <input type="text" id="studentIdInput" placeholder="2학년 학번 (예: 20105)" maxlength="5">
+                <input type="text" id="studentNameInput" placeholder="이름 (예: 황경서)">
+            </div>
+            <button class="action-btn" onclick="searchStudent()">학생 정보 조회하기</button>
+        </div>
+
+        <div id="resultArea">
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="result-label">이름</div>
+                    <div id="resName" class="result-value">-</div>
+                </div>
+                <div class="info-box">
+                    <div class="result-label">1학년 학번</div>
+                    <div id="resGrade1" class="result-value">-</div>
+                </div>
+                <div class="info-box">
+                    <div class="result-label">2학년 학번</div>
+                    <div id="resGrade2" class="result-value">-</div>
+                </div>
+                <div class="info-box">
+                    <div class="result-label">학생 고유번호</div>
+                    <div id="resUniqueId" class="result-value">-</div>
+                </div>
+            </div>
+
+            <div class="subject-area">
+                <div class="result-label" style="font-size: 1.05em; color:#0056b3;">📘 1학년 수강 신청 과목</div>
+                <div id="resSubjects" class="result-value subject-tags"></div>
+            </div>
+
+            <div class="subject-area" id="grade3Area" style="display: none; border-top-color: #d8cce2;">
+                <div class="result-label" style="font-size: 1.05em; color:#6f42c1;">🔮 3학년 1학기 선택교과 설계</div>
+                <p style="font-size: 0.85em; color: #666; margin-top: -3px; margin-bottom: 0;">※ 희망 과목을 체크하고 선택 이유를 간략히
+                    적어보세요.</p>
+                <div id="resGrade3Subjects" class="future-subject-list"></div>
+            </div>
+
+            <div class="subject-area" id="grade3Sem2Area" style="display: none; border-top-color: #d8cce2;">
+                <div class="result-label" style="font-size: 1.05em; color:#6f42c1;">🔮 3학년 2학기 선택교과 설계</div>
+                <p style="font-size: 0.85em; color: #666; margin-top: -3px; margin-bottom: 0;">※ 희망 과목을 체크하고 선택 이유를 간략히
+                    적어보세요.</p>
+                <div id="resGrade3Sem2Subjects" class="future-subject-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function searchStudent() {
+            const idVal = document.getElementById('studentIdInput').value.trim();
+            const nameVal = document.getElementById('studentNameInput').value.trim();
+            const resultArea = document.getElementById('resultArea');
+
+            if (!idVal || !nameVal) {
+                alert("조회할 학번과 이름을 모두 입력해 주세요.");
+                return;
+            }
+
+            try {
+                const { data, error } = await db
+                    .from('students')
+                    .select('name, grade1_id, grade2_id, unique_id, grade1_subjects')
+                    .eq('grade2_id', idVal)
+                    .eq('name', nameVal)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (data) {
+                    document.getElementById('resName').innerText = data.name;
+                    document.getElementById('resGrade1').innerText = data.grade1_id || "-";
+                    document.getElementById('resGrade2').innerText = data.grade2_id || "-";
+                    document.getElementById('resUniqueId').innerText = data.unique_id || "-";
+
+                    const subjectsArea = document.getElementById('resSubjects');
+                    if (data.grade1_subjects && data.grade1_subjects.trim() !== '') {
+                        const subjectArray = data.grade1_subjects.split(',');
+                        subjectsArea.innerHTML = subjectArray.map(sub => `<span class="subject-tag">${sub.trim()}</span>`).join('');
+                    } else {
+                        subjectsArea.innerHTML = '<span style="font-size:0.9em; color:#888; font-weight:normal;">등록된 수강 신청 데이터가 없습니다.</span>';
+                    }
+
+                    resultArea.style.display = 'block';
+
+                    // ✨ 1학기와 2학기 과목을 차례대로 불러옵니다.
+                    await loadGrade3Subjects();
+                    await loadGrade3Sem2Subjects();
+                } else {
+                    alert("입력하신 학번과 이름이 일치하는 학생 정보를 찾을 수 없습니다.");
+                    resultArea.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("조회 중 오류:", err);
+                alert("데이터 조회 중 오류가 발생했습니다.");
+            }
+        }
+
+        // 3학년 1학기 불러오기
+        async function loadGrade3Subjects() {
+            try {
+                document.getElementById('grade3Area').style.display = 'block';
+                const g3Area = document.getElementById('resGrade3Subjects');
+
+                const { data, error } = await db
+                    .from('subjects')
+                    .select('*')
+                    .eq('grade', '3')
+                    .in('semester', ['1', '1학기'])
+                    .order('selection_group', { ascending: true });
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    g3Area.innerHTML = data.map(sub => {
+                        const groupText = sub.selection_group ? ` <small style="color:#888;">(${sub.selection_group})</small>` : '';
+                        return `
+                        <div class="future-subject-item">
+                            <label class="future-subject-header">
+                                <input type="checkbox" onchange="toggleReason(this)">
+                                <span>${sub.subject_name}${groupText}</span>
+                            </label>
+                            <textarea class="reason-box" placeholder="${sub.subject_name} 과목을 선택하려는 이유를 적어주세요."></textarea>
+                        </div>
+                        `;
+                    }).join('');
+                } else {
+                    g3Area.innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 3학년 1학기 선택교과가 없습니다.</span>';
+                }
+            } catch (err) {
+                console.error("3학년 1학기 과목 불러오기 실패:", err);
+            }
+        }
+
+        // ✨ 3학년 2학기 불러오기 (새로 추가)
+        async function loadGrade3Sem2Subjects() {
+            try {
+                document.getElementById('grade3Sem2Area').style.display = 'block';
+                const g3Area = document.getElementById('resGrade3Sem2Subjects');
+
+                // 학기(semester)가 '2' 또는 '2학기'인 것만 조회합니다.
+                const { data, error } = await db
+                    .from('subjects')
+                    .select('*')
+                    .eq('grade', '3')
+                    .in('semester', ['2', '2학기'])
+                    .order('selection_group', { ascending: true });
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    g3Area.innerHTML = data.map(sub => {
+                        const groupText = sub.selection_group ? ` <small style="color:#888;">(${sub.selection_group})</small>` : '';
+                        return `
+                        <div class="future-subject-item">
+                            <label class="future-subject-header">
+                                <input type="checkbox" onchange="toggleReason(this)">
+                                <span>${sub.subject_name}${groupText}</span>
+                            </label>
+                            <textarea class="reason-box" placeholder="${sub.subject_name} 과목을 선택하려는 이유를 적어주세요."></textarea>
+                        </div>
+                        `;
+                    }).join('');
+                } else {
+                    g3Area.innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 3학년 2학기 선택교과가 없습니다.</span>';
+                }
+            } catch (err) {
+                console.error("3학년 2학기 과목 불러오기 실패:", err);
+            }
+        }
+
+        // 체크박스 상태에 따라 텍스트 박스를 보여주거나 숨기는 함수
+        function toggleReason(checkbox) {
+            const reasonBox = checkbox.closest('.future-subject-item').querySelector('.reason-box');
+            if (checkbox.checked) {
+                reasonBox.style.display = 'block';
+                reasonBox.focus();
+            } else {
+                reasonBox.style.display = 'none';
+                reasonBox.value = ''; // 체크 해제 시 내용 지움
+            }
+        }
+
+        document.getElementById('studentIdInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') searchStudent();
+        });
+        document.getElementById('studentNameInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') searchStudent();
+        });
+    </script>
+</body>
+
+</html>

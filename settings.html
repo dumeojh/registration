@@ -403,13 +403,52 @@
             </div>
         </div>
 
-
-
         <div id="tab-booth" class="tab-content">
             <h2 style="color:#d9534f;">📍 박람회 배치교실 관리</h2>
             <div class="section fair-csv-section">
                 <span class="label">📍 박람회 배치교실 엑셀(CSV) 일괄 등록</span>
-                <input type="file" id="csvBoothInput" accept=".csv" style="background: white;">
+                <p style="color: #666; font-size: 0.85rem; margin-top:0;">A열부터 D열까지 학번, 이름, 과목명, 배치교실 정보가 담긴 CSV 파일을
+                    선택하세요.</p>
+
+                <details class="csv-guide">
+                    <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
+                    <div style="overflow-x: auto;">
+                        <table class="csv-table">
+                            <thead>
+                                <tr>
+                                    <th>A열 (학번)</th>
+                                    <th>B열 (이름)</th>
+                                    <th>C열 (과목명)</th>
+                                    <th>D열 (배치교실)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>20101</td>
+                                    <td>김안성</td>
+                                    <td>심화 수학Ⅰ</td>
+                                    <td>2학년 1반</td>
+                                </tr>
+                                <tr>
+                                    <td>20102</td>
+                                    <td>이여고</td>
+                                    <td>프로그래밍</td>
+                                    <td>컴퓨터실</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4"
+                                        style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
+                                        💡 <b>작성 가이드</b><br>
+                                        - <b>1행(헤더)</b>: 제목 행으로 인식되어 데이터로 들어가지 않습니다. 실제 데이터는 2행부터 작성하세요.<br>
+                                        - <b>A열(1번째 열)</b>: 학생 식별을 위한 <b>학번</b>이 반드시 입력되어야 합니다.<br>
+                                        - <b>B열 ~ D열</b>: 각각 이름, 과목명, 배치될 교실(부스) 이름을 빈칸 없이 정확히 기재합니다.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+                <input type="file" id="csvBoothInput" accept=".csv" style="background: white; margin-top: 10px;">
                 <button class="btn btn-fair" id="csvBoothBtn" onclick="uploadBoothCSV()">배치교실 데이터 덮어쓰기 & 등록</button>
             </div>
         </div>

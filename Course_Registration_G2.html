@@ -593,6 +593,8 @@
             }
         }
 
+
+
         // 일반 과목 리스트 마운트 공통 함수
         function renderSubjectsList(subjects, containerId) {
             const container = document.getElementById(containerId);
@@ -601,23 +603,27 @@
                     const groupText = sub.selection_group ? ` <small style="color:#888;">(${sub.selection_group})</small>` : '';
                     const creditText = sub.credits ? ` <span style="font-size:0.8em; color:#e83e8c; margin-left:5px;">[${sub.credits}학점]</span>` : '';
 
-                    // ✨ 파일1(file1) 데이터가 있는지 확인하고 동적 링크 생성 ✨
-                    let subjectHtml = sub.subject_name; // 기본은 링크 없는 일반 텍스트
+                    // ✨ 파일1 ~ 파일5 데이터가 있는지 확인하고 동적 링크 생성 ✨
+                    let fileLinksHtml = '';
 
-                    if (sub.file1) { // Supabase의 file1 칸에 값(코드)이 들어있다면
-                        // DB에 '46'이라고만 적어도 알아서 '.jpg'를 붙여주도록 처리
-                        const fileName = sub.file1.includes('.jpg') ? sub.file1 : sub.file1 + '.jpg';
-                        const fileUrl = `https://dumeojh.github.io/high/jpgs/${fileName}`;
+                    // 1부터 5까지 반복하면서 file1, file2, file3, file4, file5를 검사합니다.
+                    for (let i = 1; i <= 5; i++) {
+                        const fileKey = `file${i}`; // 'file1', 'file2' 등의 문자열을 만듦
 
-                        // 링크가 걸린 텍스트로 변환 (클릭 시 체크박스가 눌리지 않도록 이벤트 전파 차단)
-                        subjectHtml = `<a href="${fileUrl}" target="_blank" style="color: #0056b3; text-decoration: underline; font-weight: bold;" onclick="event.stopPropagation();">${sub.subject_name}</a>`;
+                        if (sub[fileKey]) { // Supabase의 해당 칸(file1~5)에 값(코드)이 들어있다면
+                            const fileName = sub[fileKey].includes('.jpg') ? sub[fileKey] : sub[fileKey] + '.jpg';
+                            const fileUrl = `https://dumeojh.github.io/high/jpgs/${fileName}`;
+
+                            // 링크 버튼 모양으로 HTML을 추가합니다. (클릭 시 체크박스 눌림 방지 포함)
+                            fileLinksHtml += `<a href="${fileUrl}" target="_blank" style="color: #0056b3; font-size: 0.85em; text-decoration: none; font-weight: bold; margin-left: 6px; background-color: #e2ece9; padding: 2px 6px; border-radius: 4px; border: 1px solid #c3e6cb;" onclick="event.stopPropagation();">[파일${i}]</a>`;
+                        }
                     }
 
                     return `
                     <div class="future-subject-item">
                         <label class="future-subject-header">
                             <input type="checkbox" onchange="toggleReason(this)">
-                            <span>${subjectHtml}${groupText}${creditText}</span>
+                            <span>${sub.subject_name}${groupText}${creditText}${fileLinksHtml}</span>
                         </label>
                         <textarea class="reason-box" placeholder="${sub.subject_name} 과목을 선택하려는 이유를 적어주세요."></textarea>
                     </div>
@@ -627,6 +633,11 @@
                 container.innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 선택교과가 없습니다.</span>';
             }
         }
+
+
+
+
+
         // 체크박스 제어 활성화 바인딩 함수
         function toggleReason(checkbox) {
             const reasonBox = checkbox.closest('.future-subject-item').querySelector('.reason-box');

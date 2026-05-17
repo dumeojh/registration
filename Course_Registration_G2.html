@@ -351,7 +351,6 @@
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
-
         async function searchStudent() {
             const idVal = document.getElementById('studentIdInput').value.trim();
             const nameVal = document.getElementById('studentNameInput').value.trim();
@@ -363,7 +362,7 @@
             }
 
             try {
-                // 1. 신규 DB 구조에 맞춘 학생 기본 정보 조회 (마스터키: student_id)
+                // 1. 학생 기본 정보 조회
                 const { data: student, error: studentErr } = await db
                     .from('students')
                     .select('name, grade1_num, student_id')
@@ -374,14 +373,12 @@
                 if (studentErr) throw studentErr;
 
                 if (student) {
-                    // 화면에 학생 정보 출력
                     document.getElementById('resName').innerText = student.name;
                     document.getElementById('resGrade1').innerText = student.grade1_num || "-";
                     document.getElementById('resGrade2').innerText = student.student_id || "-";
-                    // 기존 unique_id는 더 이상 사용하지 않으므로 2학년 학번으로 대체 표시
                     document.getElementById('resUniqueId').innerText = student.student_id || "-";
 
-                    // 2. 신규 DB 구조에 맞춘 수강신청 내역 조회 (student_enrollments 테이블)
+                    // 2. 수강신청 내역 조회 (student_enrollments)
                     const { data: enrollments, error: enrollErr } = await db
                         .from('student_enrollments')
                         .select('subject_name')
@@ -390,17 +387,71 @@
                     if (enrollErr) throw enrollErr;
 
                     const subjectsArea = document.getElementById('resSubjects');
+
                     if (enrollments && enrollments.length > 0) {
-                        // 과목명만 추출하여 중복 제거 후 뱃지(태그) 형태로 출력
                         const subjectNames = [...new Set(enrollments.map(e => e.subject_name))];
-                        subjectsArea.innerHTML = subjectNames.map(sub => `<span class="subject-tag">${sub}</span>`).join('');
+
+                        // 3. ✨ 방금 업로드한 subjects 테이블에서 '교과군' 정보 매핑하여 가져오기
+                        const { data: subjectDetails, error: subErr } = await db
+                            .from('subjects')
+                            .select('subject_name, subject_group')
+                            .in('subject_name', subjectNames);
+
+                        if (subErr) throw subErr;
+
+                        // 과목별 교과군을 찾기 쉬운 사전 형태로 변환
+                        const groupMap = {};
+                        if (subjectDetails) {
+                            subjectDetails.forEach(sub => {
+                                groupMap[sub.subject_name] = sub.subject_group || "기타";
+                            });
+                        }
+
+                        // 교과군별 이수 개수 카운트
+                        const groupCounts = { "국어": 0, "수학": 0, "영어": 0, "사회": 0, "과학": 0, "예술": 0, "교양": 0, "체육": 0 };
+
+                        // 화면 출력용 HTML 생성 및 카운트 누적
+                        const badgesHtml = subjectNames.map(sub => {
+                            const group = groupMap[sub] || "기타";
+                            if (groupCounts[group] !== undefined) groupCounts[group]++;
+                            return `<span class="subject-tag">${sub} <small style="color:#777;">[${group}]</small></span>`;
+                        }).join('');
+
+                        // 4. 💡 1,2학년 수강 내역 기반 3학년 진단 시스템 로직
+                        let diagnosticHtml = `<div style="margin-top:15px; padding:15px; background:#f8f9fa; border-radius:8px; border:1px solid #dee2e6; font-size:0.95em; line-height:1.6; color:#333;">`;
+                        diagnosticHtml += `<h4 style="margin:0 0 10px 0; color:#0056b3;">📊 나의 1·2학년 이수 현황 및 3학년 필수조건 진단</h4>`;
+
+                        let hasWarning = false;
+
+                        // 진단 1: 사회 교과
+                        if (groupCounts["사회"] === 0) {
+                            diagnosticHtml += `<div style="color:#d9534f; margin-bottom:5px;">⚠️ <b>사회교과 필수:</b> 1, 2학년 중 사회 과목 이수 내역이 없습니다. <br>&nbsp;&nbsp;&nbsp;👉 <b>3학년 1, 2학기 중 사회 1과목 이상을 반드시 선택</b>해야 합니다.</div>`;
+                            hasWarning = true;
+                        }
+
+                        // 진단 2: 예술 교과
+                        if (groupCounts["예술"] === 0) {
+                            diagnosticHtml += `<div style="color:#d9534f; margin-bottom:5px;">⚠️ <b>예술교과 필수:</b> 1, 2학년 중 예술 과목 이수 내역이 없습니다. <br>&nbsp;&nbsp;&nbsp;👉 <b>3학년 때 [문학 감상과 비평] 또는 [문학과 매체] 중 1과목을 필수로 선택</b>해야 합니다.</div>`;
+                            hasWarning = true;
+                        }
+
+                        // 경고가 없을 때의 긍정적인 메시지
+                        if (!hasWarning) {
+                            diagnosticHtml += `<div style="color:#28a745;">✅ <b>필수 이수 요건(사회/예술) 방어 완료:</b> 기본 필수 조건이 잘 채워져 있습니다. 진로에 맞춰 자유롭게 3학년 과목을 설계하세요!</div>`;
+                        }
+
+                        diagnosticHtml += `</div>`;
+
+                        // 기존 과목 뱃지 + 진단 창 합쳐서 화면에 표시
+                        subjectsArea.innerHTML = badgesHtml + diagnosticHtml;
+
                     } else {
-                        subjectsArea.innerHTML = '<span style="font-size:0.9em; color:#888; font-weight:normal;">등록된 수강 신청 데이터가 없습니다.</span>';
+                        subjectsArea.innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';
                     }
 
                     resultArea.style.display = 'block';
 
-                    // 3학년 1학기, 2학기 과목 로드
+                    // 3학년 과목 로드
                     await loadGrade3Subjects();
                     await loadGrade3Sem2Subjects();
                 } else {
@@ -412,6 +463,9 @@
                 alert("데이터 조회 중 오류가 발생했습니다: " + err.message);
             }
         }
+
+
+
 
         // 3학년 1학기 불러오기
         async function loadGrade3Subjects() {

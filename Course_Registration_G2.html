@@ -501,22 +501,28 @@
                         let diagnosticHtml = `<div style="margin-top:20px; padding:18px; background:#fdfdfe; border-radius:10px; border:1px solid #c8d8d3; font-size:0.95em; line-height:1.6; color:#333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">`;
                         diagnosticHtml += `<h4 style="margin:0 0 15px 0; color:#155724; border-bottom: 2px solid #c3e6cb; padding-bottom: 8px;">🎯 3학년 선택교과 설계 전 필수 점검사항 (4가지)</h4>`;
 
-                        // [점검 1] 사회교과 필수
-                        if (groupCounts["사회"] === 0) {
+
+                        // [점검 3] 예술교과 필수 (문학 감상과 비평 / 문학과 매체)
+                        if (groupCounts["예술"] === 0) {
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;">
-                                <b style="color:#d9534f;">1. 사회교과 필수 선택</b><br>
-                                2학년에서 사회교과를 선택하지 않았으므로, <b>3학년 1, 2학기 중 사회교과 한 과목은 필수적으로 선택</b>해야 합니다.
+                                <b style="color:#d9534f;">3. 예술교과 필수 이수 조건</b><br>
+                                2학년 때 음악/미술/공예일반/연극을 수강하지 않았으므로, <b>3학년 때 [문학 감상과 비평] 또는 [문학과 매체] 중 1과목을 필수로 선택</b>해야 합니다.
                             </div>`;
                         } else {
-                            const socialListStr = takenSocialSubjects.join(', '); // 수집한 사회 과목 목록
+                            // 💡 여기도 동일하게 줄바꿈 적용
+                            const artListStr = takenArtSubjects.join('<br>&nbsp;&nbsp;· ');
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;">
-                                <b style="color:#28a745;">1. 사회교과 (이수 충족)</b><br>
-                                이미 1·2학년 중 사회교과를 이수하여 필수 조건이 충족되었습니다.<br>
-                                <div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:6px 10px; border-radius:6px; display:inline-block;">
-                                    ✅ <b>나의 이수 내역:</b> ${socialListStr}
+                                <b style="color:#28a745;">3. 예술교과 (이수 충족)</b><br>
+                                이미 1·2학년 중 예술교과를 이수하여 대체 과목 필수 선택 대상이 아닙니다.<br>
+                                <div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">
+                                    ✅ <b>나의 이수 내역:</b><br>
+                                    &nbsp;&nbsp;· ${artListStr}
                                 </div>
                             </div>`;
                         }
+
+
+
 
                         // [점검 2] 국, 영, 수 초과 금지
                         diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #0056b3;">

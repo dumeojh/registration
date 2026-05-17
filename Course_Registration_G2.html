@@ -430,9 +430,12 @@
                         const catSem2 = new Set();
                         const catGrade2 = new Set(); // 2학년 수강과목 대비
 
-                        // ✨ 이수 내역 상세 표시를 위한 배열 추가
+                        // ✨ 이수 내역 상세 표시를 위한 배열 추가 (국·영·수 포함)
                         const takenSocialSubjects = [];
                         const takenArtSubjects = [];
+                        const takenKoreanSubjects = [];
+                        const takenEnglishSubjects = [];
+                        const takenMathSubjects = [];
 
                         // 확보한 데이터들을 조건에 맞게 바구니에 분배
                         enrollments.forEach(e => {
@@ -451,13 +454,22 @@
                                 catGrade2.add(tagHtml);
                             }
 
-                            // 💡 상세 내역용 데이터 수집 (예: "[1학년 1학기 공통] 통합사회")
+                            // 💡 상세 내역용 데이터 수집 (어느 학기, 어떤 과목)
                             const detailStr = `[${cat}] <b>${sub}</b>`;
                             if (group === "사회" && !takenSocialSubjects.includes(detailStr)) {
                                 takenSocialSubjects.push(detailStr);
                             }
                             if (group === "예술" && !takenArtSubjects.includes(detailStr)) {
                                 takenArtSubjects.push(detailStr);
+                            }
+                            if (group === "국어" && !takenKoreanSubjects.includes(detailStr)) {
+                                takenKoreanSubjects.push(detailStr);
+                            }
+                            if (group === "영어" && !takenEnglishSubjects.includes(detailStr)) {
+                                takenEnglishSubjects.push(detailStr);
+                            }
+                            if (group === "수학" && !takenMathSubjects.includes(detailStr)) {
+                                takenMathSubjects.push(detailStr);
                             }
                         });
 
@@ -508,7 +520,6 @@
                                 2학년에서 사회교과를 선택하지 않았으므로, <b>3학년 1, 2학기 중 사회교과 한 과목은 필수적으로 선택</b>해야 합니다.
                             </div>`;
                         } else {
-                            // 💡 학기별로 예쁘게 줄바꿈되도록 수정
                             const socialListStr = takenSocialSubjects.join('<br>&nbsp;&nbsp;· ');
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;">
                                 <b style="color:#28a745;">1. 사회교과 (이수 충족)</b><br>
@@ -520,11 +531,21 @@
                             </div>`;
                         }
 
-                        // [점검 2] 국, 영, 수 초과 금지
+                        // [점검 2] 국, 영, 수 초과 금지 (✨ 상세 이수 내역 학기별 줄바꿈 추가)
+                        const koreanDetails = takenKoreanSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + takenKoreanSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
+                        const englishDetails = takenEnglishSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + takenEnglishSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
+                        const mathDetails = takenMathSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + takenMathSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
+
                         diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #0056b3;">
                             <b style="color:#0056b3;">2. 기초교과(국·영·수) 선택 제한</b><br>
                             국, 영, 수 교과는 4학기 동안 <b>총 4개 과목이 초과되지 않도록 선택</b>해야 합니다. (한 학기에 1과목 선택 권장)<br>
-                            <span style="font-size:0.9em; color:#666;">👉 나의 1·2학년 누적 수강: 국어(${groupCounts["국어"] || 0}개), 영어(${groupCounts["영어"] || 0}개), 수학(${groupCounts["수학"] || 0}개)</span>
+                            <span style="font-size:0.9em; color:#666;">👉 나의 1·2학년 누적 수강 개수: 국어(${groupCounts["국어"] || 0}개), 영어(${groupCounts["영어"] || 0}개), 수학(${groupCounts["수학"] || 0}개)</span><br>
+                            <div style="margin-top:6px; font-size:0.9em; color:#004085; background-color:#e0f3ff; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6; width:100%; box-sizing:border-box;">
+                                ✅ <b>나의 국·영·수 세부 이수 내역:</b>
+                                <br>&nbsp;&nbsp;• <b>국어</b> (${groupCounts["국어"] || 0}개):${koreanDetails}
+                                <br>&nbsp;&nbsp;• <b>영어</b> (${groupCounts["영어"] || 0}개):${englishDetails}
+                                <br>&nbsp;&nbsp;• <b>수학</b> (${groupCounts["수학"] || 0}개):${mathDetails}
+                            </div>
                         </div>`;
 
                         // [점검 3] 예술교과 필수 (문학 감상과 비평 / 문학과 매체)
@@ -534,7 +555,6 @@
                                 2학년 때 음악/미술/공예일반/연극을 수강하지 않았으므로, <b>3학년 때 [문학 감상과 비평] 또는 [문학과 매체] 중 1과목을 필수로 선택</b>해야 합니다.
                             </div>`;
                         } else {
-                            // 💡 여기도 학기별로 예쁘게 줄바꿈되도록 완벽히 수정!
                             const artListStr = takenArtSubjects.join('<br>&nbsp;&nbsp;· ');
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;">
                                 <b style="color:#28a745;">3. 예술교과 (이수 충족)</b><br>

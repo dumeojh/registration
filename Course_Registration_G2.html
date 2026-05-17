@@ -305,6 +305,7 @@
         </div>
 
         <div id="resultArea">
+
             <div class="info-grid">
                 <div class="info-box">
                     <div class="result-label">이름</div>
@@ -319,8 +320,8 @@
                     <div id="resGrade2" class="result-value">-</div>
                 </div>
                 <div class="info-box">
-                    <div class="result-label">학생 고유번호</div>
-                    <div id="resUniqueId" class="result-value">-</div>
+                    <div class="result-label">3학년 학번</div>
+                    <div id="resGrade3" class="result-value">-</div>
                 </div>
             </div>
 
@@ -364,10 +365,10 @@
             }
 
             try {
-                // 1. 학생 기본 정보 조회
+                // 1. 학생 기본 정보 조회 (grade3_num 추가)
                 const { data: student, error: studentErr } = await db
                     .from('students')
-                    .select('name, grade1_num, student_id')
+                    .select('name, grade1_num, student_id, grade3_num')
                     .eq('student_id', idVal)
                     .eq('name', nameVal)
                     .maybeSingle();
@@ -378,7 +379,10 @@
                     document.getElementById('resName').innerText = student.name;
                     document.getElementById('resGrade1').innerText = student.grade1_num || "-";
                     document.getElementById('resGrade2').innerText = student.student_id || "-";
-                    document.getElementById('resUniqueId').innerText = student.student_id || "-";
+                    // 고유번호 대신 3학년 학번을 출력하도록 변경
+                    document.getElementById('resGrade3').innerText = student.grade3_num || "-";
+
+
 
                     // 2. ✨ 수강신청 내역 조회 시 'category' 컬럼 추가 확보
                     const { data: enrollments, error: enrollErr } = await db

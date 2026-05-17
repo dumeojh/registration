@@ -577,6 +577,18 @@
             }
         }
 
+        // 체크박스 상태에 따라 텍스트 박스를 보여주거나 숨기는 함수
+        function toggleReason(checkbox) {
+            const reasonBox = checkbox.closest('.future-subject-item').querySelector('.reason-box');
+            if (checkbox.checked) {
+                reasonBox.style.display = 'block';
+                reasonBox.focus();
+            } else {
+                reasonBox.style.display = 'none';
+                reasonBox.value = ''; // 체크 해제 시 내용 지움
+            }
+        }
+
 
         // 엔터키 입력 이벤트
         document.getElementById('studentIdInput').addEventListener('keypress', function (e) {

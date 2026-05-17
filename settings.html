@@ -298,15 +298,56 @@
         </div>
 
         <div id="tab-student2" class="tab-content active">
-            <div class="card">
-                <h3>👥 1. 학생 명단 일괄 등록 (마스터키: 2학년 학번)</h3>
-                <p style="color: #666; font-size: 0.9rem;">양식: [1학년 학번, 2학년 학번, 3학년 학번, 이름] 순서의 CSV 파일</p>
-                <div class="upload-box">
-                    <input type="file" id="studentFile2" accept=".csv" />
-                    <button onclick="uploadStudents2()" class="btn-primary">학생 명단 업로드</button>
-                </div>
+            <h2 style="color:var(--primary-color);">👥 학생 명단 일괄 등록 (마스터키: 2학년 학번)</h2>
+            <div class="section csv-section">
+                <span class="label">👥 학생 명단 엑셀(CSV) 등록</span>
+                <p style="color: #666; font-size: 0.85rem; margin-top:0;">1학년부터 3학년까지의 학번과 이름 정보가 담긴 CSV 파일을 선택하세요.</p>
+
+                <details class="csv-guide">
+                    <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
+                    <div style="overflow-x: auto;">
+                        <table class="csv-table">
+                            <thead>
+                                <tr>
+                                    <th>A열 (1학년 학번)</th>
+                                    <th>B열 (2학년 학번)</th>
+                                    <th>C열 (3학년 학번)</th>
+                                    <th>D열 (이름)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>10101</td>
+                                    <td>20101</td>
+                                    <td>30101</td>
+                                    <td>김안성</td>
+                                </tr>
+                                <tr>
+                                    <td>10102</td>
+                                    <td>20102</td>
+                                    <td></td>
+                                    <td>이여고</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4"
+                                        style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
+                                        💡 <b>작성 가이드</b><br>
+                                        - <b>1행(헤더)</b>: 제목 행으로 인식되어 데이터로 들어가지 않습니다.<br>
+                                        - <b>B열(2학년 학번) & D열(이름)</b>: 시스템 등록을 위한 <b>필수 항목</b>입니다. 반드시 기재해 주세요.<br>
+                                        - <b>A열(1학년) & C열(3학년)</b>: 해당 학년의 학번이 있다면 기재하고, 아직 없거나 배정받지 않았다면 빈칸으로 두셔도
+                                        무방합니다.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+                <input type="file" id="studentFile2" accept=".csv" style="background: white; margin-top: 10px;" />
+                <button onclick="uploadStudents2()" class="btn btn-save" style="margin-top: 5px;">학생 명단 업로드</button>
             </div>
         </div>
+
+
 
         <div id="tab-grade1" class="tab-content">
             <h2 style="color:#6f42c1;">🪄 1학년 수강신청 관리 (배열 데이터 구조)</h2>

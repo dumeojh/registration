@@ -18,7 +18,6 @@
             justify-content: center;
             min-height: 100vh;
             position: relative;
-            /* 모달창 배치를 위한 기준점 */
         }
 
         .container {
@@ -52,10 +51,31 @@
             transform: translateY(-2px);
         }
 
+        /* ✨ 왼쪽 상단 '관리자용 미달성 점검' 작은 박스 (버튼) */
+        .admin-btn {
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+
+        .admin-btn:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+        }
+
         h1 {
             color: #0056b3;
             margin-top: 40px;
-            /* 버튼 공간 확보 */
             margin-bottom: 10px;
             font-size: 1.8em;
             word-break: keep-all;
@@ -134,7 +154,6 @@
            ========================================= */
         .modal-overlay {
             display: none;
-            /* 평소에는 숨겨둠 */
             position: fixed;
             top: 0;
             left: 0;
@@ -241,6 +260,48 @@
             font-weight: bold;
             color: #333;
         }
+
+        /* 관리자 모달 스타일 추가 */
+        .admin-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 95%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: popIn 0.3s ease-out;
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+
+        .admin-table th,
+        .admin-table td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .admin-table th {
+            background-color: #f8f9fa;
+            color: #495057;
+            position: sticky;
+            top: 0;
+        }
+
+        .issue-text {
+            color: #d9534f;
+            font-weight: bold;
+            text-align: left;
+        }
     </style>
 </head>
 
@@ -248,6 +309,7 @@
 
     <div class="container">
         <button class="lookup-btn" onclick="openModal()">🔍 내 부스 조회</button>
+        <button class="admin-btn" onclick="openAdminModal()">🚨 점검 미달성 학생 조회</button>
 
         <h1>안성여고 2026 교육과정 박람회</h1>
         <p class="subtitle">원하시는 접속 메뉴를 선택해 주세요.</p>
@@ -307,13 +369,46 @@
         </div>
     </div>
 
+    <div id="adminModal" class="modal-overlay">
+        <div class="admin-modal-content">
+            <span class="close-btn" onclick="closeAdminModal()">×</span>
+            <h2 class="modal-title" style="color: #dc3545;">🚨 필수 점검 미달성 학생 명단</h2>
+            <p style="font-size: 0.9em; color: #666; word-break: keep-all;">
+                사회/예술 필수 교과 미이수 및 수강 데이터 누락(5과목 미만)이 의심되는 학생 목록입니다.
+            </p>
+
+            <button class="modal-search-btn" style="background-color: #28a745;" onclick="runBatchCheck()"
+                id="runCheckBtn">
+                ▶ 데이터 일괄 스캔 시작
+            </button>
+
+            <div id="loadingMsg" style="display:none; margin-top:15px; color:#0056b3; font-weight:bold;">
+                ⏳ 데이터를 불러오고 분석 중입니다. 잠시만 기다려주세요...
+            </div>
+
+            <div id="adminResultArea" style="display:none;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">학번</th>
+                            <th style="width: 25%;">이름</th>
+                            <th style="width: 50%;">미달성 사유</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Supabase 연결 설정
         const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // 모달창 열고 닫는 함수
+        // 부스 조회 모달 관련 함수
         function openModal() {
             document.getElementById('boothModal').style.display = 'flex';
             document.getElementById('boothStudentId').focus();
@@ -325,17 +420,6 @@
             document.getElementById('boothStudentId').value = '';
         }
 
-        // 팝업창 바깥 영역을 클릭하면 모달 닫히기
-        window.onclick = function (event) {
-            const modal = document.getElementById('boothModal');
-            if (event.target == modal) {
-                closeModal();
-            }
-        }
-
-
-
-        // DB에서 학번으로 배치 교실 검색하는 함수
         async function searchBooth() {
             const studentId = document.getElementById('boothStudentId').value.trim();
             const resultBox = document.getElementById('modalResult');
@@ -346,13 +430,11 @@
             }
 
             try {
-                // 1. 끝에 .maybeSingle()을 붙여서 한 명의 데이터만 정확히 가져옵니다.
                 const { data, error } = await db.from('expo_booths').select('*').eq('student_id', studentId).maybeSingle();
 
                 if (error) throw error;
 
                 if (data) {
-                    // 2. 저장된 컬럼명(student_name, subject_name, booth_location)과 정확히 맞춥니다.
                     document.getElementById('resBoothId').innerText = data.student_id;
                     document.getElementById('resBoothName').innerText = data.student_name;
                     document.getElementById('resBoothSubject').innerText = data.subject_name;
@@ -366,6 +448,109 @@
             } catch (err) {
                 console.error("조회 오류:", err);
                 alert("데이터를 조회하는 중 오류가 발생했습니다.");
+            }
+        }
+
+        // ==========================================
+        // ✨ [관리자용] 필수 점검 미달성 학생 일괄 조회 로직
+        // ==========================================
+
+        function openAdminModal() {
+            document.getElementById('adminModal').style.display = 'flex';
+            document.getElementById('adminResultArea').style.display = 'none';
+            document.getElementById('adminTableBody').innerHTML = '';
+        }
+
+        function closeAdminModal() {
+            document.getElementById('adminModal').style.display = 'none';
+        }
+
+        // 모달 바깥 클릭 시 닫기 로직 (중복 제거 후 병합됨)
+        window.onclick = function (event) {
+            const boothModal = document.getElementById('boothModal');
+            const adminModal = document.getElementById('adminModal');
+            if (event.target == boothModal) closeModal();
+            if (event.target == adminModal) closeAdminModal();
+        }
+
+        async function runBatchCheck() {
+            const btn = document.getElementById('runCheckBtn');
+            const loading = document.getElementById('loadingMsg');
+            const resultArea = document.getElementById('adminResultArea');
+            const tbody = document.getElementById('adminTableBody');
+
+            btn.style.display = 'none';
+            loading.style.display = 'block';
+            resultArea.style.display = 'none';
+            tbody.innerHTML = '';
+
+            try {
+                // 1. 모든 과목 정보 가져오기 (교과군 분류용)
+                const { data: subjects, error: subErr } = await db.from('subjects').select('subject_name, subject_group');
+                if (subErr) throw subErr;
+
+                const groupMap = {};
+                if (subjects) {
+                    subjects.forEach(sub => groupMap[sub.subject_name] = sub.subject_group || "기타");
+                }
+
+                // 2. 모든 학생 정보 가져오기 (이름, 학번 순 정렬)
+                const { data: students, error: stuErr } = await db.from('students').select('student_id, name').order('student_id', { ascending: true });
+                if (stuErr) throw stuErr;
+
+                // 3. 전체 학생의 수강신청 내역 가져오기
+                const { data: enrollments, error: enrErr } = await db.from('student_enrollments').select('student_id, subject_name');
+                if (enrErr) throw enrErr;
+
+                let failedStudentsHtml = '';
+                let issueCount = 0;
+
+                // 4. 학생별로 데이터 분석
+                students.forEach(student => {
+                    const myEnrollments = enrollments.filter(e => e.student_id === student.student_id);
+                    const groupCounts = { "사회": 0, "예술": 0 };
+
+                    // 수강한 과목의 교과군 카운트
+                    myEnrollments.forEach(e => {
+                        const group = groupMap[e.subject_name] || "기타";
+                        if (groupCounts[group] !== undefined) groupCounts[group]++;
+                    });
+
+                    let issues = [];
+
+                    if (groupCounts["사회"] === 0) issues.push("사회교과 필수 미선택");
+                    if (groupCounts["예술"] === 0) issues.push("예술교과 미이수");
+                    if (myEnrollments.length < 5) issues.push("수강 데이터 누락 의심(5과목 미만)");
+
+                    if (issues.length > 0) {
+                        issueCount++;
+                        failedStudentsHtml += `
+                            <tr>
+                                <td>${student.student_id || '-'}</td>
+                                <td>${student.name || '-'}</td>
+                                <td class="issue-text">• ${issues.join('<br>• ')}</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                // 5. 화면 출력
+                if (issueCount === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" style="color:#28a745; font-weight:bold; padding:20px;">🎉 모든 학생이 점검 사항을 정상적으로 충족했습니다!</td></tr>`;
+                } else {
+                    tbody.innerHTML = failedStudentsHtml;
+                }
+
+                loading.style.display = 'none';
+                resultArea.style.display = 'block';
+                btn.style.display = 'inline-block';
+                btn.innerText = "↻ 다시 스캔하기";
+
+            } catch (error) {
+                console.error("일괄 점검 중 오류 발생:", error);
+                alert("데이터 분석 중 오류가 발생했습니다. 관리자 도구를 확인해 주세요.");
+                loading.style.display = 'none';
+                btn.style.display = 'inline-block';
             }
         }
     </script>

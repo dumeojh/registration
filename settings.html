@@ -348,7 +348,7 @@
             <button class="tab-btn active" onclick="switchTab('tab-student2', this)">👥 학생관리2 (신규)</button>
             <button class="tab-btn" onclick="switchTab('tab-grade1', this)">🪄 1학년 수강신청</button>
             <button class="tab-btn" onclick="switchTab('tab-booth', this)">📍 박람회 배치교실</button>
-            <button class="tab-btn" onclick="switchTab('tab-subject', this)">📚 선택교과 입력</button>
+
         </div>
 
 
@@ -426,21 +426,6 @@
             </div>
         </div>
 
-        <div id="tab-subject" class="tab-content">
-            <h2>📚 선택교과 개별 입력</h2>
-            <details class="subject-accordion">
-                <summary>➕ 새로운 선택교과 개별 등록 폼 열기</summary>
-                <div class="subject-accordion-content">
-                    <span class="label">과목명</span>
-                    <input type="text" id="newSubName" placeholder="예: 언어생활 탐구">
-                    <button class="btn btn-save" onclick="addNewSubjectDetailed()">과목 상세 등록하기</button>
-                </div>
-            </details>
-            <div class="section">
-                <span class="label">현재 등록된 교과 목록</span>
-                <ul id="subjectList" class="subject-list"></ul>
-            </div>
-        </div>
 
     </div>
 

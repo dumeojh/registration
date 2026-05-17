@@ -350,6 +350,8 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+
+
         async function searchStudent() {
             const idVal = document.getElementById('studentIdInput').value.trim();
             const nameVal = document.getElementById('studentNameInput').value.trim();
@@ -361,32 +363,44 @@
             }
 
             try {
-                const { data, error } = await db
+                // 1. 신규 DB 구조에 맞춘 학생 기본 정보 조회 (마스터키: student_id)
+                const { data: student, error: studentErr } = await db
                     .from('students')
-                    .select('name, grade1_id, grade2_id, unique_id, grade1_subjects')
-                    .eq('grade2_id', idVal)
+                    .select('name, grade1_num, student_id')
+                    .eq('student_id', idVal)
                     .eq('name', nameVal)
                     .maybeSingle();
 
-                if (error) throw error;
+                if (studentErr) throw studentErr;
 
-                if (data) {
-                    document.getElementById('resName').innerText = data.name;
-                    document.getElementById('resGrade1').innerText = data.grade1_id || "-";
-                    document.getElementById('resGrade2').innerText = data.grade2_id || "-";
-                    document.getElementById('resUniqueId').innerText = data.unique_id || "-";
+                if (student) {
+                    // 화면에 학생 정보 출력
+                    document.getElementById('resName').innerText = student.name;
+                    document.getElementById('resGrade1').innerText = student.grade1_num || "-";
+                    document.getElementById('resGrade2').innerText = student.student_id || "-";
+                    // 기존 unique_id는 더 이상 사용하지 않으므로 2학년 학번으로 대체 표시
+                    document.getElementById('resUniqueId').innerText = student.student_id || "-";
+
+                    // 2. 신규 DB 구조에 맞춘 수강신청 내역 조회 (student_enrollments 테이블)
+                    const { data: enrollments, error: enrollErr } = await db
+                        .from('student_enrollments')
+                        .select('subject_name')
+                        .eq('student_id', idVal);
+
+                    if (enrollErr) throw enrollErr;
 
                     const subjectsArea = document.getElementById('resSubjects');
-                    if (data.grade1_subjects && data.grade1_subjects.trim() !== '') {
-                        const subjectArray = data.grade1_subjects.split(',');
-                        subjectsArea.innerHTML = subjectArray.map(sub => `<span class="subject-tag">${sub.trim()}</span>`).join('');
+                    if (enrollments && enrollments.length > 0) {
+                        // 과목명만 추출하여 중복 제거 후 뱃지(태그) 형태로 출력
+                        const subjectNames = [...new Set(enrollments.map(e => e.subject_name))];
+                        subjectsArea.innerHTML = subjectNames.map(sub => `<span class="subject-tag">${sub}</span>`).join('');
                     } else {
                         subjectsArea.innerHTML = '<span style="font-size:0.9em; color:#888; font-weight:normal;">등록된 수강 신청 데이터가 없습니다.</span>';
                     }
 
                     resultArea.style.display = 'block';
 
-                    // ✨ 1학기와 2학기 과목을 차례대로 불러옵니다.
+                    // 3학년 1학기, 2학기 과목 로드
                     await loadGrade3Subjects();
                     await loadGrade3Sem2Subjects();
                 } else {
@@ -395,7 +409,7 @@
                 }
             } catch (err) {
                 console.error("조회 중 오류:", err);
-                alert("데이터 조회 중 오류가 발생했습니다.");
+                alert("데이터 조회 중 오류가 발생했습니다: " + err.message);
             }
         }
 

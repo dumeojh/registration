@@ -547,6 +547,8 @@
             });
         }
 
+
+
         function uploadStudents2() {
             const fileInput = document.getElementById('studentFile2');
             if (!fileInput.files[0]) {
@@ -577,19 +579,25 @@
                         return;
                     }
 
-                    const { error } = await db
-                        .from('students')
-                        .upsert(studentsToInsert, { onConflict: 'student_id' });
+                    // 안전한 예외 처리가 적용된 부분 (try...catch)
+                    try {
+                        const { error } = await db
+                            .from('students')
+                            .upsert(studentsToInsert, { onConflict: 'student_id' });
 
-                    if (error) {
-                        console.error(error);
-                        alert('학생 등록 실패: ' + error.message);
-                    } else {
-                        alert(`총 ${studentsToInsert.length}명의 학생 등록이 완료되었습니다!`);
+                        if (error) throw error; // 에러가 있으면 catch 블록으로 던짐
+
+                        alert(`🎉 총 ${studentsToInsert.length}명의 학생 등록이 완료되었습니다!`);
+                        fileInput.value = ''; // 성공 시 파일 입력창 초기화
+
+                    } catch (err) {
+                        console.error("🚨 학생 등록 에러:", err);
+                        alert('학생 등록 중 오류가 발생했습니다: ' + err.message);
                     }
                 }
             });
         }
+
 
         function uploadEnrollments() {
             const fileInput = document.getElementById('enrollmentFile');
@@ -654,15 +662,20 @@
                         return;
                     }
 
-                    const { error } = await db
-                        .from('student_enrollments')
-                        .insert(enrollmentsToInsert);
+                    // 안전한 예외 처리가 적용된 부분 (try...catch)
+                    try {
+                        const { error } = await db
+                            .from('student_enrollments')
+                            .insert(enrollmentsToInsert);
 
-                    if (error) {
-                        console.error(error);
-                        alert('수강신청 등록 실패: ' + error.message);
-                    } else {
+                        if (error) throw error; // 에러가 있으면 catch 블록으로 던짐
+
                         alert(`🎉 총 ${enrollmentsToInsert.length}건의 수강신청 과목이 성공적으로 등록되었습니다!`);
+                        fileInput.value = ''; // 성공 시 파일 입력창 초기화
+
+                    } catch (err) {
+                        console.error("🚨 수강신청 등록 에러:", err);
+                        alert('수강신청 등록 중 오류가 발생했습니다: ' + err.message);
                     }
                 }
             });

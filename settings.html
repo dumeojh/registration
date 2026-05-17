@@ -345,56 +345,13 @@
         </div>
 
         <div class="tab-menu">
-            <button class="tab-btn active" onclick="switchTab('tab-system', this)">⚙️ 과목/환경설정</button>
-            <button class="tab-btn" onclick="switchTab('tab-student', this)">👩‍🎓 학생 관리</button>
+            <button class="tab-btn active" onclick="switchTab('tab-student', this)">👩‍🎓 학생 관리</button>
             <button class="tab-btn" onclick="switchTab('tab-student2', this)">👥 학생관리2 (신규)</button>
             <button class="tab-btn" onclick="switchTab('tab-grade1', this)">🪄 1학년 수강신청</button>
             <button class="tab-btn" onclick="switchTab('tab-booth', this)">📍 박람회 배치교실</button>
             <button class="tab-btn" onclick="switchTab('tab-subject', this)">📚 선택교과 입력</button>
         </div>
 
-        <div id="tab-system" class="tab-content active">
-            <h2>⚙️ 시스템 기본 설정</h2>
-            <div class="section">
-                <span class="label">박람회 메인 타이틀</span>
-                <input type="text" id="eventTitle" placeholder="예: 2026 교육과정 박람회">
-                <button class="btn btn-save" onclick="updateTitle()">타이틀 저장</button>
-            </div>
-
-            <div class="section csv-section">
-                <span class="label">엑셀(CSV) 파일로 과목 대량 등록</span>
-                <details class="csv-guide">
-                    <summary>📊 엑셀(CSV) 양식 확인</summary>
-                    <div style="overflow-x: auto; white-space: nowrap;">
-                        <table class="csv-table">
-                            <thead>
-                                <tr>
-                                    <th>교과군</th>
-                                    <th>과목명</th>
-                                    <th>파일1</th>
-                                    <th>학년</th>
-                                    <th>학기</th>
-                                    <th>학점</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>국어</td>
-                                    <td>언어생활 탐구</td>
-                                    <td>46.jpg</td>
-                                    <td>2</td>
-                                    <td>1</td>
-                                    <td>3</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </details>
-                <input type="file" id="csvSubjectFileInput" accept=".csv" style="background: white;">
-                <button class="btn btn-save" id="csvSubjectUploadBtn" onclick="uploadSubjectCSV()">CSV로 과목 일괄
-                    등록</button>
-            </div>
-        </div>
 
         <div id="tab-student" class="tab-content">
             <h2 style="color:#0056b3;">👩‍🎓 학생 관리</h2>
@@ -531,33 +488,14 @@
         });
 
         window.onload = async () => {
-            loadTitle();
-            loadSubjects();
+            // 더 이상 존재하지 않는 화면 요소들을 부르는 함수 호출을 지웁니다.
             loadStudents();
             loadGrade1Students();
         };
 
-        async function loadTitle() {
-            const { data } = await db.from('system_config').select('value').eq('key', 'event_title').maybeSingle();
-            if (data) document.getElementById('eventTitle').value = data.value;
-        }
-        async function updateTitle() {
-            const title = document.getElementById('eventTitle').value;
-            await db.from('system_config').upsert({ key: 'event_title', value: title });
-            alert('행사 타이틀이 변경되었습니다.');
-        }
 
-        async function loadSubjects() {
-            const { data } = await db.from('subjects').select('*').order('category', { ascending: true });
-            const listEl = document.getElementById('subjectList');
-            listEl.innerHTML = '';
-            if (data) data.forEach(item => {
-                const typeInfo = item.selection_type ? `<span style="color:#6f42c1; font-size:0.8em;">[${item.selection_type}/${item.semester}]</span>` : '';
-                const li = document.createElement('li'); li.className = 'subject-item';
-                li.innerHTML = `<div style="line-height:1.4;">${typeInfo}<br><span>[${item.category}] <b>${item.subject_name}</b> (${item.credits}학점)</span></div> <span class="delete-btn" onclick="deleteSubject(${item.id})">삭제</span>`;
-                listEl.appendChild(li);
-            });
-        }
+
+
 
         async function loadStudents() {
             const { data } = await db.from('students').select('*').order('name', { ascending: true });
@@ -655,7 +593,7 @@
             }
         }
 
-        async function deleteSubject(id) { if (confirm('과목을 삭제하시겠습니까?')) { await db.from('subjects').delete().eq('id', id); loadSubjects(); } }
+
         async function deleteStudent(unique_id) { if (confirm('학생을 삭제하시겠습니까?')) { await db.from('students').delete().eq('unique_id', unique_id); loadStudents(); loadGrade1Students(); } }
 
 

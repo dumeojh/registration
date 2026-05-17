@@ -345,28 +345,16 @@
         </div>
 
         <div class="tab-menu">
-            <button class="tab-btn active" onclick="switchTab('tab-student', this)">👩‍🎓 학생 관리</button>
-            <button class="tab-btn" onclick="switchTab('tab-student2', this)">👥 학생관리2 (신규)</button>
+            <button class="tab-btn active" onclick="switchTab('tab-student2', this)">👥 학생관리2 (신규)</button>
             <button class="tab-btn" onclick="switchTab('tab-grade1', this)">🪄 1학년 수강신청</button>
             <button class="tab-btn" onclick="switchTab('tab-booth', this)">📍 박람회 배치교실</button>
             <button class="tab-btn" onclick="switchTab('tab-subject', this)">📚 선택교과 입력</button>
         </div>
 
 
-        <div id="tab-student" class="tab-content">
-            <h2 style="color:#0056b3;">👩‍🎓 학생 관리</h2>
-            <div class="section csv-section">
-                <span class="label">기본 학생 명단 엑셀(CSV) 등록</span>
-                <input type="file" id="csvFileInput" accept=".csv" style="background: white;">
-                <button class="btn btn-save" id="csvUploadBtn" onclick="uploadCSV()">학생 기본 명단 일괄 등록</button>
-            </div>
-            <div class="section">
-                <span class="label">등록된 학생 목록 (조회)</span>
-                <ul id="studentList" class="subject-list"></ul>
-            </div>
-        </div>
 
-        <div id="tab-student2" class="tab-content">
+
+        <div id="tab-student2" class="tab-content active">
             <div class="card">
                 <h3>👥 1. 학생 명단 일괄 등록 (마스터키: 2학년 학번)</h3>
                 <p style="color: #666; font-size: 0.9rem;">양식: [1학년 학번, 2학년 학번, 3학년 학번, 이름] 순서의 CSV 파일</p>
@@ -489,39 +477,11 @@
 
         window.onload = async () => {
             // 더 이상 존재하지 않는 화면 요소들을 부르는 함수 호출을 지웁니다.
-            loadStudents();
+
             loadGrade1Students();
         };
 
 
-
-
-
-        async function loadStudents() {
-            const { data } = await db.from('students').select('*').order('name', { ascending: true });
-            const listEl = document.getElementById('studentList');
-            listEl.innerHTML = '';
-
-            if (data) {
-                data.forEach(student => {
-                    const li = document.createElement('li');
-                    li.className = 'subject-item';
-                    const g1 = student.grade1_id ? student.grade1_id : '-';
-                    const g2 = student.grade2_id ? student.grade2_id : '-';
-                    const g3 = student.grade3_id ? student.grade3_id : '-';
-                    li.innerHTML = `
-                        <div style="line-height:1.4;">
-                            <span><b>${student.unique_id}</b> ${student.name}</span><br>
-                            <span style="font-size:0.85em; color:#666;">
-                                1학년: ${g1} | 2학년: ${g2} | 3학년: ${g3}
-                            </span>
-                        </div>
-                        <span class="delete-btn" onclick="deleteStudent('${student.unique_id}')">삭제</span>
-                    `;
-                    listEl.appendChild(li);
-                });
-            }
-        }
 
 
 
@@ -594,7 +554,6 @@
         }
 
 
-        async function deleteStudent(unique_id) { if (confirm('학생을 삭제하시겠습니까?')) { await db.from('students').delete().eq('unique_id', unique_id); loadStudents(); loadGrade1Students(); } }
 
 
 
@@ -737,9 +696,9 @@
 
 
         // 과목 CSV (더미 구현용)
-        async function uploadSubjectCSV() { alert('과목 업로드 기능 생략됨 (테스트용)'); }
-        async function uploadCSV() { alert('기본 명단 업로드 기능 생략됨 (테스트용)'); }
-        async function addNewSubjectDetailed() { alert('추가 기능 생략됨'); }
+
+
+
 
         // [기능 3] 박람회 배치교실 CSV 덮어쓰기 업로드 (학번, 이름, 과목, 배치교실)
         async function uploadBoothCSV() {

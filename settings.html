@@ -302,44 +302,48 @@
             <h2 style="color:#6f42c1;">📚 전체 과목 일괄 등록 (교과군 포함)</h2>
             <div class="section special-csv-section">
                 <span class="label">📚 교육과정 과목 엑셀(CSV) 등록</span>
-                <p style="color: #666; font-size: 0.85rem; margin-top:0;">학년, 학기, 선택군, 과목명, 그리고 <b>교과군(국어, 수학 등)</b>이
-                    포함된 CSV 파일을 업로드하세요.</p>
+                <p style="color: #666; font-size: 0.85rem; margin-top:0;">교과군부터 비고까지 총 10개 항목이 포함된 지정된 양식의 CSV 파일을
+                    업로드하세요.</p>
 
                 <details class="csv-guide">
                     <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
                     <div style="overflow-x: auto;">
-                        <table class="csv-table">
+                        <table class="csv-table" style="min-width: 800px;">
                             <thead>
                                 <tr>
-                                    <th>A열 (학년)</th>
-                                    <th>B열 (학기)</th>
-                                    <th>C열 (선택군)</th>
-                                    <th>D열 (과목명)</th>
-                                    <th>E열 (교과군)</th>
+                                    <th>A열 (교과군)</th>
+                                    <th>B열 (과목명)</th>
+                                    <th>C열 (학년)</th>
+                                    <th>D열 (1학기)</th>
+                                    <th>E열 (2학기)</th>
+                                    <th>F열 (입학생 기준)</th>
+                                    <th>G열 (선택유형)</th>
+                                    <th>H열 (선택그룹)</th>
+                                    <th>I열 (학점)</th>
+                                    <th>J열 (비고)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>3</td>
-                                    <td>1</td>
-                                    <td>택 2</td>
-                                    <td>심화 수학Ⅰ</td>
                                     <td>수학</td>
-                                </tr>
-                                <tr>
+                                    <td>심화 수학Ⅰ</td>
                                     <td>3</td>
-                                    <td>1학기</td>
+                                    <td>O</td>
                                     <td></td>
-                                    <td>문학 감상과 비평</td>
-                                    <td>예술</td>
+                                    <td>2024년</td>
+                                    <td>진로선택</td>
+                                    <td>택 2</td>
+                                    <td>3</td>
+                                    <td></td>
                                 </tr>
                                 <tr>
-                                    <td colspan="5"
+                                    <td colspan="10"
                                         style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
                                         💡 <b>작성 가이드</b><br>
                                         - <b>1행(헤더)</b>: 제목 행이므로 데이터로 들어가지 않습니다.<br>
-                                        - <b>D열(과목명)</b>: 필수 항목입니다. 띄어쓰기까지 정확하게 기재해 주세요.<br>
-                                        - <b>E열(교과군)</b>: 국어, 수학, 영어, 사회, 과학, 예술, 체육, 교양 등 해당 과목의 <b>교과군 영역</b>을 입력합니다.
+                                        - <b>B열(과목명)</b>: <span style="color:red;">필수 항목</span>입니다. 띄어쓰기까지 정확하게 기재해
+                                        주세요.<br>
+                                        - 빈칸은 빈칸 그대로 시스템에 등록되므로, 해당 없는 학기나 비고란은 비워두셔도 무방합니다.
                                     </td>
                                 </tr>
                             </tbody>
@@ -352,6 +356,7 @@
                     등록</button>
             </div>
         </div>
+
 
 
 
@@ -739,6 +744,7 @@
             });
         }
 
+
         function uploadSubjects() {
             const fileInput = document.getElementById('subjectFile');
             if (!fileInput.files[0]) {
@@ -753,15 +759,20 @@
 
                     for (let i = 1; i < data.length; i++) {
                         const row = data[i];
-                        // D열(과목명)이 비어있으면 건너뛰기
-                        if (!row[3] || String(row[3]).trim() === '') continue;
+                        // B열(인덱스 1) 과목명이 비어있으면 건너뛰기
+                        if (!row[1] || String(row[1]).trim() === '') continue;
 
                         subjectsToInsert.push({
-                            grade: row[0] ? String(row[0]).trim() : null,
-                            semester: row[1] ? String(row[1]).trim() : null,
-                            selection_group: row[2] ? String(row[2]).trim() : null,
-                            subject_name: String(row[3]).trim(),
-                            subject_group: row[4] ? String(row[4]).trim() : null // ✨ 새로 추가된 E열 교과군!
+                            subject_group: row[0] ? String(row[0]).trim() : null,    // A열: 교과군
+                            subject_name: String(row[1]).trim(),                     // B열: 과목명
+                            grade: row[2] ? String(row[2]).trim() : null,            // C열: 학년
+                            semester1: row[3] ? String(row[3]).trim() : null,        // D열: 1학기
+                            semester2: row[4] ? String(row[4]).trim() : null,        // E열: 2학기
+                            admission_year: row[5] ? String(row[5]).trim() : null,   // F열: 입학생 기준
+                            selection_type: row[6] ? String(row[6]).trim() : null,   // G열: 선택유형
+                            selection_group: row[7] ? String(row[7]).trim() : null,  // H열: 선택그룹
+                            credits: row[8] ? String(row[8]).trim() : null,          // I열: 학점
+                            remarks: row[9] ? String(row[9]).trim() : null           // J열: 비고
                         });
                     }
 
@@ -786,7 +797,7 @@
 
                         if (insErr) throw insErr;
 
-                        alert(`🎉 총 ${subjectsToInsert.length}개의 과목 및 교과군 정보가 성공적으로 등록되었습니다!`);
+                        alert(`🎉 총 ${subjectsToInsert.length}개의 과목 데이터가 지정된 순서대로 성공적으로 등록되었습니다!`);
                         fileInput.value = ''; // 성공 시 파일 입력창 초기화
 
                     } catch (err) {

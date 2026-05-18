@@ -679,75 +679,96 @@
                 return;
             }
 
+            // 요청하신 새로운 열(Column) 인덱스 매핑 (A열=0 기준)
+            // E~N(4~13), O~X(14~23), Y~AN(24~39), AO~BD(40~55), BE~BW(56~74), BX~CP(75~93)
             const subjectRanges = [
-                { start: 4, end: 23, category: '1학년 1학기 선택' },
-                { start: 24, end: 43, category: '1학년 2학기 선택' },
-                { start: 44, end: 53, category: '1학년 1학기 공통' },
-                { start: 54, end: 63, category: '1학년 2학기 공통' },
-                { start: 64, end: 79, category: '2학년 1학기 선택' },
-                { start: 80, end: 95, category: '2학년 2학기 선택' },
-                { start: 96, end: 114, category: '3학년 1학기 선택' },
-                { start: 115, end: 133, category: '3학년 2학기 선택' }
+                { start: 4, end: 13, category: '1학년 1학기' },
+                { start: 14, end: 23, category: '1학년 2학기' },
+                { start: 24, end: 39, category: '2학년 1학기' },
+                { start: 40, end: 55, category: '2학년 2학기' },
+                { start: 56, end: 74, category: '3학년 1학기' },
+                { start: 75, end: 93, category: '3학년 2학기' }
             ];
+
+            // 업로드 중 버튼 상태 변경 (중복 클릭 방지)
+            const btn = document.querySelector('#tab-enrollment .btn-add');
+            const originalText = btn.innerText;
+            btn.innerText = '데이터 덮어쓰는 중... ⏳';
+            btn.disabled = true;
 
             Papa.parse(fileInput.files[0], {
                 complete: async function (results) {
-                    const data = results.data;
-                    const enrollmentsToInsert = [];
+                    try {
+                        const data = results.data;
+                        const enrollmentsToInsert = [];
 
-                    if (data.length < 2) {
-                        alert('업로드할 데이터가 충분하지 않습니다.');
-                        return;
-                    }
+                        if (data.length < 2) {
+                            alert('업로드할 데이터가 충분하지 않습니다.');
+                            return;
+                        }
 
-                    const headers = data[0];
+                        const headers = data[0];
 
-                    for (let i = 1; i < data.length; i++) {
-                        const row = data[i];
-                        const studentId = row[1] ? String(row[1]).trim() : null;
+                        for (let i = 1; i < data.length; i++) {
+                            const row = data[i];
+                            const studentId = row[1] ? String(row[1]).trim() : null;
 
-                        if (!studentId) continue;
+                            // 2학년 학번이 없으면 건너뜀
+                            if (!studentId) continue;
 
-                        subjectRanges.forEach(range => {
-                            for (let j = range.start; j <= range.end; j++) {
-                                const cellValue = row[j];
+                            subjectRanges.forEach(range => {
+                                for (let j = range.start; j <= range.end; j++) {
+                                    const cellValue = row[j];
 
-                                if (cellValue) {
-                                    const valStr = String(cellValue).trim().toUpperCase();
-                                    if (valStr === '1' || valStr === 'O' || valStr === 'Y') {
-                                        const subjectName = headers[j];
+                                    if (cellValue) {
+                                        const valStr = String(cellValue).trim().toUpperCase();
+                                        // 1, O, Y 등으로 체크된 항목만 데이터로 생성
+                                        if (valStr === '1' || valStr === 'O' || valStr === 'Y') {
+                                            const subjectName = headers[j];
 
-                                        if (subjectName && String(subjectName).trim() !== '') {
-                                            enrollmentsToInsert.push({
-                                                student_id: studentId,
-                                                subject_name: String(subjectName).trim(),
-                                                category: range.category
-                                            });
+                                            if (subjectName && String(subjectName).trim() !== '') {
+                                                enrollmentsToInsert.push({
+                                                    student_id: studentId,
+                                                    subject_name: String(subjectName).trim(),
+                                                    category: range.category
+                                                });
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        });
-                    }
+                            });
+                        }
 
-                    if (enrollmentsToInsert.length === 0) {
-                        alert('업로드할 유효한 수강신청 데이터(1로 체크된 항목)가 없습니다.');
-                        return;
-                    }
+                        if (enrollmentsToInsert.length === 0) {
+                            alert('업로드할 유효한 수강신청 데이터(1, O, Y로 체크된 항목)가 없습니다.');
+                            return;
+                        }
 
-                    try {
-                        const { error } = await db
+                        // ✨ 중복 방지 로직: 기존 수강신청 데이터를 지우고 새 데이터로 덮어쓰기
+                        const { error: deleteErr } = await db
+                            .from('student_enrollments')
+                            .delete()
+                            .neq('student_id', '');
+
+                        if (deleteErr) throw deleteErr;
+
+                        // 새 수강신청 데이터 일괄 삽입
+                        const { error: insertErr } = await db
                             .from('student_enrollments')
                             .insert(enrollmentsToInsert);
 
-                        if (error) throw error;
+                        if (insertErr) throw insertErr;
 
-                        alert(`🎉 총 ${enrollmentsToInsert.length}건의 수강신청 과목이 성공적으로 등록되었습니다!`);
+                        alert(`🎉 총 ${enrollmentsToInsert.length}건의 수강신청 과목이 성공적으로 덮어쓰기 등록되었습니다!`);
                         fileInput.value = '';
 
                     } catch (err) {
                         console.error("🚨 수강신청 등록 에러:", err);
                         alert('수강신청 등록 중 오류가 발생했습니다: ' + err.message);
+                    } finally {
+                        // 버튼 상태 복구
+                        btn.innerText = originalText;
+                        btn.disabled = false;
                     }
                 }
             });

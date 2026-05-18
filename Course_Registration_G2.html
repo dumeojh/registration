@@ -344,10 +344,12 @@
             </div>
 
             <details class="subject-area" id="subjectsSection">
-                <summary class="result-label" style="font-size: 1.05em; color:#0056b3;">📘 1학년 수강 신청 과목 (접기/펼치기)
+                <summary class="result-label" style="font-size: 1.05em; color:#0056b3;">📘 1,2학년 수강과목 (접기/펼치기)
                 </summary>
                 <div id="resSubjects" class="result-value" style="margin-top: 15px;"></div>
             </details>
+
+
 
             <details class="subject-area" id="diagnosticArea" style="display: none; border-top-color: #c8d8d3;">
                 <summary class="result-label" style="font-size: 1.05em; color:#155724;">🎯 3학년 선택교과 설계 전 필수 점검사항
@@ -467,7 +469,8 @@
                         // ✨ 카테고리 분류 세팅 변경 부분 ✨
                         const catSem1 = new Set();
                         const catSem2 = new Set();
-                        const catGrade2 = new Set();
+                        const catGrade2Sem1 = new Set(); // 2학년 1학기용
+                        const catGrade2Sem2 = new Set(); // 2학년 2학기용
 
                         const takenSocialSubjects = [];
                         const takenArtSubjects = [];
@@ -486,8 +489,10 @@
                                 catSem1.add(tagHtml);
                             } else if (cat.includes('1학년 2학기')) {
                                 catSem2.add(tagHtml);
-                            } else if (cat.includes('2학년')) {
-                                catGrade2.add(tagHtml);
+                            } else if (cat.includes('2학년 1학기')) {
+                                catGrade2Sem1.add(tagHtml);
+                            } else if (cat.includes('2학년 2학기')) {
+                                catGrade2Sem2.add(tagHtml);
                             }
 
                             const detailStr = `[${cat}] <b>${sub}</b>`;
@@ -502,10 +507,13 @@
                         let badgesHtml = '';
                         if (catSem1.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 1학년 1학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catSem1].join('')}</div></div>`;
                         if (catSem2.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 1학년 2학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catSem2].join('')}</div></div>`;
-                        if (catGrade2.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 2학년 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catGrade2].join('')}</div></div>`;
+                        if (catGrade2Sem1.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 2학년 1학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catGrade2Sem1].join('')}</div></div>`;
+                        if (catGrade2Sem2.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 2학년 2학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catGrade2Sem2].join('')}</div></div>`;
+
                         if (!badgesHtml) badgesHtml = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';
 
                         document.getElementById('resSubjects').innerHTML = badgesHtml;
+
 
                         // 4. 💡 3학년 진단 시스템 로직 생성
                         let diagnosticHtml = `<div style="margin-top:5px; padding:18px; background:#fdfdfe; border-radius:10px; border:1px solid #c8d8d3; font-size:0.95em; line-height:1.6; color:#333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">`;

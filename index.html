@@ -4,411 +4,346 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2학년 수강신청 정보 조회</title>
+    <title>안성여고 2026 교육과정 박람회</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* 기본 배경 및 폰트 설정 */
         body {
             font-family: 'Malgun Gothic', sans-serif;
             background-color: #f4f7f6;
             margin: 0;
-            padding: 20px;
             display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            align-items: flex-start;
             min-height: 100vh;
+            position: relative;
         }
 
         .container {
-            max-width: 700px;
+            text-align: center;
+            padding: 20px;
             width: 100%;
-            background: #ffffff;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            box-sizing: border-box;
+            position: relative;
         }
 
-        .nav-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
-        }
-
-        .nav-btn {
+        /* ✨ 오른쪽 상단 '배치 장소 조회' 작은 박스 (버튼) */
+        .lookup-btn {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background-color: #6f42c1;
+            color: white;
+            border: none;
             padding: 8px 15px;
-            background-color: #f8f9fa;
-            color: #495057;
-            border: 1px solid #ced4da;
-            border-radius: 5px;
+            border-radius: 20px;
             font-size: 0.9em;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            transition: background-color 0.2s;
-        }
-
-        .nav-btn:hover {
-            background-color: #e9ecef;
-        }
-
-        .print-btn {
-            margin-left: auto;
-            background-color: #e2ece9;
             font-weight: bold;
-            color: #155724;
-            border-color: #c3e6cb;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+
+        .lookup-btn:hover {
+            background-color: #59339d;
+            transform: translateY(-2px);
         }
 
         h1 {
             color: #0056b3;
-            text-align: center;
-            font-size: 1.6em;
-            margin-bottom: 30px;
-        }
-
-        .search-box {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #dee2e6;
-            margin-bottom: 30px;
-        }
-
-        label {
-            display: block;
+            margin-top: 40px;
             margin-bottom: 10px;
+            font-size: 1.8em;
+            word-break: keep-all;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        /* 카드 버튼들을 감싸는 영역 */
+        .card-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        @media (min-width: 600px) {
+            .card-container {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .card {
+                flex: 1 1 calc(33.333% - 20px);
+                min-width: 250px;
+                max-width: 350px;
+            }
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 15px;
+            padding: 30px 20px;
+            flex: 1;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-decoration: none;
+            color: #333;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid transparent;
+            box-sizing: border-box;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            border-color: #0056b3;
+        }
+
+        .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .card h2 {
+            color: #333;
+            margin: 0 0 10px 0;
+            font-size: 1.25em;
+        }
+
+        .card p {
+            margin: 0;
+            font-size: 0.9em;
+            color: #777;
+            word-break: keep-all;
+            line-height: 1.4;
+        }
+
+        /* =========================================
+           ✨ 모달창 (팝업) 스타일 설정
+           ========================================= */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content,
+        .admin-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: popIn 0.3s ease-out;
+            text-align: center;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .admin-modal-content {
+            width: 95%;
+            max-width: 650px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .modal-title {
+            margin-top: 0;
+            color: #6f42c1;
+            font-size: 1.3em;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.1em;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .modal-search-btn {
+            background-color: #6f42c1;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .modal-search-btn:hover {
+            opacity: 0.9;
+        }
+
+        #modalResult {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f3eef5;
+            border-radius: 8px;
+            border: 1px solid #d8cce2;
+            display: none;
+            text-align: left;
+        }
+
+        .result-row {
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .result-row strong {
+            color: #59339d;
+            display: inline-block;
+            width: 65px;
+        }
+
+        .result-val {
             font-weight: bold;
             color: #333;
         }
 
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        input[type="text"] {
+        /* 관리자 모달 테이블 스타일 */
+        .admin-table {
             width: 100%;
-            padding: 12px;
-            font-size: 1.1em;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            box-sizing: border-box;
-            text-align: center;
-        }
-
-        input[type="text"]:focus {
-            border-color: #4a90e2;
-            outline: none;
-        }
-
-        .action-btn {
-            width: 100%;
-            padding: 12px;
-            background-color: #0056b3;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .action-btn:hover {
-            background-color: #004494;
-        }
-
-        #resultArea {
-            display: none;
+            border-collapse: collapse;
             margin-top: 20px;
-            padding: 20px;
-            border: 2px solid #c3e6cb;
-            background-color: #f0fdf4;
-            border-radius: 10px;
-            animation: fadeIn 0.3s ease-in;
+            font-size: 0.9em;
         }
 
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
+        .admin-table th,
+        .admin-table td {
+            border: 1px solid #dee2e6;
+            padding: 10px;
             text-align: center;
         }
 
-        .info-box {
-            background: #ffffff;
-            border: 1px solid #c3e6cb;
-            border-radius: 8px;
-            padding: 15px 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+        .admin-table th {
+            background-color: #f8f9fa;
+            color: #495057;
+            position: sticky;
+            top: 0;
         }
 
-        .result-label {
-            font-size: 0.85em;
-            color: #155724;
-            margin-bottom: 8px;
+        .issue-text {
+            color: #d9534f;
             font-weight: bold;
+            text-align: left;
+            line-height: 1.5;
         }
 
-        .result-value {
-            font-size: 1.1em;
-            font-weight: bold;
-            color: #000;
-            word-break: break-all;
-        }
-
-        .subject-area {
-            border-top: 1px dashed #c3e6cb;
-            padding-top: 20px;
-            margin-top: 15px;
-            display: block;
-        }
-
-        summary.result-label {
-            cursor: pointer;
-            outline: none;
-            padding: 5px 0;
-            transition: color 0.2s;
-        }
-
-        summary.result-label:hover {
-            opacity: 0.8;
-        }
-
-        .subject-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .subject-tag {
-            background-color: #e2ece9;
-            color: #0056b3;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: normal;
-            border: 1px solid #c8d8d3;
-        }
-
-        .future-subject-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 15px;
-        }
-
-        .future-subject-item {
-            background-color: #f3eef5;
-            border: 1px solid #d8cce2;
-            border-radius: 10px;
-            padding: 15px;
-            transition: all 0.2s;
-        }
-
-        .future-subject-header {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            font-weight: bold;
-            color: #6f42c1;
-        }
-
-        .reason-box {
-            display: none;
-            width: 100%;
-            margin-top: 12px;
-            padding: 10px;
-            border: 1px solid #c8b8e0;
-            border-radius: 5px;
-            font-family: inherit;
-            font-size: 0.9em;
-            resize: vertical;
-            box-sizing: border-box;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @media (max-width: 500px) {
-            .info-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .input-group {
-                flex-direction: column;
-            }
-        }
-
+        /* ✨ 인쇄 전용 스타일 (종이에 출력할 때만 적용됨) ✨ */
         @media print {
+            body {
+                background: white;
+                margin: 0;
+                padding: 0;
+            }
 
-            .nav-buttons,
-            .search-box,
-            .action-btn {
+            .container,
+            #boothModal {
                 display: none !important;
             }
 
-            body {
-                padding: 0;
-                background-color: white;
-            }
-
-            .container {
-                box-shadow: none;
-                border: none;
-                max-width: 100%;
-            }
-
-            #resultArea {
-                display: block !important;
-                border: 1px solid #000;
-                background: white;
-            }
-
-            .reason-box {
-                display: block !important;
-                border: 1px solid #ccc;
-            }
-
-            details {
-                display: block !important;
-            }
-
-            details>*:not(summary) {
-                display: block !important;
-            }
-        }
-
-        /* --- 듀얼 리스트 UI 공통 스타일 --- */
-        .dual-list-container {
-            display: flex;
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .list-box {
-            flex: 1;
-            border: 2px solid #d8cce2;
-            border-radius: 10px;
-            padding: 15px;
-            background: #fdfdfe;
-            min-height: 250px;
-            max-height: 350px;
-            overflow-y: auto;
-        }
-
-        .list-box h4 {
-            margin-top: 0;
-            margin-bottom: 12px;
-            font-size: 1.05em;
-            color: #6f42c1;
-            text-align: center;
-            border-bottom: 2px dashed #f3eef5;
-            padding-bottom: 8px;
-        }
-
-        .dual-subject-item {
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            background-color: #f3eef5;
-            border: 1px solid #d8cce2;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.95em;
-            transition: all 0.2s;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: bold;
-            color: #495057;
-        }
-
-        .dual-subject-item:hover {
-            background-color: #e5d9f0;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        .credit-summary {
-            text-align: right;
-            font-size: 1.1em;
-            font-weight: bold;
-            color: #0056b3;
-            margin-top: 15px;
-            background-color: #e0f3ff;
-            padding: 10px 15px;
-            border-radius: 8px;
-            display: inline-block;
-            float: right;
-        }
-
-        .complete-btn-container {
-            clear: both;
-            text-align: center;
-            margin-top: 25px;
-            padding-top: 15px;
-        }
-
-        .complete-btn {
-            background-color: #6f42c1;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .complete-btn:hover {
-            background-color: #5a32a3;
-        }
-
-        .reason-section {
-            margin-top: 15px;
-            padding-top: 15px;
-            animation: fadeIn 0.3s ease-in;
-        }
-
-        /* ✨ 아코디언 접힘 상태 미리보기 텍스트 스타일 ✨ */
-        .preview-text {
-            display: block;
-            font-size: 0.85em;
-            color: #0056b3;
-            margin-top: 8px;
-            font-weight: normal;
-        }
-
-        /* 아코디언이 열려있을 때(open)는 미리보기 텍스트 숨김 */
-        details[open] .preview-text {
-            display: none;
-        }
-
-        @media (max-width: 600px) {
-            .dual-list-container {
-                flex-direction: column;
-            }
-
-            .credit-summary {
-                float: none;
+            .modal-overlay {
+                position: static;
+                background: transparent;
                 display: block;
+                height: auto;
+            }
+
+            .admin-modal-content {
+                box-shadow: none;
+                padding: 0;
+                width: 100%;
+                max-width: 100%;
+                max-height: none;
+                overflow: visible;
+                animation: none;
+                margin: 0;
+            }
+
+            /* 인쇄 시 불필요한 요소 숨김 (컨트롤 패널, X버튼 등) */
+            .close-btn,
+            #controlPanel,
+            p {
+                display: none !important;
+            }
+
+            .modal-title {
+                font-size: 1.5em;
                 text-align: center;
+                margin-bottom: 20px;
+                color: black !important;
+            }
+
+            .admin-table {
+                font-size: 11pt;
+                border-collapse: collapse;
+            }
+
+            .admin-table th,
+            .admin-table td {
+                border: 1px solid #000;
+                color: black;
+            }
+
+            .admin-table th {
+                position: static;
+                background-color: #eee;
+            }
+
+            .issue-text {
+                color: black !important;
             }
         }
     </style>
@@ -417,79 +352,116 @@
 <body>
 
     <div class="container">
-        <div class="nav-buttons">
-            <button type="button" class="nav-btn" onclick="history.back()">⬅ 이전 단계로</button>
-            <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
-            <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 정보 인쇄</button>
+        <button class="lookup-btn" onclick="openModal()">🔍 내 부스 조회</button>
+
+        <h1>안성여고 2026 교육과정 박람회</h1>
+        <p class="subtitle">원하시는 접속 메뉴를 선택해 주세요.</p>
+
+        <div class="card-container">
+            <a href="Educational_Planning_G1.html" class="card">
+                <div class="icon">🌱</div>
+                <h2>1학년 학업설계서</h2>
+                <p>고교 생활의 시작! 나만의 교육과정을 그려보세요. (2026년 입학)</p>
+            </a>
+
+            <a href="Educational_Planning_G2.html" class="card">
+                <div class="icon">📘</div>
+                <h2>2학년 학업설계서</h2>
+                <p>전공 심화와 진로 구체화를 위한 과목을 선택하세요. (2025년 입학)</p>
+            </a>
+
+            <a href="Course_Registration_G2.html" class="card">
+                <div class="icon">📝</div>
+                <h2>2학년 수강신청 정보</h2>
+                <p>실제 수강신청을 위한 세부 정보 및 양식을 확인하세요.</p>
+            </a>
+
+            <a href="settings.html" class="card">
+                <div class="icon">⚙️</div>
+                <h2>시스템 환경설정</h2>
+                <p>과목 및 학생 데이터를 관리하는 관리자 전용 메뉴입니다.</p>
+            </a>
+
+            <a href="https://dumeojh.github.io/high/" class="card" target="_blank" rel="noopener noreferrer">
+                <div class="icon">🔗</div>
+                <h2>고교학점제 안내</h2>
+                <p>관련 홈페이지로 이동하여 추가 정보를 확인하세요.</p>
+            </a>
+
+            <a href="#" class="card" onclick="openAdminModal(); return false;"
+                style="border: 2px dashed #dc3545; background-color: #fffafb;">
+                <div class="icon">🚨</div>
+                <h2 style="color: #dc3545;">1·2학년 미달성 점검</h2>
+                <p>사회/예술 필수교과 미이수 학생(3학년 필수 수강 대상자)을 조회합니다.</p>
+            </a>
         </div>
+    </div>
 
-        <h1>2학년 수강신청 정보 조회</h1>
-
-        <div class="search-box">
-            <label>학번과 이름을 모두 입력하세요</label>
-            <div class="input-group">
-                <input type="text" id="studentIdInput" placeholder="2학년 학번 (예: 20105)" maxlength="5">
-                <input type="text" id="studentNameInput" placeholder="이름 (예: 황경서)">
+    <div id="boothModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">×</span>
+            <h2 class="modal-title">📍 박람회 교실 찾기</h2>
+            <p style="font-size: 0.9em; color: #666;">본인의 학번을 입력해 주세요.</p>
+            <input type="text" id="boothStudentId" class="modal-input" placeholder="예: 20105" maxlength="5"
+                onkeypress="if(event.key === 'Enter') searchBooth()">
+            <button class="modal-search-btn" onclick="searchBooth()">교실 조회하기</button>
+            <div id="modalResult">
+                <div class="result-row"><strong>학번</strong> <span id="resBoothId" class="result-val"></span></div>
+                <div class="result-row"><strong>이름</strong> <span id="resBoothName" class="result-val"></span></div>
+                <div class="result-row"><strong>상담과목</strong> <span id="resBoothSubject" class="result-val"></span>
+                </div>
+                <div class="result-row" style="margin-bottom:0;"><strong>배치교실</strong> <span id="resBoothRoom"
+                        class="result-val" style="color: #d9534f; font-size:1.1em;"></span></div>
             </div>
-            <button class="action-btn" onclick="searchStudent()">학생 정보 조회하기</button>
         </div>
+    </div>
 
-        <div id="resultArea">
+    <div id="adminModal" class="modal-overlay">
+        <div class="admin-modal-content">
+            <span class="close-btn" onclick="closeAdminModal()">×</span>
+            <h2 class="modal-title" style="color: #dc3545;">🚨 1·2학년 필수교과 미달성 학생 명단</h2>
+            <p style="font-size: 0.9em; color: #666; word-break: keep-all;">
+                2학년까지의 수강 내역을 바탕으로 <b>사회교과 및 예술교과 필수 이수 조건</b>을 달성하지 못한 학생(3학년 필수 지정 대상)을 찾아냅니다.
+            </p>
 
-            <div class="info-grid">
-                <div class="info-box">
-                    <div class="result-label">이름</div>
-                    <div id="resName" class="result-value">-</div>
-                </div>
-                <div class="info-box">
-                    <div class="result-label">1학년 학번</div>
-                    <div id="resGrade1" class="result-value">-</div>
-                </div>
-                <div class="info-box">
-                    <div class="result-label">2학년 학번</div>
-                    <div id="resGrade2" class="result-value">-</div>
-                </div>
-                <div class="info-box">
-                    <div class="result-label">3학년 학번</div>
-                    <div id="resGrade3" class="result-value">-</div>
+            <div id="controlPanel"
+                style="display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 15px; flex-wrap: wrap;">
+                <button class="modal-search-btn"
+                    style="background-color: #28a745; width: auto; margin: 0; padding: 10px 20px;"
+                    onclick="fetchAndRenderData()" id="runCheckBtn">
+                    ▶ 데이터 전체 스캔 시작
+                </button>
+
+                <div id="filterWrap" style="display: none; gap: 10px; align-items: center;">
+                    <select id="classFilter" class="modal-input"
+                        style="width: auto; margin: 0; padding: 10px; cursor: pointer;" onchange="renderAdminTable()">
+                        <option value="all">전체 반</option>
+                    </select>
+                    <button class="modal-search-btn"
+                        style="background-color: #6c757d; width: auto; margin: 0; padding: 10px 20px;"
+                        onclick="window.print()">
+                        🖨️ 명단 인쇄
+                    </button>
                 </div>
             </div>
 
-            <details class="subject-area" id="subjectsSection">
-                <summary class="result-label" style="font-size: 1.05em; color:#0056b3;">📘 1,2학년 수강과목 (접기/펼치기)
-                </summary>
-                <div id="resSubjects" class="result-value" style="margin-top: 15px;"></div>
-            </details>
+            <div id="loadingMsg" style="display:none; margin-top:15px; color:#0056b3; font-weight:bold;">
+                ⏳ 서버에서 학생 및 수강 데이터를 가져오는 중입니다... (데이터가 많을 경우 잠시 기다려주세요)
+            </div>
 
-            <details class="subject-area" id="diagnosticArea" style="display: none; border-top-color: #c8d8d3;">
-                <summary class="result-label" style="font-size: 1.05em; color:#155724;">🎯 3학년 선택교과 설계 전 필수 점검사항
-                    (접기/펼치기)</summary>
-                <div id="resDiagnostic" class="result-value" style="margin-top: 15px;"></div>
-            </details>
-
-            <details class="subject-area" id="grade3Area" style="display: none; border-top-color: #d8cce2;">
-                <summary class="result-label" style="font-size: 1.05em; color:#6f42c1;">
-                    🔮 3학년 1학기 선택교과 설계 (접기/펼치기)
-                    <div id="sem1Preview" class="preview-text"></div>
-                </summary>
-                <div style="margin-top: 10px;">
-                    <p style="font-size: 0.85em; color: #666; margin-top: 0; margin-bottom: 10px;">※ 희망 과목을 선택하고 장바구니에
-                        담아보세요.</p>
-                    <div id="resGrade3Subjects" class="future-subject-list"></div>
-                </div>
-            </details>
-
-            <details class="subject-area" id="grade3Sem2Area" style="display: none; border-top-color: #d8cce2;">
-                <summary class="result-label" style="font-size: 1.05em; color:#6f42c1;">
-                    🔮 3학년 2학기 선택교과 설계 (접기/펼치기)
-                    <div id="sem2Preview" class="preview-text"></div>
-                </summary>
-                <div style="margin-top: 10px;">
-                    <p style="font-size: 0.85em; color: #666; margin-top: 0; margin-bottom: 10px;">※ 희망 과목을 선택하고 장바구니에
-                        담아보세요.</p>
-                    <div id="resGrade3Sem2Subjects" class="future-subject-list"></div>
-                </div>
-            </details>
+            <div id="adminResultArea" style="display:none;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">학번</th>
+                            <th style="width: 20%;">이름</th>
+                            <th style="width: 60%;">미달성 항목 및 3학년 필수 선택 조건</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTableBody">
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -498,740 +470,209 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // 🌟 현재 로그인(조회)한 학생의 학번을 저장할 전역 변수
-        let currentStudentId = '';
+        // 부스 조회 관련 함수
+        function openModal() {
+            document.getElementById('boothModal').style.display = 'flex';
+            document.getElementById('boothStudentId').focus();
+        }
+        function closeModal() {
+            document.getElementById('boothModal').style.display = 'none';
+            document.getElementById('modalResult').style.display = 'none';
+            document.getElementById('boothStudentId').value = '';
+        }
 
-        async function searchStudent() {
-            const idVal = document.getElementById('studentIdInput').value.trim();
-            const nameVal = document.getElementById('studentNameInput').value.trim();
-            const resultArea = document.getElementById('resultArea');
-
-            if (!idVal || !nameVal) {
-                alert("조회할 학번과 이름을 모두 입력해 주세요.");
-                return;
-            }
-
-            // 검색 시 현재 학번 세팅
-            currentStudentId = idVal;
-
-            // 새로운 검색 시 이전의 open 속성들을 모두 리셋하여 닫힘 상태로 초기화
-            document.getElementById('subjectsSection').removeAttribute('open');
-            document.getElementById('diagnosticArea').removeAttribute('open');
-            document.getElementById('grade3Area').removeAttribute('open');
-            document.getElementById('grade3Sem2Area').removeAttribute('open');
-
-            document.getElementById('diagnosticArea').style.display = 'none';
-            document.getElementById('grade3Area').style.display = 'none';
-            document.getElementById('grade3Sem2Area').style.display = 'none';
-
+        async function searchBooth() {
+            const studentId = document.getElementById('boothStudentId').value.trim();
+            const resultBox = document.getElementById('modalResult');
+            if (!studentId) return alert("학번을 입력해 주세요.");
             try {
-                // 1. 학생 기본 정보 조회
-                const { data: student, error: studentErr } = await db
-                    .from('students')
-                    .select('name, grade1_num, student_id, grade3_num')
-                    .eq('student_id', idVal)
-                    .eq('name', nameVal)
-                    .maybeSingle();
-
-                if (studentErr) throw studentErr;
-
-                if (student) {
-                    document.getElementById('resName').innerText = student.name;
-                    document.getElementById('resGrade1').innerText = student.grade1_num || "-";
-                    document.getElementById('resGrade2').innerText = student.student_id || "-";
-                    document.getElementById('resGrade3').innerText = student.grade3_num || "-";
-
-                    // 2. 수강신청 내역 조회
-                    const { data: enrollments, error: enrollErr } = await db
-                        .from('student_enrollments')
-                        .select('subject_name, category')
-                        .eq('student_id', idVal);
-
-                    if (enrollErr) throw enrollErr;
-
-                    // 3. 3학년 전체 과목 한 번에 가져오기
-                    const { data: g3Data, error: g3Err } = await db
-                        .from('subjects')
-                        .select('*')
-                        .eq('grade', '3')
-                        .order('selection_group', { ascending: true });
-
-                    if (g3Err) throw g3Err;
-
-                    // 🌟 3.5 기존에 학생이 저장해둔 선택과목 및 이유 모두 불러오기 (1, 2학기 전체)
-                    const { data: savedSelections, error: saveErr } = await db
-                        .from('course_selections')
-                        .select('*')
-                        .eq('student_id', idVal);
-
-                    if (saveErr) console.error("저장된 데이터 로드 오류:", saveErr);
-
-                    // 1학기, 2학기 데이터 분리
-                    const savedSem1 = savedSelections ? savedSelections.filter(s => s.semester === '3-1') : [];
-                    const savedSem2 = savedSelections ? savedSelections.filter(s => s.semester === '3-2') : [];
-
-                    const liberalArtsSubjects = g3Data ? g3Data.filter(sub => sub.subject_group === '교양') : [];
-
-                    // ✨ DB의 selection_type 컬럼 값이 '진로선택' 또는 '융합선택'인 과목만 필터링합니다.
-                    const regularSem1 = g3Data ? g3Data.filter(sub =>
-                        sub.subject_group !== '교양' &&
-                        sub.semester1 &&
-                        sub.semester1.trim() !== '' &&
-                        (sub.selection_type === '진로선택' || sub.selection_type === '융합선택')
-                    ) : [];
-
-                    const regularSem2 = g3Data ? g3Data.filter(sub =>
-                        sub.subject_group !== '교양' &&
-                        sub.semester2 &&
-                        sub.semester2.trim() !== '' &&
-                        (sub.selection_type === '진로선택' || sub.selection_type === '융합선택')
-                    ) : [];
-
-                    if (enrollments && enrollments.length > 0) {
-                        const subjectNames = [...new Set(enrollments.map(e => e.subject_name))];
-
-                        const { data: subjectDetails, error: subErr } = await db
-                            .from('subjects')
-                            .select('subject_name, subject_group, credits')
-                            .in('subject_name', subjectNames);
-
-                        if (subErr) throw subErr;
-
-                        const groupMap = {};
-                        const creditMap = {};
-                        if (subjectDetails) {
-                            subjectDetails.forEach(sub => {
-                                groupMap[sub.subject_name] = sub.subject_group || "기타";
-                                creditMap[sub.subject_name] = parseInt(sub.credits, 10) || 0;
-                            });
-                        }
-
-                        const groupCounts = { "국어": 0, "수학": 0, "영어": 0, "사회": 0, "과학": 0, "예술": 0, "교양": 0, "체육": 0 };
-                        subjectNames.forEach(sub => {
-                            const group = groupMap[sub] || "기타";
-                            if (groupCounts[group] !== undefined) groupCounts[group]++;
-                        });
-
-                        const catSem1 = new Set();
-                        const catSem2 = new Set();
-                        const catGrade2Sem1 = new Set();
-                        const catGrade2Sem2 = new Set();
-
-                        const takenSocialSubjects = [];
-                        const takenArtSubjects = [];
-
-                        const grade2KoreanSubjects = [];
-                        const grade2EnglishSubjects = [];
-                        const grade2MathSubjects = [];
-
-                        let totalSocialCredits = 0;
-                        let grade2KoreanCredits = 0;
-                        let grade2EnglishCredits = 0;
-                        let grade2MathCredits = 0;
-                        let grade2KoreanCount = 0;
-                        let grade2EnglishCount = 0;
-                        let grade2MathCount = 0;
-
-                        enrollments.forEach(e => {
-                            const sub = e.subject_name;
-                            const cat = e.category || '기타 학기';
-                            const group = groupMap[sub] || "기타";
-                            const subCredits = creditMap[sub] || 0;
-
-                            const tagHtml = `<span class="subject-tag">${sub} <small style="color:#777;">[${group}]</small></span>`;
-
-                            if (cat.includes('1학년 1학기')) {
-                                catSem1.add(tagHtml);
-                            } else if (cat.includes('1학년 2학기')) {
-                                catSem2.add(tagHtml);
-                            } else if (cat.includes('2학년 1학기')) {
-                                catGrade2Sem1.add(tagHtml);
-                            } else if (cat.includes('2학년 2학기')) {
-                                catGrade2Sem2.add(tagHtml);
-                            }
-
-                            const detailStr = `[${cat}] <b>${sub}</b> <span style="font-size:0.85em; color:#e83e8c;">(${subCredits}학점)</span>`;
-
-                            if (group === "사회" && !takenSocialSubjects.includes(detailStr)) {
-                                takenSocialSubjects.push(detailStr);
-                                totalSocialCredits += subCredits;
-                            }
-                            if (group === "예술" && !takenArtSubjects.includes(detailStr)) takenArtSubjects.push(detailStr);
-
-                            if (cat.includes('2학년')) {
-                                if (group === "국어" && !grade2KoreanSubjects.includes(detailStr)) {
-                                    grade2KoreanSubjects.push(detailStr);
-                                    grade2KoreanCredits += subCredits;
-                                    grade2KoreanCount++;
-                                }
-                                if (group === "영어" && !grade2EnglishSubjects.includes(detailStr)) {
-                                    grade2EnglishSubjects.push(detailStr);
-                                    grade2EnglishCredits += subCredits;
-                                    grade2EnglishCount++;
-                                }
-                                if (group === "수학" && !grade2MathSubjects.includes(detailStr)) {
-                                    grade2MathSubjects.push(detailStr);
-                                    grade2MathCredits += subCredits;
-                                    grade2MathCount++;
-                                }
-                            }
-                        });
-
-                        let badgesHtml = '';
-                        if (catSem1.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 1학년 1학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catSem1].join('')}</div></div>`;
-                        if (catSem2.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 1학년 2학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catSem2].join('')}</div></div>`;
-                        if (catGrade2Sem1.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 2학년 1학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catGrade2Sem1].join('')}</div></div>`;
-                        if (catGrade2Sem2.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 2학년 2학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catGrade2Sem2].join('')}</div></div>`;
-
-                        if (!badgesHtml) badgesHtml = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';
-
-                        document.getElementById('resSubjects').innerHTML = badgesHtml;
-
-                        // 4. 💡 3학년 진단 시스템 로직 생성
-                        let diagnosticHtml = `<div style="margin-top:5px; padding:18px; background:#fdfdfe; border-radius:10px; border:1px solid #c8d8d3; font-size:0.95em; line-height:1.6; color:#333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">`;
-
-                        // [점검 1] 사회 
-                        if (groupCounts["사회"] === 0) {
-                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;"><b style="color:#d9534f;">1. 사회교과 필수 선택</b><br>2학년에서 사회교과를 선택하지 않았으므로, <b>3학년 1, 2학기 중 사회교과 한 과목은 필수적으로 선택</b>해야 합니다.</div>`;
-                        } else {
-                            const socialListStr = takenSocialSubjects.join('<br>&nbsp;&nbsp;· ');
-                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;"><b style="color:#28a745;">1. 사회교과 (이수 충족) - 누적 ${totalSocialCredits}학점</b><br>이미 1·2학년 중 사회교과를 이수하여 필수 조건이 충족되었습니다.<br><div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">✅ <b>나의 이수 내역 (합계: ${totalSocialCredits}학점):</b><br>&nbsp;&nbsp;· ${socialListStr}</div></div>`;
-                        }
-
-                        // [점검 2] 기초교과 
-                        const koreanDetails = grade2KoreanSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + grade2KoreanSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
-                        const englishDetails = grade2EnglishSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + grade2EnglishSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
-                        const mathDetails = grade2MathSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + grade2MathSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
-
-                        diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #0056b3;">
-                            <b style="color:#0056b3;">2. 기초교과(국·영·수 교과군) 선택 제한</b><br>
-                            2학년, 3학년 합쳐서 4학기 동안 <b>선택교과(국·영·수)는 합이 12학점을 넘으면 안 됩니다.</b><br>
-                            (전입생이 아닌 이상 선택교과에서 국·영·수는 12학점까지가 최대이므로, 한 학기에 1과목 정도씩 들으시면 됩니다.)<br>
-                            <span style="font-size:0.9em; color:#666;">👉 나의 2학년 누적 수강 개수: 국어(${grade2KoreanCount}개, ${grade2KoreanCredits}학점), 영어(${grade2EnglishCount}개, ${grade2EnglishCredits}학점), 수학(${grade2MathCount}개, ${grade2MathCredits}학점)</span><br>
-                            <div style="margin-top:6px; font-size:0.9em; color:#004085; background-color:#e0f3ff; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6; width:100%; box-sizing:border-box;">
-                                ✅ <b>나의 2학년 국·영·수 선택교과 세부 이수 내역:</b><br>
-                                &nbsp;&nbsp;• <b>국어 교과군</b> (${grade2KoreanCount}개, 누적 ${grade2KoreanCredits}학점):${koreanDetails}<br>
-                                &nbsp;&nbsp;• <b>영어 교과군</b> (${grade2EnglishCount}개, 누적 ${grade2EnglishCredits}학점):${englishDetails}<br>
-                                &nbsp;&nbsp;• <b>수학 교과군</b> (${grade2MathCount}개, 누적 ${grade2MathCredits}학점):${mathDetails}
-                            </div>
-                        </div>`;
-
-                        // [점검 3] 예술
-                        if (groupCounts["예술"] === 0) {
-                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;"><b style="color:#d9534f;">3. 예술교과 필수 이수 조건</b><br>2학년 때 음악/미술/공예일반/연극을 수강하지 않았으므로, <b>3학년 때 [문학 감상과 비평] 또는 [문학과 매체] 중 1과목을 필수로 선택</b>해야 합니다.</div>`;
-                        } else {
-                            const artListStr = takenArtSubjects.join('<br>&nbsp;&nbsp;· ');
-                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;"><b style="color:#28a745;">3. 예술교과 (이수 충족)</b><br>이미 1·2학년 중 예술교과를 이수하여 대체 과목 필수 선택 대상이 아닙니다.<br><div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">✅ <b>나의 이수 내역:</b><br>&nbsp;&nbsp;· ${artListStr}</div></div>`;
-                        }
-
-                        // [점검 4] 교양교과
-                        let liberalArtsTable = `<div style="overflow-x:auto; margin-top:12px;">
-                            <table style="width:100%; border-collapse: collapse; font-size: 0.9em; text-align: center; border: 1px solid #ffe0b2;">
-                                <tr style="background-color: #fff3cd; color: #856404; border-bottom: 1px solid #ffe0b2;">
-                                    <th style="padding: 10px; text-align: left;">교양 과목명</th>
-                                    <th style="padding: 10px; width: 60px;">1학기</th>
-                                    <th style="padding: 10px; width: 60px;">2학기</th>
-                                    <th style="padding: 10px; width: 75px;">선택안함</th>
-                                </tr>`;
-
-                        liberalArtsSubjects.forEach((sub, idx) => {
-                            const creditText = sub.credits ? ` <span style="font-size:0.85em; color:#e83e8c;">[${sub.credits}학점]</span>` : '';
-                            const radioName = `lib_radio_${idx}`;
-                            liberalArtsTable += `
-                                <tr style="border-bottom: 1px solid #ffe0b2; background-color: #fff;">
-                                    <td style="padding: 10px; text-align: left; font-weight: bold; color: #495057;">${sub.subject_name}${creditText}</td>
-                                    <td style="padding: 10px;"><input type="radio" name="${radioName}" value="sem1" style="transform: scale(1.3); cursor:pointer;"></td>
-                                    <td style="padding: 10px;"><input type="radio" name="${radioName}" value="sem2" style="transform: scale(1.3); cursor:pointer;"></td>
-                                    <td style="padding: 10px;"><input type="radio" name="${radioName}" value="none" checked style="transform: scale(1.3); cursor:pointer;"></td>
-                                </tr>`;
-                        });
-                        liberalArtsTable += `</table></div>`;
-
-                        diagnosticHtml += `<div style="margin-bottom:0; padding-left:12px; border-left:4px solid #ff9500;">
-                            <b style="color:#d35400;">4. 교양교과 중복 유의 및 6학점 채우기</b><br>
-                            교양은 1, 2학기 동일하게 편성되어 있으므로 <b>아래 표에서 학기별로 중복되지 않게 선택</b>해 주세요.
-                            ${liberalArtsTable}
-                        </div>`;
-
-                        diagnosticHtml += `</div>`;
-
-                        document.getElementById('resDiagnostic').innerHTML = diagnosticHtml;
-                        document.getElementById('diagnosticArea').style.display = 'block';
-
-                    } else {
-                        document.getElementById('resSubjects').innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';
-                        document.getElementById('diagnosticArea').style.display = 'none';
-                    }
-
-                    resultArea.style.display = 'block';
-
-                    // 5. 하단 3학년 일반 과목 리스트 듀얼 UI 출력 (저장된 데이터도 함께 넘겨줌)
-                    initDualListSem1(regularSem1, savedSem1);
-                    initDualListSem2(regularSem2, savedSem2); // ✨ 2학기도 장바구니 UI로 초기화
-
-                    document.getElementById('grade3Area').style.display = 'block';
-                    document.getElementById('grade3Sem2Area').style.display = 'block';
-
+                const { data, error } = await db.from('expo_booths').select('*').eq('student_id', studentId).maybeSingle();
+                if (error) throw error;
+                if (data) {
+                    document.getElementById('resBoothId').innerText = data.student_id;
+                    document.getElementById('resBoothName').innerText = data.student_name;
+                    document.getElementById('resBoothSubject').innerText = data.subject_name;
+                    document.getElementById('resBoothRoom').innerText = data.booth_location;
+                    resultBox.style.display = 'block';
                 } else {
-                    alert("입력하신 학번과 이름이 일치하는 학생 정보를 찾을 수 없습니다.");
-                    resultArea.style.display = 'none';
+                    alert("해당 학번의 배치 정보가 없습니다.");
+                    resultBox.style.display = 'none';
                 }
             } catch (err) {
-                console.error("조회 중 오류:", err);
-                alert("데이터 조회 중 오류가 발생했습니다: " + err.message);
+                console.error("조회 오류:", err);
             }
         }
 
-        // ========================================================
-        // 🔮 3학년 1학기 듀얼 리스트 로직
-        // ========================================================
-        let sem1Available = [];
-        let sem1Selected = [];
-        let sem1Reasons = {};
+        // ==========================================
+        // ✨ [관리자용] 미달성 점검 로직 (1000개 제한 돌파 및 동적 반 생성)
+        // ==========================================
 
-        function initDualListSem1(subjects, savedData = []) {
-            sem1Available = subjects ? [...subjects] : [];
-            sem1Selected = [];
-            sem1Reasons = {};
+        let globalAdminData = null; // 데이터를 한 번만 불러오기 위한 전역 변수
 
-            if (savedData && savedData.length > 0) {
-                savedData.forEach(savedItem => {
-                    const idx = sem1Available.findIndex(s => s.subject_name === savedItem.subject_name);
-                    if (idx > -1) {
-                        sem1Selected.push(sem1Available[idx]);
-                        sem1Available.splice(idx, 1);
-                        sem1Reasons[savedItem.subject_name] = savedItem.reason || '';
+        // ✨ 1000개 제한을 무시하고 데이터를 끝까지 불러오는 함수 ✨
+        async function fetchAllRows(tableName, selectQuery) {
+            let allData = [];
+            let start = 0;
+            const limit = 1000;
+
+            while (true) {
+                const { data, error } = await db.from(tableName).select(selectQuery).range(start, start + limit - 1);
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+
+                allData = allData.concat(data);
+
+                if (data.length < limit) break; // 가져온 데이터가 1000개 미만이면 마지막 페이지라는 뜻이므로 종료
+                start += limit;
+            }
+            return allData;
+        }
+
+        function openAdminModal() {
+            document.getElementById('adminModal').style.display = 'flex';
+            document.getElementById('adminResultArea').style.display = 'none';
+            document.getElementById('adminTableBody').innerHTML = '';
+
+            // 초기화
+            document.getElementById('filterWrap').style.display = 'none';
+            const btn = document.getElementById('runCheckBtn');
+            btn.style.display = 'inline-block';
+            btn.innerText = "▶ 데이터 전체 스캔 시작";
+            globalAdminData = null;
+        }
+
+        function closeAdminModal() {
+            document.getElementById('adminModal').style.display = 'none';
+        }
+
+        window.onclick = function (event) {
+            const boothModal = document.getElementById('boothModal');
+            const adminModal = document.getElementById('adminModal');
+            if (event.target == boothModal) closeModal();
+            if (event.target == adminModal) closeAdminModal();
+        }
+
+        // 1. Supabase에서 데이터를 안전하게 모두 긁어오는 함수
+        async function fetchAndRenderData() {
+            const btn = document.getElementById('runCheckBtn');
+            const loading = document.getElementById('loadingMsg');
+            const filterWrap = document.getElementById('filterWrap');
+            const resultArea = document.getElementById('adminResultArea');
+
+            btn.style.display = 'none';
+            filterWrap.style.display = 'none';
+            resultArea.style.display = 'none';
+            loading.style.display = 'block';
+
+            try {
+                // 교과군 맵핑 (fetchAllRows 사용)
+                const subjects = await fetchAllRows('subjects', 'subject_name, subject_group');
+                const groupMap = {};
+                if (subjects) subjects.forEach(sub => groupMap[sub.subject_name] = sub.subject_group || "기타");
+
+                // 학생 정보 가져오기
+                const { data: students, error: stuErr } = await db.from('students').select('student_id, name').order('student_id', { ascending: true });
+                if (stuErr) throw stuErr;
+
+                // ✨ 전체 수강신청 내역 모두 가져오기 (fetchAllRows 사용으로 데이터 누락 완전 차단)
+                const enrollments = await fetchAllRows('student_enrollments', 'student_id, subject_name');
+
+                // 전역 변수에 저장 (반 변경 시 재활용)
+                globalAdminData = { students, enrollments, groupMap };
+
+                // 🌟 데이터에 존재하는 반만 추출해서 Select 박스 구성
+                const classSet = new Set();
+                students.forEach(s => {
+                    if (s.student_id && s.student_id.length >= 5) {
+                        classSet.add(s.student_id.substring(1, 3));
                     }
                 });
-            }
 
-            const container = document.getElementById('resGrade3Subjects');
-            container.className = '';
+                const classArray = Array.from(classSet).sort();
+                const selectEl = document.getElementById('classFilter');
 
-            container.innerHTML = `
-                <div id="sem1InteractiveArea">
-                    <div class="dual-list-container" id="sem1DualContainer">
-                        <div class="list-box">
-                            <h4>📚 개설 과목 (클릭하여 선택)</h4>
-                            <div id="sem1AvailableList"></div>
-                        </div>
-                        <div class="list-box">
-                            <h4>✅ 선택 과목 (최대 5개)</h4>
-                            <div id="sem1SelectedList"></div>
-                        </div>
-                    </div>
-                    
-                    <div style="overflow: hidden;">
-                        <div class="credit-summary" id="sem1CreditSummary">
-                            총 선택 합계: <span id="sem1CreditTotal" style="font-size:1.3em; color:#e83e8c;">0</span>학점 
-                            <span style="font-size:0.8em; color:#555;">(0/5과목)</span>
-                        </div>
-                    </div>
-
-                    <div class="complete-btn-container" id="sem1CompleteContainer">
-                        <button class="complete-btn" type="button" onclick="completeSem1()">✅ 과목 선택 완료</button>
-                    </div>
-                </div>
-
-                <div id="sem1ReasonSection" class="reason-section" style="display: none;">
-                    <h4 style="color: #6f42c1; margin-top: 0; margin-bottom: 15px; border-left: 4px solid #6f42c1; padding-left: 10px;">📝 선택한 과목의 설계 이유를 적어주세요 (1학기)</h4>
-                    <div id="sem1ReasonList" class="future-subject-list"></div>
-                    
-                    <div style="text-align: center; margin-top: 25px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                        <button class="nav-btn" type="button" onclick="modifySem1()">🔄 과목 다시 선택하기</button>
-                        <button class="action-btn" style="width: auto; padding: 10px 30px; background-color: #28a745;" type="button" onclick="saveSem1Selections()">💾 선택 과목 및 이유 저장하기</button>
-                    </div>
-                </div>
-            `;
-
-            renderDualListsSem1();
-
-            if (savedData && savedData.length > 0) {
-                completeSem1();
-            }
-        }
-
-        function renderDualListsSem1() {
-            const availContainer = document.getElementById('sem1AvailableList');
-            const selContainer = document.getElementById('sem1SelectedList');
-            const summaryLabel = document.getElementById('sem1CreditSummary');
-            const previewEl = document.getElementById('sem1Preview');
-
-            availContainer.innerHTML = sem1Available.map(sub => {
-                const safeName = sub.subject_name.replace(/'/g, "\\'");
-                const groupText = sub.selection_group ? `<span style="font-size:0.8em; color:#888; font-weight:normal;"> (${sub.selection_group})</span>` : '';
-                return `<div class="dual-subject-item" onclick="moveRight('${safeName}')">
-                            <span>${sub.subject_name}${groupText}</span>
-                            <span style="color:#28a745;">▶</span>
-                        </div>`;
-            }).join('');
-
-            selContainer.innerHTML = sem1Selected.map(sub => {
-                const safeName = sub.subject_name.replace(/'/g, "\\'");
-                const groupText = sub.selection_group ? `<span style="font-size:0.8em; color:#888; font-weight:normal;"> (${sub.selection_group})</span>` : '';
-                return `<div class="dual-subject-item" style="background-color:#e0eafa; border-color:#b8daff;" onclick="moveLeft('${safeName}')">
-                            <span style="color:#d9534f;">◀</span>
-                            <span>${sub.subject_name}${groupText}</span>
-                        </div>`;
-            }).join('');
-
-            const totalCredits = sem1Selected.length * 3;
-            summaryLabel.innerHTML = `총 선택 합계: <span id="sem1CreditTotal" style="font-size:1.3em; color:#e83e8c;">${totalCredits}</span>학점 <span style="font-size:0.8em; color:#555;">(${sem1Selected.length}/5과목)</span>`;
-
-            // ✨ 1학기 아코디언 미리보기 텍스트 업데이트
-            if (previewEl) {
-                if (sem1Selected.length > 0) {
-                    previewEl.innerText = `✅ 담은 과목: ${sem1Selected.map(s => s.subject_name).join(', ')}`;
-                } else {
-                    previewEl.innerText = '';
-                }
-            }
-        }
-
-        function moveRight(subName) {
-            if (sem1Selected.length >= 5) {
-                alert("과목은 최대 5개까지만 선택할 수 있습니다.");
-                return;
-            }
-            const idx = sem1Available.findIndex(s => s.subject_name === subName);
-            if (idx > -1) {
-                sem1Selected.push(sem1Available[idx]);
-                sem1Available.splice(idx, 1);
-                renderDualListsSem1();
-            }
-        }
-
-        function moveLeft(subName) {
-            const idx = sem1Selected.findIndex(s => s.subject_name === subName);
-            if (idx > -1) {
-                sem1Available.push(sem1Selected[idx]);
-                sem1Selected.splice(idx, 1);
-                renderDualListsSem1();
-            }
-        }
-
-        function completeSem1() {
-            if (sem1Selected.length === 0) {
-                alert("선택된 과목이 없습니다. 최소 1개 이상의 과목을 선택해 주세요.");
-                return;
-            }
-
-            document.getElementById('sem1InteractiveArea').style.display = 'none';
-            document.getElementById('sem1ReasonSection').style.display = 'block';
-
-            const reasonList = document.getElementById('sem1ReasonList');
-            reasonList.innerHTML = sem1Selected.map(sub => {
-                const groupText = sub.selection_group ? ` <small style="color:#888;">(${sub.selection_group})</small>` : '';
-                const savedText = sem1Reasons[sub.subject_name] ? sem1Reasons[sub.subject_name] : '';
-
-                let fileLinksHtml = '';
-                for (let i = 1; i <= 5; i++) {
-                    const fileKey = `file${i}`;
-                    if (sub[fileKey]) {
-                        const fileName = sub[fileKey].includes('.jpg') ? sub[fileKey] : sub[fileKey] + '.jpg';
-                        const fileUrl = `https://dumeojh.github.io/high/jpgs/${fileName}`;
-                        fileLinksHtml += `<a href="${fileUrl}" target="_blank" style="color: #0056b3; font-size: 0.85em; text-decoration: none; font-weight: bold; margin-left: 6px; background-color: #e2ece9; padding: 2px 6px; border-radius: 4px; border: 1px solid #c3e6cb;">[파일${i}]</a>`;
-                    }
-                }
-
-                return `
-                <div class="future-subject-item">
-                    <label class="future-subject-header" style="cursor: default;">
-                        <span style="font-size:1.05em; color:#6f42c1;">✅ ${sub.subject_name}${groupText}${fileLinksHtml}</span>
-                    </label>
-                    <textarea class="reason-box" style="display:block; width:100%; min-height:80px; margin-top:12px;" placeholder="${sub.subject_name} 과목을 선택한 이유를 자유롭게 적어보세요.">${savedText}</textarea>
-                </div>
-                `;
-            }).join('');
-        }
-
-        function modifySem1() {
-            const textareas = document.querySelectorAll('#sem1ReasonList .reason-box');
-            sem1Selected.forEach((sub, idx) => {
-                if (textareas[idx]) {
-                    sem1Reasons[sub.subject_name] = textareas[idx].value;
-                }
-            });
-
-            document.getElementById('sem1InteractiveArea').style.display = 'block';
-            document.getElementById('sem1ReasonSection').style.display = 'none';
-        }
-
-        async function saveSem1Selections() {
-            if (!currentStudentId) {
-                alert("학생 정보가 없습니다. 다시 조회해주세요.");
-                return;
-            }
-
-            const textareas = document.querySelectorAll('#sem1ReasonList .reason-box');
-            sem1Selected.forEach((sub, idx) => {
-                if (textareas[idx]) {
-                    sem1Reasons[sub.subject_name] = textareas[idx].value;
-                }
-            });
-
-            const insertData = sem1Selected.map(sub => {
-                return {
-                    student_id: currentStudentId,
-                    semester: '3-1',
-                    subject_name: sub.subject_name,
-                    reason: sem1Reasons[sub.subject_name]
-                };
-            });
-
-            try {
-                const { error: delErr } = await db
-                    .from('course_selections')
-                    .delete()
-                    .eq('student_id', currentStudentId)
-                    .eq('semester', '3-1');
-
-                if (delErr) throw delErr;
-
-                if (insertData.length > 0) {
-                    const { error: insErr } = await db
-                        .from('course_selections')
-                        .insert(insertData);
-
-                    if (insErr) throw insErr;
-                }
-
-                alert("✅ 1학기 과목과 설계 이유가 성공적으로 저장되었습니다!");
-            } catch (err) {
-                console.error("저장 중 오류:", err);
-                alert("저장 중 오류가 발생했습니다: " + err.message);
-            }
-        }
-
-
-        // ========================================================
-        // ✨ 3학년 2학기 듀얼 리스트 로직 (1학기와 동일 구조)
-        // ========================================================
-        let sem2Available = [];
-        let sem2Selected = [];
-        let sem2Reasons = {};
-
-        function initDualListSem2(subjects, savedData = []) {
-            sem2Available = subjects ? [...subjects] : [];
-            sem2Selected = [];
-            sem2Reasons = {};
-
-            if (savedData && savedData.length > 0) {
-                savedData.forEach(savedItem => {
-                    const idx = sem2Available.findIndex(s => s.subject_name === savedItem.subject_name);
-                    if (idx > -1) {
-                        sem2Selected.push(sem2Available[idx]);
-                        sem2Available.splice(idx, 1);
-                        sem2Reasons[savedItem.subject_name] = savedItem.reason || '';
-                    }
+                let optionsHtml = '<option value="all">전체 반</option>';
+                classArray.forEach(cls => {
+                    optionsHtml += `<option value="${cls}">${parseInt(cls, 10)}반</option>`;
                 });
-            }
+                selectEl.innerHTML = optionsHtml;
 
-            const container = document.getElementById('resGrade3Sem2Subjects');
-            container.className = '';
+                loading.style.display = 'none';
+                btn.style.display = 'inline-block';
+                btn.innerText = "↻ 데이터 다시 갱신";
+                filterWrap.style.display = 'flex';
 
-            container.innerHTML = `
-                <div id="sem2InteractiveArea">
-                    <div class="dual-list-container" id="sem2DualContainer">
-                        <div class="list-box">
-                            <h4>📚 개설 과목 (클릭하여 선택)</h4>
-                            <div id="sem2AvailableList"></div>
-                        </div>
-                        <div class="list-box">
-                            <h4>✅ 선택 과목 (최대 5개)</h4>
-                            <div id="sem2SelectedList"></div>
-                        </div>
-                    </div>
-                    
-                    <div style="overflow: hidden;">
-                        <div class="credit-summary" id="sem2CreditSummary">
-                            총 선택 합계: <span id="sem2CreditTotal" style="font-size:1.3em; color:#e83e8c;">0</span>학점 
-                            <span style="font-size:0.8em; color:#555;">(0/5과목)</span>
-                        </div>
-                    </div>
+                renderAdminTable();
 
-                    <div class="complete-btn-container" id="sem2CompleteContainer">
-                        <button class="complete-btn" type="button" onclick="completeSem2()">✅ 과목 선택 완료</button>
-                    </div>
-                </div>
-
-                <div id="sem2ReasonSection" class="reason-section" style="display: none;">
-                    <h4 style="color: #6f42c1; margin-top: 0; margin-bottom: 15px; border-left: 4px solid #6f42c1; padding-left: 10px;">📝 선택한 과목의 설계 이유를 적어주세요 (2학기)</h4>
-                    <div id="sem2ReasonList" class="future-subject-list"></div>
-                    
-                    <div style="text-align: center; margin-top: 25px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                        <button class="nav-btn" type="button" onclick="modifySem2()">🔄 과목 다시 선택하기</button>
-                        <button class="action-btn" style="width: auto; padding: 10px 30px; background-color: #28a745;" type="button" onclick="saveSem2Selections()">💾 선택 과목 및 이유 저장하기</button>
-                    </div>
-                </div>
-            `;
-
-            renderDualListsSem2();
-
-            if (savedData && savedData.length > 0) {
-                completeSem2();
+            } catch (error) {
+                console.error("일괄 점검 중 오류 발생:", error);
+                alert("데이터 분석 중 오류가 발생했습니다.");
+                loading.style.display = 'none';
+                btn.style.display = 'inline-block';
             }
         }
 
-        function renderDualListsSem2() {
-            const availContainer = document.getElementById('sem2AvailableList');
-            const selContainer = document.getElementById('sem2SelectedList');
-            const summaryLabel = document.getElementById('sem2CreditSummary');
-            const previewEl = document.getElementById('sem2Preview');
+        // 2. 표를 그려주는 함수
+        function renderAdminTable() {
+            if (!globalAdminData) return;
 
-            availContainer.innerHTML = sem2Available.map(sub => {
-                const safeName = sub.subject_name.replace(/'/g, "\\'");
-                const groupText = sub.selection_group ? `<span style="font-size:0.8em; color:#888; font-weight:normal;"> (${sub.selection_group})</span>` : '';
-                return `<div class="dual-subject-item" onclick="moveRightSem2('${safeName}')">
-                            <span>${sub.subject_name}${groupText}</span>
-                            <span style="color:#28a745;">▶</span>
-                        </div>`;
-            }).join('');
+            const { students, enrollments, groupMap } = globalAdminData;
+            const classFilter = document.getElementById('classFilter').value;
+            const tbody = document.getElementById('adminTableBody');
 
-            selContainer.innerHTML = sem2Selected.map(sub => {
-                const safeName = sub.subject_name.replace(/'/g, "\\'");
-                const groupText = sub.selection_group ? `<span style="font-size:0.8em; color:#888; font-weight:normal;"> (${sub.selection_group})</span>` : '';
-                return `<div class="dual-subject-item" style="background-color:#e0eafa; border-color:#b8daff;" onclick="moveLeftSem2('${safeName}')">
-                            <span style="color:#d9534f;">◀</span>
-                            <span>${sub.subject_name}${groupText}</span>
-                        </div>`;
-            }).join('');
+            let failedStudentsHtml = '';
+            let issueCount = 0;
 
-            const totalCredits = sem2Selected.length * 3;
-            summaryLabel.innerHTML = `총 선택 합계: <span id="sem2CreditTotal" style="font-size:1.3em; color:#e83e8c;">${totalCredits}</span>학점 <span style="font-size:0.8em; color:#555;">(${sem2Selected.length}/5과목)</span>`;
-
-            // ✨ 2학기 아코디언 미리보기 텍스트 업데이트
-            if (previewEl) {
-                if (sem2Selected.length > 0) {
-                    previewEl.innerText = `✅ 담은 과목: ${sem2Selected.map(s => s.subject_name).join(', ')}`;
-                } else {
-                    previewEl.innerText = '';
-                }
-            }
-        }
-
-        function moveRightSem2(subName) {
-            if (sem2Selected.length >= 5) {
-                alert("과목은 최대 5개까지만 선택할 수 있습니다.");
-                return;
-            }
-            const idx = sem2Available.findIndex(s => s.subject_name === subName);
-            if (idx > -1) {
-                sem2Selected.push(sem2Available[idx]);
-                sem2Available.splice(idx, 1);
-                renderDualListsSem2();
-            }
-        }
-
-        function moveLeftSem2(subName) {
-            const idx = sem2Selected.findIndex(s => s.subject_name === subName);
-            if (idx > -1) {
-                sem2Available.push(sem2Selected[idx]);
-                sem2Selected.splice(idx, 1);
-                renderDualListsSem2();
-            }
-        }
-
-        function completeSem2() {
-            if (sem2Selected.length === 0) {
-                alert("선택된 과목이 없습니다. 최소 1개 이상의 과목을 선택해 주세요.");
-                return;
-            }
-
-            document.getElementById('sem2InteractiveArea').style.display = 'none';
-            document.getElementById('sem2ReasonSection').style.display = 'block';
-
-            const reasonList = document.getElementById('sem2ReasonList');
-            reasonList.innerHTML = sem2Selected.map(sub => {
-                const groupText = sub.selection_group ? ` <small style="color:#888;">(${sub.selection_group})</small>` : '';
-                const savedText = sem2Reasons[sub.subject_name] ? sem2Reasons[sub.subject_name] : '';
-
-                let fileLinksHtml = '';
-                for (let i = 1; i <= 5; i++) {
-                    const fileKey = `file${i}`;
-                    if (sub[fileKey]) {
-                        const fileName = sub[fileKey].includes('.jpg') ? sub[fileKey] : sub[fileKey] + '.jpg';
-                        const fileUrl = `https://dumeojh.github.io/high/jpgs/${fileName}`;
-                        fileLinksHtml += `<a href="${fileUrl}" target="_blank" style="color: #0056b3; font-size: 0.85em; text-decoration: none; font-weight: bold; margin-left: 6px; background-color: #e2ece9; padding: 2px 6px; border-radius: 4px; border: 1px solid #c3e6cb;">[파일${i}]</a>`;
-                    }
+            students.forEach(student => {
+                // 선택한 반 필터링 적용
+                if (classFilter !== 'all') {
+                    if (!student.student_id || student.student_id.length < 5) return;
+                    if (student.student_id.substring(1, 3) !== classFilter) return;
                 }
 
-                return `
-                <div class="future-subject-item">
-                    <label class="future-subject-header" style="cursor: default;">
-                        <span style="font-size:1.05em; color:#6f42c1;">✅ ${sub.subject_name}${groupText}${fileLinksHtml}</span>
-                    </label>
-                    <textarea class="reason-box" style="display:block; width:100%; min-height:80px; margin-top:12px;" placeholder="${sub.subject_name} 과목을 선택한 이유를 자유롭게 적어보세요.">${savedText}</textarea>
-                </div>
-                `;
-            }).join('');
-        }
+                const myEnrollments = enrollments.filter(e => e.student_id === student.student_id);
+                const groupCounts = { "사회": 0, "예술": 0 };
 
-        function modifySem2() {
-            const textareas = document.querySelectorAll('#sem2ReasonList .reason-box');
-            sem2Selected.forEach((sub, idx) => {
-                if (textareas[idx]) {
-                    sem2Reasons[sub.subject_name] = textareas[idx].value;
+                myEnrollments.forEach(e => {
+                    const group = groupMap[e.subject_name] || "기타";
+                    if (groupCounts[group] !== undefined) groupCounts[group]++;
+                });
+
+                let issues = [];
+
+                if (groupCounts["사회"] === 0) {
+                    issues.push("<b>[사회교과 미이수]</b><br><span style='font-size:0.9em; color:#666;'>➔ 3학년 1, 2학기 중 <b>사회교과 한 과목 필수 선택</b> 요망</span>");
+                }
+                if (groupCounts["예술"] === 0) {
+                    issues.push("<b>[예술교과 미이수]</b><br><span style='font-size:0.9em; color:#666;'>➔ 3학년 때 <b>'문학 감상과 비평'</b> 또는 <b>'문학과 매체'</b> 중 1과목 필수 선택 요망</span>");
+                }
+
+                // ✨ 수정됨: 0개일 때도 누락 의심으로 걸러내도록 수정
+                if (myEnrollments.length < 5) {
+                    issues.push("<span style='font-size:0.9em; color:#856404;'>※ 수강 데이터 입력 누락 의심 (등록된 과목 5개 미만)</span>");
+                }
+
+                if (issues.length > 0) {
+                    issueCount++;
+                    failedStudentsHtml += `
+                        <tr>
+                            <td style="font-weight:bold;">${student.student_id || '-'}</td>
+                            <td>${student.name || '-'}</td>
+                            <td class="issue-text">• ${issues.join('<br><br>• ')}</td>
+                        </tr>
+                    `;
                 }
             });
 
-            document.getElementById('sem2InteractiveArea').style.display = 'block';
-            document.getElementById('sem2ReasonSection').style.display = 'none';
-        }
-
-        async function saveSem2Selections() {
-            if (!currentStudentId) {
-                alert("학생 정보가 없습니다. 다시 조회해주세요.");
-                return;
+            if (issueCount === 0) {
+                const classText = classFilter === 'all' ? '전체 학생 중' : `${parseInt(classFilter, 10)}반 학생 중`;
+                tbody.innerHTML = `<tr><td colspan="3" style="color:#28a745; font-weight:bold; padding:20px;">🎉 ${classText} 1, 2학년 필수교과 미이수 학생이 없습니다!</td></tr>`;
+            } else {
+                tbody.innerHTML = failedStudentsHtml;
             }
 
-            const textareas = document.querySelectorAll('#sem2ReasonList .reason-box');
-            sem2Selected.forEach((sub, idx) => {
-                if (textareas[idx]) {
-                    sem2Reasons[sub.subject_name] = textareas[idx].value;
-                }
-            });
-
-            const insertData = sem2Selected.map(sub => {
-                return {
-                    student_id: currentStudentId,
-                    semester: '3-2', // ✨ 2학기 데이터로 저장
-                    subject_name: sub.subject_name,
-                    reason: sem2Reasons[sub.subject_name]
-                };
-            });
-
-            try {
-                const { error: delErr } = await db
-                    .from('course_selections')
-                    .delete()
-                    .eq('student_id', currentStudentId)
-                    .eq('semester', '3-2');
-
-                if (delErr) throw delErr;
-
-                if (insertData.length > 0) {
-                    const { error: insErr } = await db
-                        .from('course_selections')
-                        .insert(insertData);
-
-                    if (insErr) throw insErr;
-                }
-
-                alert("✅ 2학기 과목과 설계 이유가 성공적으로 저장되었습니다!");
-            } catch (err) {
-                console.error("저장 중 오류:", err);
-                alert("저장 중 오류가 발생했습니다: " + err.message);
-            }
+            document.getElementById('adminResultArea').style.display = 'block';
         }
-
-        // 엔터키 입력 이벤트 바인딩
-        document.getElementById('studentIdInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') searchStudent();
-        });
-        document.getElementById('studentNameInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') searchStudent();
-        });
     </script>
 </body>
 

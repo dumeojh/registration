@@ -454,8 +454,6 @@
                 <div id="resSubjects" class="result-value" style="margin-top: 15px;"></div>
             </details>
 
-
-
             <details class="subject-area" id="diagnosticArea" style="display: none; border-top-color: #c8d8d3;">
                 <summary class="result-label" style="font-size: 1.05em; color:#155724;">🎯 3학년 선택교과 설계 전 필수 점검사항
                     (접기/펼치기)</summary>
@@ -466,8 +464,8 @@
                 <summary class="result-label" style="font-size: 1.05em; color:#6f42c1;">🔮 3학년 1학기 선택교과 설계 (접기/펼치기)
                 </summary>
                 <div style="margin-top: 10px;">
-                    <p style="font-size: 0.85em; color: #666; margin-top: 0; margin-bottom: 10px;">※ 희망 과목을 체크하고 선택 이유를
-                        간략히 적어보세요.</p>
+                    <p style="font-size: 0.85em; color: #666; margin-top: 0; margin-bottom: 10px;">※ 희망 과목을 선택하고 장바구니에
+                        담아보세요.</p>
                     <div id="resGrade3Subjects" class="future-subject-list"></div>
                 </div>
             </details>
@@ -545,27 +543,26 @@
 
                     const liberalArtsSubjects = g3Data ? g3Data.filter(sub => sub.subject_group === '교양') : [];
 
-                    // ✨ 기존 조건에 `&& sub.category === '선택교과'` 조건을 추가합니다.
-                    // (💡주의: 만약 DB 테이블의 '구분' 컬럼 이름이 category가 아니라면, gubun, course_type 등 실제 컬럼명으로 바꿔주세요!)
-                    const regularSem1 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester1 && sub.semester1.trim() !== '' && sub.category === '선택교과') : [];
-                    const regularSem2 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester2 && sub.semester2.trim() !== '' && sub.category === '선택교과') : [];
+                    // ✨ '선택'이라는 글자가 포함된 과목만 필터링 (DB 컬럼명이 category이고 '선택'이라는 단어가 들어있을 경우)
+                    const regularSem1 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester1 && sub.semester1.trim() !== '' && sub.category && sub.category.includes('선택')) : [];
+                    const regularSem2 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester2 && sub.semester2.trim() !== '' && sub.category && sub.category.includes('선택')) : [];
+
                     if (enrollments && enrollments.length > 0) {
                         const subjectNames = [...new Set(enrollments.map(e => e.subject_name))];
 
-                        // ✨ 1,2학년 과목 교과군 및 학점(credits) 매핑 추가 ✨
                         const { data: subjectDetails, error: subErr } = await db
                             .from('subjects')
-                            .select('subject_name, subject_group, credits') // 학점 추가
+                            .select('subject_name, subject_group, credits')
                             .in('subject_name', subjectNames);
 
                         if (subErr) throw subErr;
 
                         const groupMap = {};
-                        const creditMap = {}; // 학점 저장용 Map
+                        const creditMap = {};
                         if (subjectDetails) {
                             subjectDetails.forEach(sub => {
                                 groupMap[sub.subject_name] = sub.subject_group || "기타";
-                                creditMap[sub.subject_name] = parseInt(sub.credits, 10) || 0; // 숫자로 변환
+                                creditMap[sub.subject_name] = parseInt(sub.credits, 10) || 0;
                             });
                         }
 
@@ -583,7 +580,6 @@
                         const takenSocialSubjects = [];
                         const takenArtSubjects = [];
 
-                        // 2학년 국/영/수 전용 변수
                         const grade2KoreanSubjects = [];
                         const grade2EnglishSubjects = [];
                         const grade2MathSubjects = [];
@@ -600,7 +596,7 @@
                             const sub = e.subject_name;
                             const cat = e.category || '기타 학기';
                             const group = groupMap[sub] || "기타";
-                            const subCredits = creditMap[sub] || 0; // 해당 과목의 학점
+                            const subCredits = creditMap[sub] || 0;
 
                             const tagHtml = `<span class="subject-tag">${sub} <small style="color:#777;">[${group}]</small></span>`;
 
@@ -614,16 +610,14 @@
                                 catGrade2Sem2.add(tagHtml);
                             }
 
-                            // ✨ 과목명 뒤에 (X학점) 정보 텍스트 추가 ✨
                             const detailStr = `[${cat}] <b>${sub}</b> <span style="font-size:0.85em; color:#e83e8c;">(${subCredits}학점)</span>`;
 
                             if (group === "사회" && !takenSocialSubjects.includes(detailStr)) {
                                 takenSocialSubjects.push(detailStr);
-                                totalSocialCredits += subCredits; // 사회교과일 경우 학점 누적
+                                totalSocialCredits += subCredits;
                             }
                             if (group === "예술" && !takenArtSubjects.includes(detailStr)) takenArtSubjects.push(detailStr);
 
-                            // 💡 2학년 국영수 교과만 별도 수집
                             if (cat.includes('2학년')) {
                                 if (group === "국어" && !grade2KoreanSubjects.includes(detailStr)) {
                                     grade2KoreanSubjects.push(detailStr);
@@ -653,11 +647,10 @@
 
                         document.getElementById('resSubjects').innerHTML = badgesHtml;
 
-
                         // 4. 💡 3학년 진단 시스템 로직 생성
                         let diagnosticHtml = `<div style="margin-top:5px; padding:18px; background:#fdfdfe; border-radius:10px; border:1px solid #c8d8d3; font-size:0.95em; line-height:1.6; color:#333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">`;
 
-                        // [점검 1] 사회 (총 학점 표시 추가)
+                        // [점검 1] 사회 
                         if (groupCounts["사회"] === 0) {
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;"><b style="color:#d9534f;">1. 사회교과 필수 선택</b><br>2학년에서 사회교과를 선택하지 않았으므로, <b>3학년 1, 2학기 중 사회교과 한 과목은 필수적으로 선택</b>해야 합니다.</div>`;
                         } else {
@@ -665,7 +658,7 @@
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;"><b style="color:#28a745;">1. 사회교과 (이수 충족) - 누적 ${totalSocialCredits}학점</b><br>이미 1·2학년 중 사회교과를 이수하여 필수 조건이 충족되었습니다.<br><div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">✅ <b>나의 이수 내역 (합계: ${totalSocialCredits}학점):</b><br>&nbsp;&nbsp;· ${socialListStr}</div></div>`;
                         }
 
-                        // [점검 2] 기초교과 (2학년 기준 업데이트)
+                        // [점검 2] 기초교과 
                         const koreanDetails = grade2KoreanSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + grade2KoreanSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
                         const englishDetails = grade2EnglishSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + grade2EnglishSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
                         const mathDetails = grade2MathSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + grade2MathSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
@@ -821,7 +814,7 @@
                         </div>`;
             }).join('');
 
-            // 학점 계산 (요청하신 대로 1과목당 무조건 3학점으로 계산)
+            // 학점 계산
             const totalCredits = sem1Selected.length * 3;
             summaryLabel.innerHTML = `총 선택 합계: <span id="sem1CreditTotal" style="font-size:1.3em; color:#e83e8c;">${totalCredits}</span>학점 <span style="font-size:0.8em; color:#555;">(${sem1Selected.length}/5과목)</span>`;
         }

@@ -544,9 +544,11 @@
                     if (g3Err) throw g3Err;
 
                     const liberalArtsSubjects = g3Data ? g3Data.filter(sub => sub.subject_group === '교양') : [];
-                    const regularSem1 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester1 && sub.semester1.trim() !== '') : [];
-                    const regularSem2 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester2 && sub.semester2.trim() !== '') : [];
 
+                    // ✨ 기존 조건에 `&& sub.category === '선택교과'` 조건을 추가합니다.
+                    // (💡주의: 만약 DB 테이블의 '구분' 컬럼 이름이 category가 아니라면, gubun, course_type 등 실제 컬럼명으로 바꿔주세요!)
+                    const regularSem1 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester1 && sub.semester1.trim() !== '' && sub.category === '선택교과') : [];
+                    const regularSem2 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester2 && sub.semester2.trim() !== '' && sub.category === '선택교과') : [];
                     if (enrollments && enrollments.length > 0) {
                         const subjectNames = [...new Set(enrollments.map(e => e.subject_name))];
 

@@ -543,19 +543,22 @@
 
                     const liberalArtsSubjects = g3Data ? g3Data.filter(sub => sub.subject_group === '교양') : [];
 
-                    // ✨ DB의 selection_type 컬럼에서 '학교지정'이 아닌 과목(선택교과)만 필터링합니다.
+
+
+
+                    // ✨ DB의 selection_type 컬럼 값이 '진로선택' 또는 '융합선택'인 과목만 필터링합니다.
                     const regularSem1 = g3Data ? g3Data.filter(sub =>
                         sub.subject_group !== '교양' &&
                         sub.semester1 &&
                         sub.semester1.trim() !== '' &&
-                        sub.selection_type !== '학교지정'
+                        (sub.selection_type === '진로선택' || sub.selection_type === '융합선택')
                     ) : [];
 
                     const regularSem2 = g3Data ? g3Data.filter(sub =>
                         sub.subject_group !== '교양' &&
                         sub.semester2 &&
                         sub.semester2.trim() !== '' &&
-                        sub.selection_type !== '학교지정'
+                        (sub.selection_type === '진로선택' || sub.selection_type === '융합선택')
                     ) : [];
 
                     if (enrollments && enrollments.length > 0) {

@@ -464,7 +464,7 @@
                             if (groupCounts[group] !== undefined) groupCounts[group]++;
                         });
 
-                        const catCommon = new Set();
+                        // ✨ 카테고리 분류 세팅 변경 부분 ✨
                         const catSem1 = new Set();
                         const catSem2 = new Set();
                         const catGrade2 = new Set();
@@ -481,11 +481,10 @@
                             const group = groupMap[sub] || "기타";
                             const tagHtml = `<span class="subject-tag">${sub} <small style="color:#777;">[${group}]</small></span>`;
 
-                            if (cat.includes('1학년 1학기 공통') || cat.includes('1학년 2학기 공통')) {
-                                catCommon.add(tagHtml);
-                            } else if (cat.includes('1학년 1학기 선택')) {
+                            // ✨ 카테고리 조건문 변경 부분 ✨
+                            if (cat.includes('1학년 1학기')) {
                                 catSem1.add(tagHtml);
-                            } else if (cat.includes('1학년 2학기 선택')) {
+                            } else if (cat.includes('1학년 2학기')) {
                                 catSem2.add(tagHtml);
                             } else if (cat.includes('2학년')) {
                                 catGrade2.add(tagHtml);
@@ -499,10 +498,10 @@
                             if (group === "수학" && !takenMathSubjects.includes(detailStr)) takenMathSubjects.push(detailStr);
                         });
 
+                        // ✨ 출력 HTML 생성 부분 변경 ✨
                         let badgesHtml = '';
-                        if (catCommon.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 1학년 공통</div><div class="subject-tags" style="margin-top:0;">${[...catCommon].join('')}</div></div>`;
-                        if (catSem1.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 1학년 1학기 선택</div><div class="subject-tags" style="margin-top:0;">${[...catSem1].join('')}</div></div>`;
-                        if (catSem2.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 1학년 2학기 선택</div><div class="subject-tags" style="margin-top:0;">${[...catSem2].join('')}</div></div>`;
+                        if (catSem1.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 1학년 1학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catSem1].join('')}</div></div>`;
+                        if (catSem2.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 1학년 2학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catSem2].join('')}</div></div>`;
                         if (catGrade2.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 2학년 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catGrade2].join('')}</div></div>`;
                         if (!badgesHtml) badgesHtml = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';
 
@@ -525,6 +524,7 @@
                         const mathDetails = takenMathSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + takenMathSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
 
                         diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #0056b3;"><b style="color:#0056b3;">2. 기초교과(국·영·수 교과군) 선택 제한</b><br>국어, 영어, 수학 <b>각 교과군은 4학기 동안 총 4개 과목이 초과되지 않도록 선택</b>해야 합니다. (교과군별로 한 학기에 1과목 선택 권장)<br><span style="font-size:0.9em; color:#666;">👉 나의 1·2학년 누적 수강 개수: 국어 교과군(${groupCounts["국어"] || 0}개), 영어 교과군(${groupCounts["영어"] || 0}개), 수학 교과군(${groupCounts["수학"] || 0}개)</span><br><div style="margin-top:6px; font-size:0.9em; color:#004085; background-color:#e0f3ff; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6; width:100%; box-sizing:border-box;">✅ <b>나의 국·영·수 교과군 세부 이수 내역:</b><br>&nbsp;&nbsp;• <b>국어 교과군</b> (${groupCounts["국어"] || 0}개):${koreanDetails}<br>&nbsp;&nbsp;• <b>영어 교과군</b> (${groupCounts["영어"] || 0}개):${englishDetails}<br>&nbsp;&nbsp;• <b>수학 교과군</b> (${groupCounts["수학"] || 0}개):${mathDetails}</div></div>`;
+
                         // [점검 3] 예술
                         if (groupCounts["예술"] === 0) {
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;"><b style="color:#d9534f;">3. 예술교과 필수 이수 조건</b><br>2학년 때 음악/미술/공예일반/연극을 수강하지 않았으므로, <b>3학년 때 [문학 감상과 비평] 또는 [문학과 매체] 중 1과목을 필수로 선택</b>해야 합니다.</div>`;

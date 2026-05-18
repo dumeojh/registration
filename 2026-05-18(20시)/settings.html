@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시스템 환경설정</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .nav-btn {
+            padding: 8px 15px;
+            background-color: #f8f9fa;
+            color: #495057;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        .tab-menu {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 25px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 5px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #888;
+            cursor: pointer;
+            transition: 0.3s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            flex: 1;
+            word-break: keep-all;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h2 {
+            border-left: 5px solid var(--primary-color);
+            padding-left: 10px;
+            color: #333;
+            margin-bottom: 20px;
+            margin-top: 0;
+            font-size: 1.3rem;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+        }
+
+        .label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn-save {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-add {
+            background-color: #34c759;
+            color: white;
+            margin-top: 5px;
+        }
+
+        .btn-special {
+            background-color: #6f42c1;
+            color: white;
+            margin-top: 5px;
+        }
+
+        .btn-fair {
+            background-color: #ff9500;
+            color: white;
+            margin-top: 5px;
+        }
+
+        .btn-save:hover,
+        .btn-add:hover,
+        .btn-special:hover,
+        .btn-fair:hover {
+            opacity: 0.8;
+        }
+
+        .subject-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+            border-top: 1px solid #eee;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .subject-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .csv-section {
+            background-color: #eef2f5;
+            border-color: #d1d9e0;
+        }
+
+        .special-csv-section {
+            background-color: #f3eef5;
+            border-color: #d8cce2;
+        }
+
+        .fair-csv-section {
+            background-color: #fff6e5;
+            border-color: #ffe0b2;
+        }
+
+        .csv-guide {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            background-color: #fff;
+            border: 1px dashed #bbb;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .csv-guide summary {
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #495057;
+            outline: none;
+        }
+
+        .csv-guide summary:hover {
+            color: var(--primary-color);
+        }
+
+        .csv-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .csv-table th {
+            background-color: #f1f3f5;
+            border: 1px solid #dee2e6;
+            padding: 6px;
+            color: #333;
+        }
+
+        .csv-table td {
+            border: 1px solid #dee2e6;
+            padding: 6px;
+            color: #666;
+        }
+
+        .tag-container {
+            margin-top: 5px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .tag-common {
+            background-color: #e9ecef;
+            color: #495057;
+            border: 1px solid #ced4da;
+        }
+
+        .tag-elective {
+            background-color: #e0f3ff;
+            color: #0056b3;
+            border: 1px solid #b8daff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="admin-container">
+        <div class="nav-buttons">
+            <button type="button" class="nav-btn" onclick="history.back()">⬅ 이전 단계로</button>
+            <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
+        </div>
+
+        <div class="tab-menu">
+            <button class="tab-btn active" onclick="switchTab('tab-student2', this)">👥 학생관리2 (신규)</button>
+
+            <button class="tab-btn" onclick="switchTab('tab-enrollment', this)">📝 수강신청 등록 (확장)</button>
+
+            <button class="tab-btn" onclick="switchTab('tab-subjects', this)">📚 과목 관리 (교과군)</button>
+            <button class="tab-btn" onclick="switchTab('tab-booth', this)">📍 박람회 배치교실</button>
+        </div>
+
+        <div id="tab-subjects" class="tab-content">
+            <h2 style="color:#6f42c1;">📚 전체 과목 일괄 등록 (교과군 포함)</h2>
+            <div class="section special-csv-section">
+                <span class="label">📚 교육과정 과목 엑셀(CSV) 등록</span>
+                <p style="color: #666; font-size: 0.85rem; margin-top:0;">교과군부터 구분까지 총 16개 항목이 포함된 지정된 양식의 CSV 파일을
+                    업로드하세요.</p>
+
+                <details class="csv-guide">
+                    <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
+                    <div style="overflow-x: auto;">
+                        <table class="csv-table" style="min-width: 1000px;">
+                            <thead>
+                                <tr>
+                                    <th>A열 (교과군)</th>
+                                    <th>B열 (과목명)</th>
+                                    <th>C열 (학년)</th>
+                                    <th>D열 (1학기)</th>
+                                    <th>E열 (2학기)</th>
+                                    <th>F열 (입학생 기준)</th>
+                                    <th>G열 (선택유형)</th>
+                                    <th>H열 (선택그룹)</th>
+                                    <th>I열 (학점)</th>
+                                    <th>J열 (비고)</th>
+                                    <th style="color:#0056b3;">K열 (파일1)</th>
+                                    <th style="color:#0056b3;">L열 (파일2)</th>
+                                    <th style="color:#0056b3;">M열 (파일3)</th>
+                                    <th style="color:#0056b3;">N열 (파일4)</th>
+                                    <th style="color:#0056b3;">O열 (파일5)</th>
+                                    <th style="color:#d9534f;">P열 (구분)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>수학</td>
+                                    <td>심화 수학Ⅰ</td>
+                                    <td>3</td>
+                                    <td>O</td>
+                                    <td></td>
+                                    <td>2024년</td>
+                                    <td>진로선택</td>
+                                    <td>택 2</td>
+                                    <td>3</td>
+                                    <td></td>
+                                    <td style="font-weight:bold; color:#0056b3;">46</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td style="font-weight:bold; color:#d9534f;">선택교과</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="16"
+                                        style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
+                                        💡 <b>작성 가이드</b><br>
+                                        - <b>1행(헤더)</b>: 제목 행이므로 데이터로 들어가지 않습니다.<br>
+                                        - <b>B열(과목명)</b>: <span style="color:red;">필수 항목</span>입니다. 띄어쓰기까지 정확하게 기재해
+                                        주세요.<br>
+                                        - <b>K열 ~ O열(파일)</b>: 안내할 자료 이미지의 번호(코드)를 입력합니다. (예: 46)<br>
+                                        - <b>P열(구분)</b>: '선택교과', '학교지정' 등을 기재합니다.<br>
+                                        - 빈칸은 빈칸 그대로 시스템에 등록되므로, 해당 없는 학기나 비고, 파일 란은 비워두셔도 무방합니다.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+
+                <input type="file" id="subjectFile" accept=".csv" style="background: white; margin-top: 10px;" />
+                <button onclick="uploadSubjects()" class="btn btn-special" style="margin-top: 5px;">과목 데이터 덮어쓰기 &
+                    등록</button>
+            </div>
+        </div>
+
+
+
+
+        <div id="tab-student2" class="tab-content active">
+            <h2 style="color:var(--primary-color);">👥 학생 명단 일괄 등록 (마스터키: 2학년 학번)</h2>
+            <div class="section csv-section">
+                <span class="label">👥 학생 명단 엑셀(CSV) 등록</span>
+                <p style="color: #666; font-size: 0.85rem; margin-top:0;">1학년부터 3학년까지의 학번과 이름 정보가 담긴 CSV 파일을 선택하세요.</p>
+
+                <details class="csv-guide">
+                    <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
+                    <div style="overflow-x: auto;">
+                        <table class="csv-table">
+                            <thead>
+                                <tr>
+                                    <th>A열 (1학년 학번)</th>
+                                    <th>B열 (2학년 학번)</th>
+                                    <th>C열 (3학년 학번)</th>
+                                    <th>D열 (이름)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>10101</td>
+                                    <td>20101</td>
+                                    <td>30101</td>
+                                    <td>김안성</td>
+                                </tr>
+                                <tr>
+                                    <td>10102</td>
+                                    <td>20102</td>
+                                    <td></td>
+                                    <td>이여고</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4"
+                                        style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
+                                        💡 <b>작성 가이드</b><br>
+                                        - <b>1행(헤더)</b>: 제목 행으로 인식되어 데이터로 들어가지 않습니다.<br>
+                                        - <b>B열(2학년 학번) & D열(이름)</b>: 시스템 등록을 위한 <b>필수 항목</b>입니다. 반드시 기재해 주세요.<br>
+                                        - <b>A열(1학년) & C열(3학년)</b>: 해당 학년의 학번이 있다면 기재하고, 아직 없거나 배정받지 않았다면 빈칸으로 두셔도
+                                        무방합니다.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+                <input type="file" id="studentFile2" accept=".csv" style="background: white; margin-top: 10px;" />
+                <button onclick="uploadStudents2()" class="btn btn-save" style="margin-top: 5px;">학생 명단 업로드</button>
+            </div>
+        </div>
+
+
+
+        <div id="tab-enrollment" class="tab-content">
+            <h2 style="color:#34c759;">📝 수강신청 데이터 일괄 등록 (확장 양식)</h2>
+            <div class="section csv-section">
+                <span class="label">📝 수강신청 결과 엑셀(CSV) 등록</span>
+                <p style="color: #666; font-size: 0.85rem; margin-top:0;">A~D열에 학번 및 이름, E열부터 ED열까지 수강신청 데이터가 담긴 CSV 파일을
+                    선택하세요.</p>
+
+                <details class="csv-guide">
+                    <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
+                    <div style="overflow-x: auto;">
+                        <table class="csv-table">
+                            <thead>
+                                <tr>
+                                    <th>A열(1학년 학번)</th>
+                                    <th>B열(2학년 학번)</th>
+                                    <th>C열(3학년 학번)</th>
+                                    <th>D열(이름)</th>
+                                    <th>E열(1-1선택)</th>
+                                    <th>F열(과목명...)</th>
+                                    <th>...</th>
+                                    <th>ED열(3-2선택)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>10101</td>
+                                    <td>20101</td>
+                                    <td>30101</td>
+                                    <td>김안성</td>
+                                    <td>1</td>
+                                    <td></td>
+                                    <td>...</td>
+                                    <td>Y</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="8"
+                                        style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
+                                        💡 <b>작성 가이드</b><br>
+                                        - <b>1행(헤더)</b>: E열부터 ED열까지 정확한 과목명이 기재되어 있어야 합니다. (1행은 데이터로 등록되지 않습니다)<br>
+                                        - <b>A열 ~ C열(학번)</b>: 학번을 기재하되, 시스템의 기준(마스터키)이 되는 <b>B열(2학년 학번)은 반드시 입력</b>되어야
+                                        합니다.<br>
+                                        - <b>D열(이름)</b>: 학생의 이름을 입력합니다.<br>
+                                        - <b>E열 ~ ED열(과목)</b>: 수강하는 과목의 셀에 <b>1, O, Y</b> 중 하나를 입력합니다. (해당 과목을 수강하지 않으면
+                                        빈칸)
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+                <input type="file" id="enrollmentFile" accept=".csv" style="background: white; margin-top: 10px;" />
+                <button onclick="uploadEnrollments()" class="btn btn-add">수강신청 업로드</button>
+            </div>
+        </div>
+
+
+
+        <div id="tab-booth" class="tab-content">
+            <h2 style="color:#d9534f;">📍 박람회 배치교실 관리</h2>
+            <div class="section fair-csv-section">
+                <span class="label">📍 박람회 배치교실 엑셀(CSV) 일괄 등록</span>
+                <p style="color: #666; font-size: 0.85rem; margin-top:0;">A열부터 D열까지 학번, 이름, 과목명, 배치교실 정보가 담긴 CSV 파일을
+                    선택하세요.</p>
+
+                <details class="csv-guide">
+                    <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
+                    <div style="overflow-x: auto;">
+                        <table class="csv-table">
+                            <thead>
+                                <tr>
+                                    <th>A열 (학번)</th>
+                                    <th>B열 (이름)</th>
+                                    <th>C열 (과목명)</th>
+                                    <th>D열 (배치교실)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>20101</td>
+                                    <td>김안성</td>
+                                    <td>심화 수학Ⅰ</td>
+                                    <td>2학년 1반</td>
+                                </tr>
+                                <tr>
+                                    <td>20102</td>
+                                    <td>이여고</td>
+                                    <td>프로그래밍</td>
+                                    <td>컴퓨터실</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4"
+                                        style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
+                                        💡 <b>작성 가이드</b><br>
+                                        - <b>1행(헤더)</b>: 제목 행으로 인식되어 데이터로 들어가지 않습니다. 실제 데이터는 2행부터 작성하세요.<br>
+                                        - <b>A열(1번째 열)</b>: 학생 식별을 위한 <b>학번</b>이 반드시 입력되어야 합니다.<br>
+                                        - <b>B열 ~ D열</b>: 각각 이름, 과목명, 배치될 교실(부스) 이름을 빈칸 없이 정확히 기재합니다.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+                <input type="file" id="csvBoothInput" accept=".csv" style="background: white; margin-top: 10px;">
+                <button class="btn btn-fair" id="csvBoothBtn" onclick="uploadBoothCSV()">배치교실 데이터 덮어쓰기 & 등록</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function switchTab(tabId, btnElement) {
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            const targetContent = document.getElementById(tabId);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+
+            if (btnElement) {
+                btnElement.classList.add('active');
+            }
+        }
+
+        const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                persistSession: false
+            }
+        });
+
+
+        async function uploadBoothCSV() {
+            const fileInput = document.getElementById('csvBoothInput');
+            if (!fileInput.files[0]) {
+                alert('박람회 배치교실 CSV 파일을 선택해 주세요.');
+                return;
+            }
+
+            const btn = document.getElementById('csvBoothBtn');
+            const originalText = btn.innerText;
+            btn.innerText = '기존 데이터 비우고 덮어쓰는 중... ⏳';
+            btn.disabled = true;
+
+            Papa.parse(fileInput.files[0], {
+                complete: async function (results) {
+                    try {
+                        const data = results.data;
+                        const boothsToInsert = [];
+
+                        for (let i = 1; i < data.length; i++) {
+                            const row = data[i];
+                            if (!row[0] || String(row[0]).trim() === '') continue;
+
+                            boothsToInsert.push({
+                                student_id: String(row[0]).trim(),
+                                student_name: String(row[1]).trim(),
+                                subject_name: String(row[2]).trim(),
+                                booth_location: String(row[3]).trim()
+                            });
+                        }
+
+                        if (boothsToInsert.length === 0) {
+                            alert('업로드할 유효한 데이터가 없습니다.');
+                            return;
+                        }
+
+                        const { error: deleteErr } = await db
+                            .from('expo_booths')
+                            .delete()
+                            .neq('student_id', '');
+
+                        if (deleteErr) throw deleteErr;
+
+                        const { error: insertErr } = await db
+                            .from('expo_booths')
+                            .insert(boothsToInsert);
+
+                        if (insertErr) throw insertErr;
+
+                        alert(`🎉 총 ${boothsToInsert.length}명의 배치교실 데이터가 성공적으로 덮어쓰기 되었습니다!`);
+                        fileInput.value = '';
+
+                    } catch (err) {
+                        console.error("🚨 업로드 에러:", err);
+                        alert('업로드 중 오류가 발생했습니다: ' + err.message);
+                    } finally {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }
+                }
+            });
+        }
+
+
+
+        function uploadStudents2() {
+            const fileInput = document.getElementById('studentFile2');
+            if (!fileInput.files[0]) {
+                alert('CSV 파일을 선택해 주세요.');
+                return;
+            }
+
+            Papa.parse(fileInput.files[0], {
+                complete: async function (results) {
+                    const data = results.data;
+                    const studentsToInsert = [];
+
+                    for (let i = 1; i < data.length; i++) {
+                        const row = data[i];
+                        if (!row[1] || String(row[1]).trim() === '' || !row[3] || String(row[3]).trim() === '') continue;
+
+                        studentsToInsert.push({
+                            student_id: String(row[1]).trim(),
+                            grade1_num: row[0] ? String(row[0]).trim() : null,
+                            grade2_num: String(row[1]).trim(),
+                            grade3_num: row[2] ? String(row[2]).trim() : null,
+                            name: String(row[3]).trim()
+                        });
+                    }
+
+                    if (studentsToInsert.length === 0) {
+                        alert('업로드할 유효한 학생 데이터가 없습니다.');
+                        return;
+                    }
+
+                    try {
+                        const { error } = await db
+                            .from('students')
+                            .upsert(studentsToInsert, { onConflict: 'student_id' });
+
+                        if (error) throw error;
+
+                        alert(`🎉 총 ${studentsToInsert.length}명의 학생 등록이 완료되었습니다!`);
+                        fileInput.value = '';
+
+                    } catch (err) {
+                        console.error("🚨 학생 등록 에러:", err);
+                        alert('학생 등록 중 오류가 발생했습니다: ' + err.message);
+                    }
+                }
+            });
+        }
+
+
+        function uploadEnrollments() {
+            const fileInput = document.getElementById('enrollmentFile');
+            if (!fileInput.files[0]) {
+                alert('수강신청 CSV 파일을 선택해 주세요.');
+                return;
+            }
+
+            // 요청하신 새로운 열(Column) 인덱스 매핑 (A열=0 기준)
+            // E~N(4~13), O~X(14~23), Y~AN(24~39), AO~BD(40~55), BE~BW(56~74), BX~CP(75~93)
+            const subjectRanges = [
+                { start: 4, end: 13, category: '1학년 1학기' },
+                { start: 14, end: 23, category: '1학년 2학기' },
+                { start: 24, end: 39, category: '2학년 1학기' },
+                { start: 40, end: 55, category: '2학년 2학기' },
+                { start: 56, end: 74, category: '3학년 1학기' },
+                { start: 75, end: 93, category: '3학년 2학기' }
+            ];
+
+            // 업로드 중 버튼 상태 변경 (중복 클릭 방지)
+            const btn = document.querySelector('#tab-enrollment .btn-add');
+            const originalText = btn.innerText;
+            btn.innerText = '데이터 덮어쓰는 중... ⏳';
+            btn.disabled = true;
+
+            Papa.parse(fileInput.files[0], {
+                complete: async function (results) {
+                    try {
+                        const data = results.data;
+                        const enrollmentsToInsert = [];
+
+                        if (data.length < 2) {
+                            alert('업로드할 데이터가 충분하지 않습니다.');
+                            return;
+                        }
+
+                        const headers = data[0];
+
+                        for (let i = 1; i < data.length; i++) {
+                            const row = data[i];
+                            const studentId = row[1] ? String(row[1]).trim() : null;
+
+                            // 2학년 학번이 없으면 건너뜀
+                            if (!studentId) continue;
+
+                            subjectRanges.forEach(range => {
+                                for (let j = range.start; j <= range.end; j++) {
+                                    const cellValue = row[j];
+
+                                    if (cellValue) {
+                                        const valStr = String(cellValue).trim().toUpperCase();
+                                        // 1, O, Y 등으로 체크된 항목만 데이터로 생성
+                                        if (valStr === '1' || valStr === 'O' || valStr === 'Y') {
+                                            const subjectName = headers[j];
+
+                                            if (subjectName && String(subjectName).trim() !== '') {
+                                                enrollmentsToInsert.push({
+                                                    student_id: studentId,
+                                                    subject_name: String(subjectName).trim(),
+                                                    category: range.category
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+
+                        if (enrollmentsToInsert.length === 0) {
+                            alert('업로드할 유효한 수강신청 데이터(1, O, Y로 체크된 항목)가 없습니다.');
+                            return;
+                        }
+
+                        // ✨ 중복 방지 로직: 기존 수강신청 데이터를 지우고 새 데이터로 덮어쓰기
+                        const { error: deleteErr } = await db
+                            .from('student_enrollments')
+                            .delete()
+                            .neq('student_id', '');
+
+                        if (deleteErr) throw deleteErr;
+
+                        // 새 수강신청 데이터 일괄 삽입
+                        const { error: insertErr } = await db
+                            .from('student_enrollments')
+                            .insert(enrollmentsToInsert);
+
+                        if (insertErr) throw insertErr;
+
+                        alert(`🎉 총 ${enrollmentsToInsert.length}건의 수강신청 과목이 성공적으로 덮어쓰기 등록되었습니다!`);
+                        fileInput.value = '';
+
+                    } catch (err) {
+                        console.error("🚨 수강신청 등록 에러:", err);
+                        alert('수강신청 등록 중 오류가 발생했습니다: ' + err.message);
+                    } finally {
+                        // 버튼 상태 복구
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }
+                }
+            });
+        }
+
+
+        function uploadSubjects() {
+            const fileInput = document.getElementById('subjectFile');
+            if (!fileInput.files[0]) {
+                alert('과목 CSV 파일을 선택해 주세요.');
+                return;
+            }
+
+            Papa.parse(fileInput.files[0], {
+                complete: async function (results) {
+                    const data = results.data;
+                    const subjectsToInsert = [];
+
+                    for (let i = 1; i < data.length; i++) {
+                        const row = data[i];
+                        // B열(인덱스 1) 과목명이 비어있으면 건너뛰기
+                        if (!row[1] || String(row[1]).trim() === '') continue;
+
+                        // ✨ 새로 추가된 구분(subject_type) 포함 K~P열 매핑 로직 ✨
+                        subjectsToInsert.push({
+                            subject_group: row[0] ? String(row[0]).trim() : null,    // A열: 교과군
+                            subject_name: String(row[1]).trim(),                     // B열: 과목명
+                            grade: row[2] ? String(row[2]).trim() : null,            // C열: 학년
+                            semester1: row[3] ? String(row[3]).trim() : null,        // D열: 1학기
+                            semester2: row[4] ? String(row[4]).trim() : null,        // E열: 2학기
+                            admission_year: row[5] ? String(row[5]).trim() : null,   // F열: 입학생 기준
+                            selection_type: row[6] ? String(row[6]).trim() : null,   // G열: 선택유형
+                            selection_group: row[7] ? String(row[7]).trim() : null,  // H열: 선택그룹
+                            credits: row[8] ? String(row[8]).trim() : null,          // I열: 학점
+                            remarks: row[9] ? String(row[9]).trim() : null,          // J열: 비고
+                            file1: row[10] ? String(row[10]).trim() : null,          // K열: 파일1
+                            file2: row[11] ? String(row[11]).trim() : null,          // L열: 파일2
+                            file3: row[12] ? String(row[12]).trim() : null,          // M열: 파일3
+                            file4: row[13] ? String(row[13]).trim() : null,          // N열: 파일4
+                            file5: row[14] ? String(row[14]).trim() : null,          // O열: 파일5
+                            subject_type: row[15] ? String(row[15]).trim() : null    // P열: 구분 (선택교과, 학교지정 등)
+                        });
+                    }
+
+                    if (subjectsToInsert.length === 0) {
+                        alert('업로드할 유효한 과목 데이터가 없습니다.');
+                        return;
+                    }
+
+                    try {
+                        // 기존 과목 데이터를 깔끔하게 지우고 새 데이터로 덮어쓰기
+                        const { error: delErr } = await db
+                            .from('subjects')
+                            .delete()
+                            .neq('subject_name', ''); // 모든 데이터 삭제 조건
+
+                        if (delErr) throw delErr;
+
+                        // 새 데이터 일괄 삽입
+                        const { error: insErr } = await db
+                            .from('subjects')
+                            .insert(subjectsToInsert);
+
+                        if (insErr) throw insErr;
+
+                        alert(`🎉 총 ${subjectsToInsert.length}개의 과목 데이터가 지정된 순서대로 성공적으로 등록되었습니다! (구분 포함)`);
+                        fileInput.value = ''; // 성공 시 파일 입력창 초기화
+
+                    } catch (err) {
+                        console.error("🚨 과목 등록 에러:", err);
+                        alert('과목 등록 중 오류가 발생했습니다: ' + err.message);
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

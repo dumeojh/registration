@@ -281,24 +281,31 @@
             line-height: 1.5;
         }
 
-        /* ✨ 숨겨진 환경설정 버튼 스타일 */
-        #hiddenSettingsBtn {
+        /* ✨ 숨겨진 버튼 공통 스타일 및 개별 위치 지정 */
+        .hidden-admin-btn {
             position: fixed;
             bottom: 20px;
-            right: 20px;
             font-size: 1.5em;
             color: #999;
             cursor: default;
-            /* 클릭 불가능한 것처럼 위장 */
             user-select: none;
-            /* 더블클릭 시 텍스트 선택 방지 */
             opacity: 0.4;
             transition: opacity 0.3s;
             z-index: 1000;
         }
 
-        #hiddenSettingsBtn:hover {
+        .hidden-admin-btn:hover {
             opacity: 0.8;
+        }
+
+        #hiddenSettingsBtn {
+            right: 20px;
+            /* 환경설정은 우측 */
+        }
+
+        #hiddenAdminBtn {
+            left: 20px;
+            /* 점검 기능은 좌측 */
         }
 
         /* ✨ 인쇄 전용 스타일 (종이에 출력할 때만 적용됨) ✨ */
@@ -311,10 +318,10 @@
                 min-height: auto;
             }
 
+            /* 인쇄 시 컨테이너와 모달 배경, 그리고 양쪽 숨김 버튼 모두 안 보이게 처리 */
             .container,
             #boothModal,
-            #hiddenSettingsBtn {
-                /* 인쇄 시 톱니바퀴도 숨김 */
+            .hidden-admin-btn {
                 display: none !important;
             }
 
@@ -400,16 +407,11 @@
                 <p>관련 홈페이지로 이동하여 추가 정보를 확인하세요.</p>
             </a>
 
-            <a href="#" class="card" onclick="openAdminModal(); return false;"
-                style="border: 2px dashed #dc3545; background-color: #fffafb;">
-                <div class="icon">🚨</div>
-                <h2 style="color: #dc3545;">1·2학년 미달성 점검</h2>
-                <p>사회/예술 필수교과 미이수 학생(3학년 필수 수강 대상자)을 조회합니다.</p>
-            </a>
         </div>
     </div>
 
-    <div id="hiddenSettingsBtn" title="환경설정">⚙️</div>
+    <div id="hiddenAdminBtn" class="hidden-admin-btn" title="1·2학년 미달성 점검">🚨</div>
+    <div id="hiddenSettingsBtn" class="hidden-admin-btn" title="환경설정">⚙️</div>
 
     <div id="boothModal" class="modal-overlay">
         <div class="modal-content">
@@ -681,6 +683,13 @@
         document.getElementById('hiddenSettingsBtn').addEventListener('dblclick', function (event) {
             if (event.ctrlKey) {
                 window.location.href = 'settings.html';
+            }
+        });
+
+        // ✨ 관리자 전용 점검 비밀 버튼 로직: Ctrl + 더블클릭 시 모달 열기
+        document.getElementById('hiddenAdminBtn').addEventListener('dblclick', function (event) {
+            if (event.ctrlKey) {
+                openAdminModal();
             }
         });
     </script>

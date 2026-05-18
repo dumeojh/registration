@@ -479,7 +479,10 @@
                         const takenEnglishSubjects = [];
                         const takenMathSubjects = [];
 
-                        let totalSocialCredits = 0; // ✨ 사회교과 총 이수학점 합산용 변수 ✨
+                        let totalSocialCredits = 0;
+                        let totalKoreanCredits = 0; // 국어 누적 학점
+                        let totalEnglishCredits = 0; // 영어 누적 학점
+                        let totalMathCredits = 0; // 수학 누적 학점
 
                         enrollments.forEach(e => {
                             const sub = e.subject_name;
@@ -507,9 +510,18 @@
                                 totalSocialCredits += subCredits; // 사회교과일 경우 학점 누적
                             }
                             if (group === "예술" && !takenArtSubjects.includes(detailStr)) takenArtSubjects.push(detailStr);
-                            if (group === "국어" && !takenKoreanSubjects.includes(detailStr)) takenKoreanSubjects.push(detailStr);
-                            if (group === "영어" && !takenEnglishSubjects.includes(detailStr)) takenEnglishSubjects.push(detailStr);
-                            if (group === "수학" && !takenMathSubjects.includes(detailStr)) takenMathSubjects.push(detailStr);
+                            if (group === "국어" && !takenKoreanSubjects.includes(detailStr)) {
+                                takenKoreanSubjects.push(detailStr);
+                                totalKoreanCredits += subCredits; // 국어 학점 누적
+                            }
+                            if (group === "영어" && !takenEnglishSubjects.includes(detailStr)) {
+                                takenEnglishSubjects.push(detailStr);
+                                totalEnglishCredits += subCredits; // 영어 학점 누적
+                            }
+                            if (group === "수학" && !takenMathSubjects.includes(detailStr)) {
+                                takenMathSubjects.push(detailStr);
+                                totalMathCredits += subCredits; // 수학 학점 누적
+                            }
                         });
 
                         let badgesHtml = '';
@@ -539,7 +551,7 @@
                         const englishDetails = takenEnglishSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + takenEnglishSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
                         const mathDetails = takenMathSubjects.length > 0 ? '<br>&nbsp;&nbsp;&nbsp;&nbsp;· ' + takenMathSubjects.join('<br>&nbsp;&nbsp;&nbsp;&nbsp;· ') : ' 이수 내역 없음';
 
-                        diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #0056b3;"><b style="color:#0056b3;">2. 기초교과(국·영·수 교과군) 선택 제한</b><br>국어, 영어, 수학 <b>각 교과군은 4학기 동안 총 4개 과목이 초과되지 않도록 선택</b>해야 합니다. (교과군별로 한 학기에 1과목 선택 권장)<br><span style="font-size:0.9em; color:#666;">👉 나의 1·2학년 누적 수강 개수: 국어 교과군(${groupCounts["국어"] || 0}개), 영어 교과군(${groupCounts["영어"] || 0}개), 수학 교과군(${groupCounts["수학"] || 0}개)</span><br><div style="margin-top:6px; font-size:0.9em; color:#004085; background-color:#e0f3ff; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6; width:100%; box-sizing:border-box;">✅ <b>나의 국·영·수 교과군 세부 이수 내역:</b><br>&nbsp;&nbsp;• <b>국어 교과군</b> (${groupCounts["국어"] || 0}개):${koreanDetails}<br>&nbsp;&nbsp;• <b>영어 교과군</b> (${groupCounts["영어"] || 0}개):${englishDetails}<br>&nbsp;&nbsp;• <b>수학 교과군</b> (${groupCounts["수학"] || 0}개):${mathDetails}</div></div>`;
+                        diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #0056b3;"><b style="color:#0056b3;">2. 기초교과(국·영·수 교과군) 선택 제한</b><br>국어, 영어, 수학 <b>각 교과군은 4학기 동안 총 4개 과목이 초과되지 않도록 선택</b>해야 합니다. (교과군별로 한 학기에 1과목 선택 권장)<br><span style="font-size:0.9em; color:#666;">👉 나의 1·2학년 누적 수강 개수: 국어(${groupCounts["국어"] || 0}개, ${totalKoreanCredits}학점), 영어(${groupCounts["영어"] || 0}개, ${totalEnglishCredits}학점), 수학(${groupCounts["수학"] || 0}개, ${totalMathCredits}학점)</span><br><div style="margin-top:6px; font-size:0.9em; color:#004085; background-color:#e0f3ff; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6; width:100%; box-sizing:border-box;">✅ <b>나의 국·영·수 교과군 세부 이수 내역:</b><br>&nbsp;&nbsp;• <b>국어 교과군</b> (${groupCounts["국어"] || 0}개, 누적 ${totalKoreanCredits}학점):${koreanDetails}<br>&nbsp;&nbsp;• <b>영어 교과군</b> (${groupCounts["영어"] || 0}개, 누적 ${totalEnglishCredits}학점):${englishDetails}<br>&nbsp;&nbsp;• <b>수학 교과군</b> (${groupCounts["수학"] || 0}개, 누적 ${totalMathCredits}학점):${mathDetails}</div></div>`;
 
                         // [점검 3] 예술
                         if (groupCounts["예술"] === 0) {

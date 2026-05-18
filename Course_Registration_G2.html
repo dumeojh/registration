@@ -543,9 +543,21 @@
 
                     const liberalArtsSubjects = g3Data ? g3Data.filter(sub => sub.subject_group === '교양') : [];
 
-                    // 다시 원래대로 복구 (모든 1, 2학기 일반 과목 표시)
-                    const regularSem1 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester1 && sub.semester1.trim() !== '') : [];
-                    const regularSem2 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester2 && sub.semester2.trim() !== '') : [];
+                    // ✨ DB의 selection_type 컬럼에서 '학교지정'이 아닌 과목(선택교과)만 필터링합니다.
+                    const regularSem1 = g3Data ? g3Data.filter(sub =>
+                        sub.subject_group !== '교양' &&
+                        sub.semester1 &&
+                        sub.semester1.trim() !== '' &&
+                        sub.selection_type !== '학교지정'
+                    ) : [];
+
+                    const regularSem2 = g3Data ? g3Data.filter(sub =>
+                        sub.subject_group !== '교양' &&
+                        sub.semester2 &&
+                        sub.semester2.trim() !== '' &&
+                        sub.selection_type !== '학교지정'
+                    ) : [];
+
                     if (enrollments && enrollments.length > 0) {
                         const subjectNames = [...new Set(enrollments.map(e => e.subject_name))];
 

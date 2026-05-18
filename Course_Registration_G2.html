@@ -1038,16 +1038,14 @@
                             <div id="sem2AvailableList"></div>
                         </div>
                         <div class="list-box">
-                            <h4>✅ 선택 과목 (최대 5개)</h4>
-                            <div id="sem2SelectedList"></div>
+                            <h4>✅ 선택 과목 (최대 6개)</h4> <div id="sem2SelectedList"></div>
                         </div>
                     </div>
                     
                     <div style="overflow: hidden;">
                         <div class="credit-summary" id="sem2CreditSummary">
                             총 선택 합계: <span id="sem2CreditTotal" style="font-size:1.3em; color:#e83e8c;">0</span>학점 
-                            <span style="font-size:0.8em; color:#555;">(0/5과목)</span>
-                        </div>
+                            <span style="font-size:0.8em; color:#555;">(0/6과목)</span> </div>
                     </div>
 
                     <div class="complete-btn-container" id="sem2CompleteContainer">
@@ -1098,7 +1096,8 @@
             }).join('');
 
             const totalCredits = sem2Selected.length * 3;
-            summaryLabel.innerHTML = `총 선택 합계: <span id="sem2CreditTotal" style="font-size:1.3em; color:#e83e8c;">${totalCredits}</span>학점 <span style="font-size:0.8em; color:#555;">(${sem2Selected.length}/5과목)</span>`;
+            // ✨ 5과목에서 6과목으로 수정
+            summaryLabel.innerHTML = `총 선택 합계: <span id="sem2CreditTotal" style="font-size:1.3em; color:#e83e8c;">${totalCredits}</span>학점 <span style="font-size:0.8em; color:#555;">(${sem2Selected.length}/6과목)</span>`;
 
             // ✨ 2학기 아코디언 미리보기 텍스트 업데이트
             if (previewEl) {
@@ -1111,8 +1110,9 @@
         }
 
         function moveRightSem2(subName) {
-            if (sem2Selected.length >= 5) {
-                alert("과목은 최대 5개까지만 선택할 수 있습니다.");
+            // ✨ 5개 제한을 6개로 수정
+            if (sem2Selected.length >= 6) {
+                alert("과목은 최대 6개까지만 선택할 수 있습니다.");
                 return;
             }
             const idx = sem2Available.findIndex(s => s.subject_name === subName);

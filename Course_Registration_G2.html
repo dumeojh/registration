@@ -543,10 +543,9 @@
 
                     const liberalArtsSubjects = g3Data ? g3Data.filter(sub => sub.subject_group === '교양') : [];
 
-                    // ✨ '선택'이라는 글자가 포함된 과목만 필터링 (DB 컬럼명이 category이고 '선택'이라는 단어가 들어있을 경우)
-                    const regularSem1 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester1 && sub.semester1.trim() !== '' && sub.category && sub.category.includes('선택')) : [];
-                    const regularSem2 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester2 && sub.semester2.trim() !== '' && sub.category && sub.category.includes('선택')) : [];
-
+                    // 다시 원래대로 복구 (모든 1, 2학기 일반 과목 표시)
+                    const regularSem1 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester1 && sub.semester1.trim() !== '') : [];
+                    const regularSem2 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester2 && sub.semester2.trim() !== '') : [];
                     if (enrollments && enrollments.length > 0) {
                         const subjectNames = [...new Set(enrollments.map(e => e.subject_name))];
 

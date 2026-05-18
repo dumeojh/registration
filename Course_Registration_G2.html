@@ -314,7 +314,7 @@
         <h1>2학년 수강신청 정보 조회</h1>
 
         <div class="search-box">
-            <label>학번 and 이름을 모두 입력하세요</label>
+            <label>학번과 이름을 모두 입력하세요</label>
             <div class="input-group">
                 <input type="text" id="studentIdInput" placeholder="2학년 학번 (예: 20105)" maxlength="5">
                 <input type="text" id="studentNameInput" placeholder="이름 (예: 황경서)">
@@ -445,18 +445,20 @@
                     if (enrollments && enrollments.length > 0) {
                         const subjectNames = [...new Set(enrollments.map(e => e.subject_name))];
 
-                        // 1,2학년 과목 교과군 매핑
+                        // ✨ 1,2학년 과목 교과군 및 학점(credits) 매핑 추가 ✨
                         const { data: subjectDetails, error: subErr } = await db
                             .from('subjects')
-                            .select('subject_name, subject_group')
+                            .select('subject_name, subject_group, credits') // 학점 추가
                             .in('subject_name', subjectNames);
 
                         if (subErr) throw subErr;
 
                         const groupMap = {};
+                        const creditMap = {}; // 학점 저장용 Map
                         if (subjectDetails) {
                             subjectDetails.forEach(sub => {
                                 groupMap[sub.subject_name] = sub.subject_group || "기타";
+                                creditMap[sub.subject_name] = parseInt(sub.credits, 10) || 0; // 숫자로 변환
                             });
                         }
 
@@ -466,11 +468,10 @@
                             if (groupCounts[group] !== undefined) groupCounts[group]++;
                         });
 
-                        // ✨ 카테고리 분류 세팅 변경 부분 ✨
                         const catSem1 = new Set();
                         const catSem2 = new Set();
-                        const catGrade2Sem1 = new Set(); // 2학년 1학기용
-                        const catGrade2Sem2 = new Set(); // 2학년 2학기용
+                        const catGrade2Sem1 = new Set();
+                        const catGrade2Sem2 = new Set();
 
                         const takenSocialSubjects = [];
                         const takenArtSubjects = [];
@@ -478,13 +479,16 @@
                         const takenEnglishSubjects = [];
                         const takenMathSubjects = [];
 
+                        let totalSocialCredits = 0; // ✨ 사회교과 총 이수학점 합산용 변수 ✨
+
                         enrollments.forEach(e => {
                             const sub = e.subject_name;
                             const cat = e.category || '기타 학기';
                             const group = groupMap[sub] || "기타";
+                            const subCredits = creditMap[sub] || 0; // 해당 과목의 학점
+
                             const tagHtml = `<span class="subject-tag">${sub} <small style="color:#777;">[${group}]</small></span>`;
 
-                            // ✨ 카테고리 조건문 변경 부분 ✨
                             if (cat.includes('1학년 1학기')) {
                                 catSem1.add(tagHtml);
                             } else if (cat.includes('1학년 2학기')) {
@@ -495,15 +499,19 @@
                                 catGrade2Sem2.add(tagHtml);
                             }
 
-                            const detailStr = `[${cat}] <b>${sub}</b>`;
-                            if (group === "사회" && !takenSocialSubjects.includes(detailStr)) takenSocialSubjects.push(detailStr);
+                            // ✨ 과목명 뒤에 (X학점) 정보 텍스트 추가 ✨
+                            const detailStr = `[${cat}] <b>${sub}</b> <span style="font-size:0.85em; color:#e83e8c;">(${subCredits}학점)</span>`;
+
+                            if (group === "사회" && !takenSocialSubjects.includes(detailStr)) {
+                                takenSocialSubjects.push(detailStr);
+                                totalSocialCredits += subCredits; // 사회교과일 경우 학점 누적
+                            }
                             if (group === "예술" && !takenArtSubjects.includes(detailStr)) takenArtSubjects.push(detailStr);
                             if (group === "국어" && !takenKoreanSubjects.includes(detailStr)) takenKoreanSubjects.push(detailStr);
                             if (group === "영어" && !takenEnglishSubjects.includes(detailStr)) takenEnglishSubjects.push(detailStr);
                             if (group === "수학" && !takenMathSubjects.includes(detailStr)) takenMathSubjects.push(detailStr);
                         });
 
-                        // ✨ 출력 HTML 생성 부분 변경 ✨
                         let badgesHtml = '';
                         if (catSem1.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 1학년 1학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catSem1].join('')}</div></div>`;
                         if (catSem2.size > 0) badgesHtml += `<div style="margin-bottom: 15px;"><div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 6px;">📌 1학년 2학기 수강과목</div><div class="subject-tags" style="margin-top:0;">${[...catSem2].join('')}</div></div>`;
@@ -518,12 +526,12 @@
                         // 4. 💡 3학년 진단 시스템 로직 생성
                         let diagnosticHtml = `<div style="margin-top:5px; padding:18px; background:#fdfdfe; border-radius:10px; border:1px solid #c8d8d3; font-size:0.95em; line-height:1.6; color:#333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">`;
 
-                        // [점검 1] 사회
+                        // [점검 1] 사회 (총 학점 표시 추가)
                         if (groupCounts["사회"] === 0) {
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;"><b style="color:#d9534f;">1. 사회교과 필수 선택</b><br>2학년에서 사회교과를 선택하지 않았으므로, <b>3학년 1, 2학기 중 사회교과 한 과목은 필수적으로 선택</b>해야 합니다.</div>`;
                         } else {
                             const socialListStr = takenSocialSubjects.join('<br>&nbsp;&nbsp;· ');
-                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;"><b style="color:#28a745;">1. 사회교과 (이수 충족)</b><br>이미 1·2학년 중 사회교과를 이수하여 필수 조건이 충족되었습니다.<br><div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">✅ <b>나의 이수 내역:</b><br>&nbsp;&nbsp;· ${socialListStr}</div></div>`;
+                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;"><b style="color:#28a745;">1. 사회교과 (이수 충족) - 누적 ${totalSocialCredits}학점</b><br>이미 1·2학년 중 사회교과를 이수하여 필수 조건이 충족되었습니다.<br><div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">✅ <b>나의 이수 내역 (합계: ${totalSocialCredits}학점):</b><br>&nbsp;&nbsp;· ${socialListStr}</div></div>`;
                         }
 
                         // [점검 2] 기초교과
@@ -610,18 +618,15 @@
                     const groupText = sub.selection_group ? ` <small style="color:#888;">(${sub.selection_group})</small>` : '';
                     const creditText = sub.credits ? ` <span style="font-size:0.8em; color:#e83e8c; margin-left:5px;">[${sub.credits}학점]</span>` : '';
 
-                    // ✨ 파일1 ~ 파일5 데이터가 있는지 확인하고 동적 링크 생성 ✨
                     let fileLinksHtml = '';
 
-                    // 1부터 5까지 반복하면서 file1, file2, file3, file4, file5를 검사합니다.
                     for (let i = 1; i <= 5; i++) {
-                        const fileKey = `file${i}`; // 'file1', 'file2' 등의 문자열을 만듦
+                        const fileKey = `file${i}`;
 
-                        if (sub[fileKey]) { // Supabase의 해당 칸(file1~5)에 값(코드)이 들어있다면
+                        if (sub[fileKey]) {
                             const fileName = sub[fileKey].includes('.jpg') ? sub[fileKey] : sub[fileKey] + '.jpg';
                             const fileUrl = `https://dumeojh.github.io/high/jpgs/${fileName}`;
 
-                            // 링크 버튼 모양으로 HTML을 추가합니다. (클릭 시 체크박스 눌림 방지 포함)
                             fileLinksHtml += `<a href="${fileUrl}" target="_blank" style="color: #0056b3; font-size: 0.85em; text-decoration: none; font-weight: bold; margin-left: 6px; background-color: #e2ece9; padding: 2px 6px; border-radius: 4px; border: 1px solid #c3e6cb;" onclick="event.stopPropagation();">[파일${i}]</a>`;
                         }
                     }
@@ -640,10 +645,6 @@
                 container.innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 선택교과가 없습니다.</span>';
             }
         }
-
-
-
-
 
         // 체크박스 제어 활성화 바인딩 함수
         function toggleReason(checkbox) {

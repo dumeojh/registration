@@ -299,6 +299,111 @@
                 display: block !important;
             }
         }
+
+        /* --- 3학년 1학기 듀얼 리스트 UI 스타일 --- */
+        .dual-list-container {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .list-box {
+            flex: 1;
+            border: 2px solid #d8cce2;
+            border-radius: 10px;
+            padding: 15px;
+            background: #fdfdfe;
+            min-height: 250px;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .list-box h4 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 1.05em;
+            color: #6f42c1;
+            text-align: center;
+            border-bottom: 2px dashed #f3eef5;
+            padding-bottom: 8px;
+        }
+
+        .dual-subject-item {
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background-color: #f3eef5;
+            border: 1px solid #d8cce2;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .dual-subject-item:hover {
+            background-color: #e5d9f0;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .credit-summary {
+            text-align: right;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #0056b3;
+            margin-top: 15px;
+            background-color: #e0f3ff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: inline-block;
+            float: right;
+        }
+
+        .complete-btn-container {
+            clear: both;
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 15px;
+        }
+
+        .complete-btn {
+            background-color: #6f42c1;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .complete-btn:hover {
+            background-color: #5a32a3;
+        }
+
+        .reason-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @media (max-width: 600px) {
+            .dual-list-container {
+                flex-direction: column;
+            }
+
+            .credit-summary {
+                float: none;
+                display: block;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 
@@ -626,8 +731,8 @@
                     resultArea.style.display = 'block';
 
                     // 5. 하단 3학년 일반 과목 리스트 아코디언 출력
-                    renderSubjectsList(regularSem1, 'resGrade3Subjects');
-                    renderSubjectsList(regularSem2, 'resGrade3Sem2Subjects');
+                    initDualListSem1(regularSem1); // 1학기는 듀얼 리스트로 렌더링
+                    renderSubjectsList(regularSem2, 'resGrade3Sem2Subjects'); // 2학기는 기존 방식 유지
                     document.getElementById('grade3Area').style.display = 'block';
                     document.getElementById('grade3Sem2Area').style.display = 'block';
 
@@ -641,7 +746,148 @@
             }
         }
 
+        // --------------------------------------------------------
+        // 🔮 3학년 1학기 듀얼 리스트 전용 로직
+        // --------------------------------------------------------
+        let sem1Available = [];
+        let sem1Selected = [];
 
+        function initDualListSem1(subjects) {
+            sem1Available = subjects ? [...subjects] : [];
+            sem1Selected = [];
+
+            const container = document.getElementById('resGrade3Subjects');
+            container.className = ''; // 기존 리스트 스타일 제거
+
+            container.innerHTML = `
+                <div id="sem1InteractiveArea">
+                    <div class="dual-list-container" id="sem1DualContainer">
+                        <div class="list-box">
+                            <h4>📚 개설 과목 (클릭하여 선택)</h4>
+                            <div id="sem1AvailableList"></div>
+                        </div>
+                        <div class="list-box">
+                            <h4>✅ 선택 과목 (최대 5개)</h4>
+                            <div id="sem1SelectedList"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="overflow: hidden;">
+                        <div class="credit-summary" id="sem1CreditSummary">
+                            총 선택 합계: <span id="sem1CreditTotal" style="font-size:1.3em; color:#e83e8c;">0</span>학점 
+                            <span style="font-size:0.8em; color:#555;">(0/5과목)</span>
+                        </div>
+                    </div>
+
+                    <div class="complete-btn-container" id="sem1CompleteContainer">
+                        <button class="complete-btn" type="button" onclick="completeSem1()">✅ 과목 선택 완료</button>
+                    </div>
+                </div>
+
+                <div id="sem1ReasonSection" class="reason-section" style="display: none;">
+                    <h4 style="color: #6f42c1; margin-top: 0; margin-bottom: 15px; border-left: 4px solid #6f42c1; padding-left: 10px;">📝 선택한 과목의 설계 이유를 적어주세요</h4>
+                    <div id="sem1ReasonList" class="future-subject-list"></div>
+                    
+                    <div style="text-align: center; margin-top: 25px;">
+                        <button class="nav-btn" type="button" onclick="modifySem1()">🔄 과목 다시 선택하기</button>
+                    </div>
+                </div>
+            `;
+            renderDualListsSem1();
+        }
+
+        function renderDualListsSem1() {
+            const availContainer = document.getElementById('sem1AvailableList');
+            const selContainer = document.getElementById('sem1SelectedList');
+            const summaryLabel = document.getElementById('sem1CreditSummary');
+
+            availContainer.innerHTML = sem1Available.map(sub => {
+                const safeName = sub.subject_name.replace(/'/g, "\\'");
+                const groupText = sub.selection_group ? `<span style="font-size:0.8em; color:#888; font-weight:normal;"> (${sub.selection_group})</span>` : '';
+                return `<div class="dual-subject-item" onclick="moveRight('${safeName}')">
+                            <span>${sub.subject_name}${groupText}</span>
+                            <span style="color:#28a745;">▶</span>
+                        </div>`;
+            }).join('');
+
+            selContainer.innerHTML = sem1Selected.map(sub => {
+                const safeName = sub.subject_name.replace(/'/g, "\\'");
+                const groupText = sub.selection_group ? `<span style="font-size:0.8em; color:#888; font-weight:normal;"> (${sub.selection_group})</span>` : '';
+                return `<div class="dual-subject-item" style="background-color:#e0eafa; border-color:#b8daff;" onclick="moveLeft('${safeName}')">
+                            <span style="color:#d9534f;">◀</span>
+                            <span>${sub.subject_name}${groupText}</span>
+                        </div>`;
+            }).join('');
+
+            // 학점 계산 (요청하신 대로 1과목당 무조건 3학점으로 계산)
+            const totalCredits = sem1Selected.length * 3;
+            summaryLabel.innerHTML = `총 선택 합계: <span id="sem1CreditTotal" style="font-size:1.3em; color:#e83e8c;">${totalCredits}</span>학점 <span style="font-size:0.8em; color:#555;">(${sem1Selected.length}/5과목)</span>`;
+        }
+
+        function moveRight(subName) {
+            if (sem1Selected.length >= 5) {
+                alert("과목은 최대 5개까지만 선택할 수 있습니다.");
+                return;
+            }
+            const idx = sem1Available.findIndex(s => s.subject_name === subName);
+            if (idx > -1) {
+                sem1Selected.push(sem1Available[idx]);
+                sem1Available.splice(idx, 1);
+                renderDualListsSem1();
+            }
+        }
+
+        function moveLeft(subName) {
+            const idx = sem1Selected.findIndex(s => s.subject_name === subName);
+            if (idx > -1) {
+                sem1Available.push(sem1Selected[idx]);
+                sem1Selected.splice(idx, 1);
+                renderDualListsSem1();
+            }
+        }
+
+        function completeSem1() {
+            if (sem1Selected.length === 0) {
+                alert("선택된 과목이 없습니다. 최소 1개 이상의 과목을 선택해 주세요.");
+                return;
+            }
+
+            // 듀얼 리스트 영역 숨기고, 이유 작성 영역 표시
+            document.getElementById('sem1InteractiveArea').style.display = 'none';
+            const reasonSection = document.getElementById('sem1ReasonSection');
+            reasonSection.style.display = 'block';
+
+            // 선택된 과목들만 이유 작성 칸 렌더링
+            const reasonList = document.getElementById('sem1ReasonList');
+            reasonList.innerHTML = sem1Selected.map(sub => {
+                const groupText = sub.selection_group ? ` <small style="color:#888;">(${sub.selection_group})</small>` : '';
+
+                let fileLinksHtml = '';
+                for (let i = 1; i <= 5; i++) {
+                    const fileKey = `file${i}`;
+                    if (sub[fileKey]) {
+                        const fileName = sub[fileKey].includes('.jpg') ? sub[fileKey] : sub[fileKey] + '.jpg';
+                        const fileUrl = `https://dumeojh.github.io/high/jpgs/${fileName}`;
+                        fileLinksHtml += `<a href="${fileUrl}" target="_blank" style="color: #0056b3; font-size: 0.85em; text-decoration: none; font-weight: bold; margin-left: 6px; background-color: #e2ece9; padding: 2px 6px; border-radius: 4px; border: 1px solid #c3e6cb;">[파일${i}]</a>`;
+                    }
+                }
+
+                return `
+                <div class="future-subject-item">
+                    <label class="future-subject-header" style="cursor: default;">
+                        <span style="font-size:1.05em; color:#6f42c1;">✅ ${sub.subject_name}${groupText}${fileLinksHtml}</span>
+                    </label>
+                    <textarea class="reason-box" style="display:block; width:100%; min-height:80px; margin-top:12px;" placeholder="${sub.subject_name} 과목을 선택한 이유를 자유롭게 적어보세요."></textarea>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function modifySem1() {
+            // 다시 선택하기 누를 시 UI 원상복구
+            document.getElementById('sem1InteractiveArea').style.display = 'block';
+            document.getElementById('sem1ReasonSection').style.display = 'none';
+        }
 
         // 일반 과목 리스트 마운트 공통 함수
         function renderSubjectsList(subjects, containerId) {

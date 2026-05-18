@@ -565,7 +565,7 @@
 
                         diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #0056b3;">
                             <b style="color:#0056b3;">2. 기초교과(국·영·수 교과군) 선택 제한</b><br>
-                            2학년, 3학년 합쳐서 4학기 동안 <b>선택교과(국·영·수)는 각 교과군별로 12학점을 넘으면 안 됩니다.</b><br>
+                            2학년, 3학년 합쳐서 4학기 동안 <b>선택교과(국·영·수)는 합이 12학점을 넘으면 안 됩니다.</b><br>
                             (전입생이 아닌 이상 선택교과에서 국·영·수는 12학점까지가 최대이므로, 한 학기에 1과목 정도씩 들으시면 됩니다.)<br>
                             <span style="font-size:0.9em; color:#666;">👉 나의 2학년 누적 수강 개수: 국어(${grade2KoreanCount}개, ${grade2KoreanCredits}학점), 영어(${grade2EnglishCount}개, ${grade2EnglishCredits}학점), 수학(${grade2MathCount}개, ${grade2MathCredits}학점)</span><br>
                             <div style="margin-top:6px; font-size:0.9em; color:#004085; background-color:#e0f3ff; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6; width:100%; box-sizing:border-box;">
@@ -585,8 +585,6 @@
                         }
 
                         // [점검 4] 교양교과
-                        let liberalArtsWarning = groupCounts["교양"] === 0 ? `<br><span style="color:#d9534f; font-weight:bold;">⚠️ 필수이수조건[선택과목 6학점]에 따라 1, 2학기 중 2과목 이상을 필수로 선택해야 합니다.</span>` : '';
-
                         let liberalArtsTable = `<div style="overflow-x:auto; margin-top:12px;">
                             <table style="width:100%; border-collapse: collapse; font-size: 0.9em; text-align: center; border: 1px solid #ffe0b2;">
                                 <tr style="background-color: #fff3cd; color: #856404; border-bottom: 1px solid #ffe0b2;">
@@ -611,7 +609,7 @@
 
                         diagnosticHtml += `<div style="margin-bottom:0; padding-left:12px; border-left:4px solid #ff9500;">
                             <b style="color:#d35400;">4. 교양교과 중복 유의 및 6학점 채우기</b><br>
-                            교양은 1, 2학기 동일하게 편성되어 있으므로 <b>아래 표에서 학기별로 중복되지 않게 선택</b>해 주세요.${liberalArtsWarning}
+                            교양은 1, 2학기 동일하게 편성되어 있으므로 <b>아래 표에서 학기별로 중복되지 않게 선택</b>해 주세요.
                             ${liberalArtsTable}
                         </div>`;
 

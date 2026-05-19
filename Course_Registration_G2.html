@@ -1069,7 +1069,7 @@
                                 </tr>`;
                         });
                         liberalArtsTable += `</table>
-                        <button type="button" class="save-liberal-btn" onclick="saveLiberalArts()">💾 교양 과목 선택 저장하기</button>
+                        <button type="button" class="save-liberal-btn" onclick="saveLiberalArts(this)">💾 교양 과목 선택 저장하기</button>
                         <div style="clear:both;"></div>
                         </div>`;
 
@@ -1125,9 +1125,14 @@
             }
         }
 
-        // ✨ 교양 과목 DB 저장 함수 ✨
-        async function saveLiberalArts() {
+
+        async function saveLiberalArts(btnElement) {
             if (!currentStudentId) return alert("학생 정보가 없습니다. 다시 조회해주세요.");
+
+            // ✨ 중복 클릭 방지: 버튼 비활성화
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "💾 저장 중...";
+            btnElement.disabled = true;
 
             const insertData = [];
 
@@ -1141,19 +1146,17 @@
                     }
                 }
 
-                // '선택안함(none)'이 아닌 경우에만 저장할 데이터 배열에 추가
                 if (selectedValue !== 'none') {
                     insertData.push({
                         student_uid: currentStudentId,
-                        semester: '교양', // 교양 데이터임을 구분하는 키
+                        semester: '교양',
                         subject_name: sub.subject_name,
-                        reason: selectedValue // 'sem1' 또는 'sem2' 텍스트 저장
+                        reason: selectedValue
                     });
                 }
             });
 
             try {
-                // 1. 기존에 저장된 학생의 '교양' 선택 데이터를 모두 지움
                 const { error: delErr } = await db
                     .from('course_selections')
                     .delete()
@@ -1162,7 +1165,6 @@
 
                 if (delErr) throw delErr;
 
-                // 2. 새로 체크된 과목들을 Insert
                 if (insertData.length > 0) {
                     const { error: insErr } = await db.from('course_selections').insert(insertData);
                     if (insErr) throw insErr;
@@ -1172,9 +1174,12 @@
             } catch (err) {
                 console.error("교양 저장 중 오류:", err);
                 alert("저장 중 오류가 발생했습니다: " + err.message);
+            } finally {
+                // ✨ 저장 완료 후 버튼 복구
+                btnElement.innerText = originalText;
+                btnElement.disabled = false;
             }
         }
-
 
         // ========================================================
         // 🔮 3학년 1학기 듀얼 리스트 로직
@@ -1233,7 +1238,7 @@
                     
                     <div style="text-align: center; margin-top: 25px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
                         <button class="nav-btn" type="button" onclick="modifySem1()">🔄 과목 다시 선택하기</button>
-                        <button class="action-btn" style="width: auto; padding: 10px 30px; background-color: #28a745;" type="button" onclick="saveSem1Selections()">💾 선택 과목 및 이유 저장하기</button>
+                        <button class="action-btn" style="width: auto; padding: 10px 30px; background-color: #28a745;" type="button" onclick="saveSem1Selections(this)">💾 선택 과목 및 이유 저장하기</button>
                     </div>
                 </div>
             `;
@@ -1328,21 +1333,27 @@
             document.getElementById('sem1ReasonSection').style.display = 'none';
         }
 
-        async function saveSem1Selections() {
+
+        async function saveSem1Selections(btnElement) {
             if (!currentStudentId) return alert("학생 정보가 없습니다. 다시 조회해주세요.");
+
+            // ✨ 중복 클릭 방지: 버튼 비활성화
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "💾 저장 중...";
+            btnElement.disabled = true;
 
             const textareas = document.querySelectorAll('#sem1ReasonList .reason-box');
             sem1Selected.forEach((sub, idx) => { if (textareas[idx]) sem1Reasons[sub.subject_name] = textareas[idx].value; });
 
             const insertData = sem1Selected.map(sub => ({
                 student_uid: currentStudentId,
-                semester: '3-1',
+                semester: '3-1', // ⚠️ G1 파일에서는 '2-1' 로 수정
                 subject_name: sub.subject_name,
                 reason: sem1Reasons[sub.subject_name]
             }));
 
             try {
-                const { error: delErr } = await db.from('course_selections').delete().eq('student_uid', currentStudentId).eq('semester', '3-1');
+                const { error: delErr } = await db.from('course_selections').delete().eq('student_uid', currentStudentId).eq('semester', '3-1'); // ⚠️ G1 파일에서는 '2-1' 로 수정
                 if (delErr) throw delErr;
                 if (insertData.length > 0) {
                     const { error: insErr } = await db.from('course_selections').insert(insertData);
@@ -1352,8 +1363,15 @@
             } catch (err) {
                 console.error("저장 중 오류:", err);
                 alert("저장 중 오류가 발생했습니다: " + err.message);
+            } finally {
+                // ✨ 저장 완료 후 버튼 복구
+                btnElement.innerText = originalText;
+                btnElement.disabled = false;
             }
         }
+
+
+
 
         // ========================================================
         // ✨ 3학년 2학기 듀얼 리스트 로직
@@ -1412,7 +1430,7 @@
                     
                     <div style="text-align: center; margin-top: 25px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
                         <button class="nav-btn" type="button" onclick="modifySem2()">🔄 과목 다시 선택하기</button>
-                        <button class="action-btn" style="width: auto; padding: 10px 30px; background-color: #28a745;" type="button" onclick="saveSem2Selections()">💾 선택 과목 및 이유 저장하기</button>
+                        <button class="action-btn" style="width: auto; padding: 10px 30px; background-color: #28a745;" type="button" onclick="saveSem2Selections(this)">💾 선택 과목 및 이유 저장하기</button>
                     </div>
                 </div>
             `;
@@ -1512,8 +1530,15 @@
             document.getElementById('sem2ReasonSection').style.display = 'none';
         }
 
-        async function saveSem2Selections() {
+
+
+        async function saveSem2Selections(btnElement) {
             if (!currentStudentId) { alert("학생 정보가 없습니다. 다시 조회해주세요."); return; }
+
+            // ✨ 중복 클릭 방지: 버튼 비활성화
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "💾 저장 중...";
+            btnElement.disabled = true;
 
             const textareas = document.querySelectorAll('#sem2ReasonList .reason-box');
             sem2Selected.forEach((sub, idx) => {
@@ -1522,13 +1547,13 @@
 
             const insertData = sem2Selected.map(sub => ({
                 student_uid: currentStudentId,
-                semester: '3-2',
+                semester: '3-2', // ⚠️ G1 파일에서는 '2-2' 로 수정
                 subject_name: sub.subject_name,
                 reason: sem2Reasons[sub.subject_name]
             }));
 
             try {
-                const { error: delErr } = await db.from('course_selections').delete().eq('student_uid', currentStudentId).eq('semester', '3-2');
+                const { error: delErr } = await db.from('course_selections').delete().eq('student_uid', currentStudentId).eq('semester', '3-2'); // ⚠️ G1 파일에서는 '2-2' 로 수정
                 if (delErr) throw delErr;
                 if (insertData.length > 0) {
                     const { error: insErr } = await db.from('course_selections').insert(insertData);
@@ -1538,8 +1563,17 @@
             } catch (err) {
                 console.error("저장 중 오류:", err);
                 alert("저장 중 오류가 발생했습니다: " + err.message);
+            } finally {
+                // ✨ 저장 완료 후 버튼 복구
+                btnElement.innerText = originalText;
+                btnElement.disabled = false;
             }
         }
+
+
+
+
+
 
         // 🌟 모바일용 초고화질 이미지(PNG) 캡처 및 저장 기능 (흐림 문제 해결) 🌟
         function saveAsImage() {

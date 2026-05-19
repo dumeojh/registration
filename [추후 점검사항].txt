@@ -1,0 +1,10 @@
+[추후 점검사항]
+Supabase의 Authentication(로그인 연동) 또는 Row Level Security(RLS) 정책을 설정하여 데이터베이스를 보호하시기를 적극 권장해 드립니다.
+
+Course_Registration_G1
+
+고유번호	학생명	1학년	2학년	3학년
+
+
+
+1학년 학번, 2학년 학번, 3학년 학번, 이름

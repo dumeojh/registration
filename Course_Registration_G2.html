@@ -498,7 +498,7 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // 🌟 현재 로그인(조회)한 학생의 학번을 저장할 전역 변수
+        // 🌟 현재 로그인(조회)한 학생의 '고유번호(uid)'를 저장할 전역 변수로 역할 변경
         let currentStudentId = '';
 
         async function searchStudent() {
@@ -510,9 +510,6 @@
                 alert("조회할 학번과 이름을 모두 입력해 주세요.");
                 return;
             }
-
-            // 검색 시 현재 학번 세팅
-            currentStudentId = idVal;
 
             // 새로운 검색 시 이전의 open 속성들을 모두 리셋하여 닫힘 상태로 초기화
             document.getElementById('subjectsSection').removeAttribute('open');
@@ -528,7 +525,7 @@
                 // 1. 학생 기본 정보 조회
                 const { data: student, error: studentErr } = await db
                     .from('students')
-                    .select('name, grade1_num, student_id, grade3_num')
+                    .select('uid, name, grade1_num, student_id, grade3_num') // ✨ [수정됨] uid 컬럼 추가
                     .eq('student_id', idVal)
                     .eq('name', nameVal)
                     .maybeSingle();
@@ -536,6 +533,9 @@
                 if (studentErr) throw studentErr;
 
                 if (student) {
+                    // ✨ [수정됨] 이제 DB에서 가져온 진짜 고유번호(uid)를 기준으로 삼습니다!
+                    currentStudentId = student.uid;
+
                     document.getElementById('resName').innerText = student.name;
                     document.getElementById('resGrade1').innerText = student.grade1_num || "-";
                     document.getElementById('resGrade2').innerText = student.student_id || "-";
@@ -545,7 +545,7 @@
                     const { data: enrollments, error: enrollErr } = await db
                         .from('student_enrollments')
                         .select('subject_name, category')
-                        .eq('student_id', idVal);
+                        .eq('student_uid', currentStudentId); // ✨ [수정됨] student_id -> student_uid 로 변경
 
                     if (enrollErr) throw enrollErr;
 
@@ -562,7 +562,7 @@
                     const { data: savedSelections, error: saveErr } = await db
                         .from('course_selections')
                         .select('*')
-                        .eq('student_id', idVal);
+                        .eq('student_uid', currentStudentId); // ✨ [수정됨] student_id -> student_uid 로 변경
 
                     if (saveErr) console.error("저장된 데이터 로드 오류:", saveErr);
 
@@ -972,7 +972,7 @@
 
             const insertData = sem1Selected.map(sub => {
                 return {
-                    student_id: currentStudentId,
+                    student_uid: currentStudentId, // ✨ [수정됨] student_id -> student_uid 로 변경
                     semester: '3-1',
                     subject_name: sub.subject_name,
                     reason: sem1Reasons[sub.subject_name]
@@ -983,7 +983,7 @@
                 const { error: delErr } = await db
                     .from('course_selections')
                     .delete()
-                    .eq('student_id', currentStudentId)
+                    .eq('student_uid', currentStudentId) // ✨ [수정됨] student_id -> student_uid 로 변경
                     .eq('semester', '3-1');
 
                 if (delErr) throw delErr;
@@ -1194,7 +1194,7 @@
 
             const insertData = sem2Selected.map(sub => {
                 return {
-                    student_id: currentStudentId,
+                    student_uid: currentStudentId, // ✨ [수정됨] student_id -> student_uid 로 변경
                     semester: '3-2', // ✨ 2학기 데이터로 저장
                     subject_name: sub.subject_name,
                     reason: sem2Reasons[sub.subject_name]
@@ -1205,7 +1205,7 @@
                 const { error: delErr } = await db
                     .from('course_selections')
                     .delete()
-                    .eq('student_id', currentStudentId)
+                    .eq('student_uid', currentStudentId) // ✨ [수정됨] student_id -> student_uid 로 변경
                     .eq('semester', '3-2');
 
                 if (delErr) throw delErr;

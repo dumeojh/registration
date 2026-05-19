@@ -511,6 +511,12 @@
             }
         }
 
+        /* 📸 캡처 시 흐림 현상 방지: 모든 애니메이션 강제 종료 */
+        body.smart-print-mode * {
+            animation: none !important;
+            transition: none !important;
+        }
+
         /* 화면 캡처 및 인쇄 시 강제 적용되는 클래스 */
         body.smart-print-mode {
             background-color: white !important;
@@ -1597,8 +1603,6 @@
                 }
             }, 500);
         }
-
-
 
 
         // 🌟 스마트 인쇄(상담용) 실행 함수 🌟

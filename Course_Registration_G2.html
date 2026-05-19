@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2학년 수강신청 정보 조회 및 설계</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -608,6 +611,92 @@
         .save-liberal-btn:hover {
             background-color: #e68600;
         }
+
+        /* ✨ 📱 모바일 이미지 캡처용 강제 화면 전환 스타일 ✨ */
+        body.smart-print-mode {
+            background-color: white !important;
+        }
+
+        body.smart-print-mode .nav-buttons,
+        body.smart-print-mode .search-box,
+        body.smart-print-mode .action-btn,
+        body.smart-print-mode .save-liberal-btn {
+            display: none !important;
+        }
+
+        body.smart-print-mode .container {
+            box-shadow: none !important;
+            border: none !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        body.smart-print-mode #resultArea {
+            display: block !important;
+            border: none !important;
+            margin-top: 10px !important;
+        }
+
+        body.smart-print-mode #smartPrintHeader {
+            display: block !important;
+            font-size: 1.6em !important;
+            color: #2c3e50 !important;
+            border-bottom: 2px solid #2c3e50 !important;
+            padding-bottom: 12px !important;
+            margin-bottom: 25px !important;
+            font-weight: 800 !important;
+        }
+
+        body.smart-print-mode h1,
+        body.smart-print-mode #sem1InteractiveArea,
+        body.smart-print-mode #sem2InteractiveArea,
+        body.smart-print-mode .preview-text {
+            display: none !important;
+        }
+
+        body.smart-print-mode #sem1ReasonSection,
+        body.smart-print-mode #sem2ReasonSection {
+            display: block !important;
+            margin-top: 0 !important;
+        }
+
+        body.smart-print-mode details {
+            border: 1px solid #e0e0e0 !important;
+            border-radius: 8px !important;
+            padding: 20px !important;
+            margin-bottom: 20px !important;
+        }
+
+        body.smart-print-mode details>summary {
+            border-bottom: 1px solid #eee !important;
+            padding-bottom: 10px !important;
+            margin-bottom: 15px !important;
+            color: #2c3e50 !important;
+        }
+
+        body.smart-print-mode .career-inputs select,
+        body.smart-print-mode .career-inputs input {
+            border: none !important;
+            border-bottom: 1px solid #999 !important;
+            border-radius: 0 !important;
+            padding: 4px 0 !important;
+        }
+
+        body.smart-print-mode .future-subject-item {
+            background-color: transparent !important;
+            border: 1px solid #eee !important;
+            padding: 15px !important;
+        }
+
+        body.smart-print-mode .reason-box {
+            display: block !important;
+            border: none !important;
+            border-top: 1px dashed #ddd !important;
+            background: transparent !important;
+            resize: none !important;
+            padding-top: 10px !important;
+        }
     </style>
 </head>
 
@@ -621,7 +710,10 @@
                 <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 일반 인쇄</button>
                 <button type="button" class="nav-btn print-btn"
                     style="background-color: #cce5ff; color: #004085; border-color: #b8daff;" onclick="smartPrint()">📑
-                    스마트 인쇄(상담용)</button>
+                    스마트 인쇄</button>
+                <button type="button" class="nav-btn print-btn" id="btnSaveImage"
+                    style="background-color: #ffe8a1; color: #855a00; border-color: #ffe08a;" onclick="saveAsImage()">📸
+                    모바일 캡처(PNG)</button>
             </div>
         </div>
 
@@ -1419,6 +1511,58 @@
                 console.error("저장 중 오류:", err);
                 alert("저장 중 오류가 발생했습니다: " + err.message);
             }
+        }
+
+        // 🌟 모바일용 고화질 이미지(PNG) 캡처 및 저장 기능 🌟
+        function saveAsImage() {
+            if (!currentStudentId) {
+                alert("먼저 학생 정보를 조회해주세요.");
+                return;
+            }
+
+            const btn = document.getElementById('btnSaveImage');
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ 이미지 만드는 중...";
+            btn.disabled = true;
+
+            // 1. 모든 아코디언 강제 펼침 및 텍스트 박스 높이 조절
+            document.querySelectorAll('details').forEach(d => d.setAttribute('open', 'true'));
+            document.querySelectorAll('.reason-box').forEach(el => {
+                el.style.height = 'auto';
+                if (el.scrollHeight > 50) el.style.height = (el.scrollHeight + 10) + 'px';
+            });
+
+            // 2. 화면을 스마트 인쇄(상담용) 폼으로 강제 전환
+            document.body.classList.add('smart-print-mode');
+
+            // 3. 브라우저가 화면을 다시 그릴 시간(0.5초)을 준 뒤 캡처 실행
+            setTimeout(async () => {
+                try {
+                    const captureArea = document.querySelector('.container');
+
+                    const canvas = await window.html2canvas(captureArea, {
+                        scale: 2, // 2배 고화질 캡처
+                        useCORS: true,
+                        backgroundColor: "#ffffff"
+                    });
+
+                    // 4. 생성된 이미지를 파일로 다운로드
+                    const link = document.createElement('a');
+                    const studentName = document.getElementById('resName').innerText || "학생";
+                    link.download = `수강신청_상담자료_${studentName}.png`; // 파일명 설정
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+
+                } catch (err) {
+                    console.error("캡처 에러:", err);
+                    alert("이미지 저장 중 오류가 발생했습니다.");
+                } finally {
+                    // 5. 캡처가 끝나면 화면을 원래대로 복구
+                    document.body.classList.remove('smart-print-mode');
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            }, 500);
         }
 
         // 🌟 스마트 인쇄(상담용) 실행 함수 🌟

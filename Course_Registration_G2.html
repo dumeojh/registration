@@ -1535,7 +1535,7 @@
             }
         }
 
-        // 🌟 모바일용 고화질 이미지(PNG) 캡처 및 저장 기능 🌟
+        // 🌟 모바일용 초고화질 이미지(PNG) 캡처 및 저장 기능 (흐림 문제 해결) 🌟
         function saveAsImage() {
             if (!currentStudentId) {
                 alert("먼저 학생 정보를 조회해주세요.");
@@ -1544,10 +1544,10 @@
 
             const btn = document.getElementById('btnSaveImage');
             const originalText = btn.innerText;
-            btn.innerText = "⏳ 이미지 만드는 중...";
+            btn.innerText = "⏳ 초고화질 이미지 생성 중...";
             btn.disabled = true;
 
-            // 1. 모든 아코디언 강제 펼침 및 텍스트 박스 높이 조절
+            // 1. 모든 아코디언 강제 펼침 및 텍스트 박스 높이 자동 조절
             document.querySelectorAll('details').forEach(d => d.setAttribute('open', 'true'));
             document.querySelectorAll('.reason-box').forEach(el => {
                 el.style.height = 'auto';
@@ -1562,22 +1562,33 @@
                 try {
                     const captureArea = document.querySelector('.container');
 
+                    // [핵심 수정] 기기의 실제 픽셀 밀도(DPR)를 감지합니다. 
+                    // PC는 보통 1, 최신 모바일은 2~4 배율입니다.
+                    const dpr = window.devicePixelRatio || 1;
+
+                    // 기기 배율이 너무 낮으면(예: 구형 PC) 최소 2배 선명도를 보장하고, 
+                    // 높으면 기기 성능에 맞춰 최대 4배까지 캡처합니다. (너무 높으면 메모리 초과 발생 가능)
+                    const optimalScale = dpr < 2 ? 2 : (dpr > 4 ? 4 : dpr);
+
+                    console.log(`현재 기기 DPR: ${dpr}, 적용 캡처 배율: ${optimalScale}`);
+
                     const canvas = await window.html2canvas(captureArea, {
-                        scale: 2, // 2배 고화질 캡처
-                        useCORS: true,
-                        backgroundColor: "#ffffff"
+                        scale: optimalScale, // ⭐ 기기 해상도에 맞춘 최적의 고화질 설정
+                        useCORS: true,       // 외부 이미지 호환성 확보
+                        backgroundColor: "#ffffff", // 배경색 화이트 고정
+                        logging: false       // 콘솔 로그 숨김
                     });
 
                     // 4. 생성된 이미지를 파일로 다운로드
                     const link = document.createElement('a');
                     const studentName = document.getElementById('resName').innerText || "학생";
-                    link.download = `수강신청_상담자료_${studentName}.png`; // 파일명 설정
+                    link.download = `수강신청_상담자료_${studentName}.png`;
                     link.href = canvas.toDataURL('image/png');
                     link.click();
 
                 } catch (err) {
                     console.error("캡처 에러:", err);
-                    alert("이미지 저장 중 오류가 발생했습니다.");
+                    alert("이미지 생성 중 오류가 발생했습니다. 기기의 메모리가 부족하거나 용량이 너무 클 수 있습니다.");
                 } finally {
                     // 5. 캡처가 끝나면 화면을 원래대로 복구
                     document.body.classList.remove('smart-print-mode');
@@ -1586,6 +1597,9 @@
                 }
             }, 500);
         }
+
+
+
 
         // 🌟 스마트 인쇄(상담용) 실행 함수 🌟
         function smartPrint() {

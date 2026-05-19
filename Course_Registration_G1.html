@@ -161,7 +161,6 @@
             word-break: break-all;
         }
 
-        /* ✨ 진로 정보 영역 스타일 ✨ */
         .career-box {
             background-color: #fff;
             border: 2px dashed #4a90e2;
@@ -413,121 +412,6 @@
             }
         }
 
-        /* ✨ 인쇄 전용 스타일 세팅 ✨ */
-        @media print {
-
-            .nav-buttons,
-            .search-box,
-            .action-btn {
-                display: none !important;
-            }
-
-            body {
-                padding: 0;
-                background-color: white;
-            }
-
-            .container {
-                box-shadow: none;
-                border: none;
-                max-width: 100%;
-            }
-
-            #resultArea {
-                display: block !important;
-                border: 1px solid #000;
-                background: white;
-                padding: 20px;
-            }
-
-            .career-box {
-                border: 1px solid #000;
-            }
-
-            .reason-box {
-                display: block !important;
-                border: 1px solid #ccc;
-            }
-
-            details {
-                display: block !important;
-            }
-
-            details>*:not(summary) {
-                display: block !important;
-            }
-
-            /* 📑 스마트 인쇄 모드 (상담용 2페이지 강제 분할) */
-            body.smart-print-mode #smartPrintHeader {
-                display: block !important;
-            }
-
-            body.smart-print-mode h1 {
-                display: none !important;
-            }
-
-            body.smart-print-mode #sem1InteractiveArea,
-            body.smart-print-mode #sem2InteractiveArea,
-            body.smart-print-mode .preview-text {
-                display: none !important;
-            }
-
-            body.smart-print-mode #sem1ReasonSection,
-            body.smart-print-mode #sem2ReasonSection {
-                display: block !important;
-                margin-top: 0;
-            }
-
-            body.smart-print-mode .subject-area {
-                border-top: none;
-                margin-top: 0;
-                padding-top: 0;
-            }
-
-            body.smart-print-mode details {
-                border: 2px solid #555 !important;
-                border-radius: 8px;
-                padding: 15px;
-                margin-bottom: 20px;
-                page-break-inside: avoid;
-            }
-
-            body.smart-print-mode details>summary {
-                border-bottom: 2px solid #eee;
-                padding-bottom: 10px;
-                margin-bottom: 10px;
-            }
-
-            /* 교양과목 표 인쇄 스타일 */
-            body.smart-print-mode .save-liberal-btn {
-                display: none !important;
-            }
-
-            /* 1학년은 2학년 1학기 설계 영역부터 무조건 2번째 페이지로 넘김 */
-            body.smart-print-mode #grade2Area {
-                page-break-before: always;
-            }
-
-            body.smart-print-mode .career-inputs select,
-            body.smart-print-mode .career-inputs input {
-                border: none;
-                border-bottom: 1px solid #000;
-                border-radius: 0;
-                appearance: none;
-                -webkit-appearance: none;
-                padding-left: 0;
-                color: #000;
-                font-weight: bold;
-            }
-
-            body.smart-print-mode .reason-box {
-                border: none;
-                border-bottom: 1px dashed #bbb;
-                background: transparent;
-                resize: none;
-            }
-        }
-
         /* 교양과목 저장 버튼 스타일 */
         .save-liberal-btn {
             background-color: #ff9500;
@@ -545,6 +429,210 @@
 
         .save-liberal-btn:hover {
             background-color: #e68600;
+        }
+
+        /* ✨ 세련된 스마트 인쇄(상담용) 전용 스타일 세팅 ✨ */
+        @media print {
+
+            .nav-buttons,
+            .search-box,
+            .action-btn,
+            .save-liberal-btn {
+                display: none !important;
+            }
+
+            body {
+                padding: 0;
+                background-color: white;
+                color: #333;
+            }
+
+            .container {
+                box-shadow: none;
+                border: none;
+                max-width: 100%;
+                padding: 0;
+            }
+
+            #resultArea {
+                display: block !important;
+                border: none;
+                background: white;
+                padding: 0;
+            }
+
+            /* 📑 스마트 인쇄 모드 (상담용 강제 분할 및 컴팩트 레이아웃) */
+            body.smart-print-mode {
+                font-size: 11pt;
+                /* 글씨 크기 축소로 공간 확보 */
+                line-height: 1.5;
+            }
+
+            body.smart-print-mode #smartPrintHeader {
+                display: block !important;
+                text-align: center;
+                font-size: 1.6em;
+                font-weight: bold;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #2c3e50;
+                padding-bottom: 10px;
+                color: #2c3e50;
+                letter-spacing: 1px;
+            }
+
+            body.smart-print-mode h1 {
+                display: none !important;
+            }
+
+            body.smart-print-mode #sem1InteractiveArea,
+            body.smart-print-mode #sem2InteractiveArea,
+            body.smart-print-mode .preview-text {
+                display: none !important;
+            }
+
+            /* 하단 불필요한 '수정', '저장' 버튼 컨테이너 강제 숨김 */
+            body.smart-print-mode #sem1ReasonSection>div:last-child,
+            body.smart-print-mode #sem2ReasonSection>div:last-child {
+                display: none !important;
+            }
+
+            body.smart-print-mode #sem1ReasonSection,
+            body.smart-print-mode #sem2ReasonSection {
+                display: block !important;
+                margin-top: 0;
+            }
+
+            /* 학생 기본 정보 그리드를 표(Table) 느낌으로 깔끔하게 결합 */
+            body.smart-print-mode .info-grid {
+                display: flex;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                margin-bottom: 15px;
+                gap: 0;
+                background: #fdfdfd;
+            }
+
+            body.smart-print-mode .info-box {
+                flex: 1;
+                border: none;
+                border-right: 1px solid #eee;
+                border-radius: 0;
+                padding: 10px 5px;
+                box-shadow: none;
+            }
+
+            body.smart-print-mode .info-box:last-child {
+                border-right: none;
+            }
+
+            body.smart-print-mode .result-label {
+                font-size: 0.8em;
+                color: #666;
+                margin-bottom: 4px;
+            }
+
+            body.smart-print-mode .result-value {
+                font-size: 1.05em;
+                color: #000;
+            }
+
+            /* 진로 희망 박스 간소화 */
+            body.smart-print-mode .career-box {
+                border: 1px solid #ccc;
+                border-radius: 6px;
+                padding: 15px;
+                background: #fff;
+                margin-bottom: 15px;
+            }
+
+            body.smart-print-mode .career-box h3 {
+                color: #2c3e50;
+                font-size: 1.05em;
+                margin-bottom: 10px;
+            }
+
+            body.smart-print-mode .career-inputs select,
+            body.smart-print-mode .career-inputs input {
+                border: none;
+                border-bottom: 1px solid #999;
+                border-radius: 0;
+                appearance: none;
+                -webkit-appearance: none;
+                padding: 4px 0;
+                color: #000;
+                font-weight: bold;
+                font-size: 0.95em;
+            }
+
+            /* 아코디언 테두리 얇고 깔끔하게 */
+            body.smart-print-mode .subject-area {
+                border-top: none;
+                margin-top: 0;
+                padding-top: 0;
+            }
+
+            body.smart-print-mode details {
+                border: 1px solid #ddd !important;
+                border-radius: 6px;
+                padding: 15px;
+                margin-bottom: 15px;
+                page-break-inside: avoid;
+                background: #fff;
+            }
+
+            body.smart-print-mode details>summary {
+                border-bottom: 1px solid #eee;
+                padding-bottom: 8px;
+                margin-bottom: 10px;
+                font-size: 1.05em !important;
+                color: #2c3e50 !important;
+            }
+
+            /* 진단 내용 여백 축소 및 스타일 고급화 */
+            body.smart-print-mode #resDiagnostic>div {
+                padding: 10px 15px !important;
+                margin-bottom: 8px !important;
+                font-size: 0.9em;
+                background: #fff !important;
+                border-width: 0 0 0 3px !important;
+                border-radius: 4px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            }
+
+            /* 장바구니 항목 세련되게 축소 */
+            body.smart-print-mode .future-subject-list {
+                gap: 8px;
+            }
+
+            body.smart-print-mode .future-subject-item {
+                background: #fff;
+                border: 1px solid #eee;
+                padding: 12px;
+                border-radius: 6px;
+            }
+
+            body.smart-print-mode .future-subject-header span {
+                font-size: 1em !important;
+                color: #333 !important;
+            }
+
+            /* 설계 이유 텍스트 에어리어 스타일 고급화 */
+            body.smart-print-mode .reason-box {
+                border: none;
+                background: #fcfcfc;
+                border-left: 3px solid #e2e8f0;
+                padding: 8px 12px;
+                margin-top: 8px;
+                resize: none;
+                color: #444;
+                font-size: 0.95em;
+                min-height: 30px !important;
+            }
+
+            /* 1학년은 2학년 1학기 설계 영역부터 무조건 2번째 페이지로 넘김 */
+            body.smart-print-mode #grade2Area {
+                page-break-before: always;
+            }
         }
     </style>
 </head>
@@ -574,8 +662,7 @@
             <button class="action-btn" onclick="searchStudent()">학생 정보 조회하기</button>
         </div>
 
-        <div id="smartPrintHeader"
-            style="display: none; text-align: center; font-size: 1.8em; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; color: #000;">
+        <div id="smartPrintHeader">
             학생 맞춤형 진로·수강신청 상담 기초자료
         </div>
 
@@ -672,7 +759,7 @@
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let currentStudentId = '';
-        let globalLiberalArtsSubjects = []; // ✨ 1학년용 전역 교양 배열 추가
+        let globalLiberalArtsSubjects = [];
 
         async function searchStudent() {
             const idVal = document.getElementById('studentIdInput').value.trim();
@@ -744,10 +831,8 @@
                     const savedSem1 = savedSelections ? savedSelections.filter(s => s.semester === '2-1') : [];
                     const savedSem2 = savedSelections ? savedSelections.filter(s => s.semester === '2-2') : [];
 
-                    // ✨ 1학년용 저장된 교양과목 추출
                     const savedLiberalArts = savedSelections ? savedSelections.filter(s => s.semester === '교양') : [];
 
-                    // ✨ 교양과목 데이터 세팅
                     const liberalArtsSubjects = g2Data ? g2Data.filter(sub => sub.subject_group === '교양') : [];
                     globalLiberalArtsSubjects = liberalArtsSubjects;
 
@@ -830,7 +915,6 @@
                         예술 교과의 경우 <b>2, 3학년 중에 1개 과목은 필수적으로 선택</b>해야 합니다.
                     </div>`;
 
-                    // ✨ 교양과목 테이블 생성 및 저장된 데이터 복원 ✨
                     if (liberalArtsSubjects.length > 0) {
                         let liberalArtsTable = `<div style="overflow-x:auto; margin-top:12px; padding-bottom:10px;">
                             <table style="width:100%; border-collapse: collapse; font-size: 0.9em; text-align: center; border: 1px solid #ffe0b2;">
@@ -845,7 +929,6 @@
                             const creditText = sub.credits ? ` <span style="font-size:0.85em; color:#e83e8c;">[${sub.credits}학점]</span>` : '';
                             const radioName = `lib_radio_${idx}`;
 
-                            // DB에 저장된 값이 있는지 확인
                             const savedRecord = savedLiberalArts.find(item => item.subject_name === sub.subject_name);
                             const savedValue = savedRecord ? savedRecord.reason : 'none';
 
@@ -880,7 +963,6 @@
 
                     resultArea.style.display = 'block';
 
-                    // 5. 2학년 과목 듀얼 리스트 초기화
                     initDualListSem1(regularSem1, savedSem1);
                     initDualListSem2(regularSem2, savedSem2);
 
@@ -917,7 +999,6 @@
             }
         }
 
-        // ✨ 교양 과목 DB 저장 함수 (1학년) ✨
         async function saveLiberalArts() {
             if (!currentStudentId) return alert("학생 정보가 없습니다. 다시 조회해주세요.");
 
@@ -964,9 +1045,6 @@
             }
         }
 
-        // ========================================================
-        // 🔮 2학년 1학기 듀얼 리스트 로직
-        // ========================================================
         let sem1Available = [];
         let sem1Selected = [];
         let sem1Reasons = {};
@@ -1336,8 +1414,8 @@
             // 텍스트에어리어 높이 자동 조절 (내용 잘림 방지)
             document.querySelectorAll('.reason-box').forEach(el => {
                 el.style.height = 'auto';
-                if (el.scrollHeight > 50) {
-                    el.style.height = (el.scrollHeight + 10) + 'px';
+                if (el.scrollHeight > 30) {
+                    el.style.height = (el.scrollHeight + 5) + 'px';
                 }
             });
 

@@ -369,6 +369,7 @@
             btn.disabled = true;
 
             Papa.parse(fileInput.files[0], {
+                skipEmptyLines: true, // ✨ 추가
                 complete: async function (results) {
                     try {
                         // 1. 기존 DB의 학생 명단을 모두 불러옴
@@ -490,6 +491,7 @@
             btn.disabled = true;
 
             Papa.parse(fileInput.files[0], {
+                skipEmptyLines: true, // ✨ 추가
                 complete: async function (results) {
                     try {
                         const { data: students, error: stdErr } = await db.from('students').select('uid, name, grade1_num, grade2_num, grade3_num');
@@ -567,6 +569,7 @@
             btn.disabled = true;
 
             Papa.parse(fileInput.files[0], {
+                skipEmptyLines: true, // ✨ 추가
                 complete: async function (results) {
                     try {
                         const { data: students, error: stdErr } = await db.from('students').select('uid, name, grade1_num, grade2_num, grade3_num');
@@ -629,6 +632,7 @@
             }
 
             Papa.parse(fileInput.files[0], {
+                skipEmptyLines: true, // ✨ 추가
                 complete: async function (results) {
                     const data = results.data;
                     const subjectsToInsert = [];

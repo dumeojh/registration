@@ -1399,6 +1399,8 @@
             }
         }
 
+
+
         // 🌟 1학년 스마트 인쇄(상담용) 실행 함수 🌟
         function smartPrint() {
             if (!currentStudentId) {
@@ -1420,11 +1422,20 @@
             // 스마트 인쇄용 CSS 클래스 적용
             document.body.classList.add('smart-print-mode');
 
-            // 인쇄 다이얼로그 호출
-            window.print();
+            // 모바일/태블릿 브라우저가 화면을 다시 그릴 수 있도록 0.3초 지연 후 인쇄 창 호출
+            setTimeout(() => {
+                window.print();
 
-            // 인쇄 후 원래 화면으로 복구
-            document.body.classList.remove('smart-print-mode');
+                // 인쇄가 끝나거나 창이 닫히면 원래 화면 스타일로 안전하게 복구
+                window.onafterprint = () => {
+                    document.body.classList.remove('smart-print-mode');
+                };
+
+                // 시스템 호환성 대비용 자동 복구 (1초 후 실행)
+                setTimeout(() => {
+                    document.body.classList.remove('smart-print-mode');
+                }, 1000);
+            }, 300);
         }
 
         // 엔터키 입력 이벤트 바인딩

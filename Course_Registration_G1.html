@@ -99,7 +99,8 @@
             text-align: center;
         }
 
-        input[type="text"]:focus {
+        input[type="text"]:focus,
+        select:focus {
             border-color: #4a90e2;
             outline: none;
         }
@@ -159,6 +160,49 @@
             font-weight: bold;
             color: #000;
             word-break: break-all;
+        }
+
+        /* ✨ 진로 정보 영역 스타일 ✨ */
+        .career-box {
+            background-color: #fff;
+            border: 2px dashed #4a90e2;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+            /* 검색 전에는 숨김 */
+        }
+
+        .career-box h3 {
+            margin-top: 0;
+            color: #4a90e2;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .career-inputs {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .career-inputs>div {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .career-inputs select,
+        .career-inputs input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 1em;
+            box-sizing: border-box;
         }
 
         .subject-area {
@@ -277,6 +321,10 @@
                 display: block !important;
                 border: 1px solid #000;
                 background: white;
+            }
+
+            .career-box {
+                border: 1px solid #000;
             }
 
             .reason-box {
@@ -452,6 +500,36 @@
                 </div>
             </div>
 
+            <div class="career-box" id="careerInfoArea">
+                <h3>🎓 나의 진로 희망 (과목 설계 전 목표 설정)</h3>
+                <div class="career-inputs">
+                    <div>
+                        <label style="font-size: 0.85em; color: #555; display:block; margin-bottom:5px;">📌 희망 계열
+                            (선택)</label>
+                        <select id="desiredField">
+                            <option value="">-- 계열을 선택하세요 --</option>
+                            <option value="인문계열">인문계열</option>
+                            <option value="사회계열">사회계열</option>
+                            <option value="교육계열">교육계열</option>
+                            <option value="자연계열">자연계열</option>
+                            <option value="공학계열">공학계열</option>
+                            <option value="의약보건계열">의약보건계열</option>
+                            <option value="예체능계열">예체능계열</option>
+                            <option value="미정">아직 정하지 못함 (미정)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85em; color: #555; display:block; margin-bottom:5px;">🎯 희망 학과 (직접
+                            입력)</label>
+                        <input type="text" id="desiredMajor" placeholder="예: 컴퓨터공학과, 경영학과, 간호학과 등">
+                    </div>
+                    <div>
+                        <button onclick="saveCareerInfo()" class="action-btn"
+                            style="padding: 10px; font-size: 1em; margin-bottom:0;">💾 진로 저장</button>
+                    </div>
+                </div>
+            </div>
+
             <details class="subject-area" id="subjectsSection">
                 <summary class="result-label" style="font-size: 1.05em; color:#0056b3;">📘 1학년 수강과목 (접기/펼치기)</summary>
                 <div id="resSubjects" class="result-value" style="margin-top: 15px;"></div>
@@ -510,6 +588,7 @@
             document.getElementById('diagnosticArea').removeAttribute('open');
             document.getElementById('grade2Area').removeAttribute('open');
             document.getElementById('grade2Sem2Area').removeAttribute('open');
+            document.getElementById('careerInfoArea').style.display = 'none'; // ✨ 진로 영역 초기화
 
             document.getElementById('diagnosticArea').style.display = 'none';
             document.getElementById('grade2Area').style.display = 'none';
@@ -519,8 +598,8 @@
                 // 1. 학생 기본 정보 조회
                 const { data: student, error: studentErr } = await db
                     .from('students')
-                    .select('uid, name, grade1_num, student_id, grade3_num')
-                    .eq('grade1_num', idVal) // ✨ [수정됨] 1학년 학번 컬럼(grade1_num)으로 검색하도록 수정!
+                    .select('uid, name, grade1_num, student_id, grade3_num, desired_field, desired_major') // ✨ 진로 정보 컬럼 추가
+                    .eq('grade1_num', idVal)
                     .eq('name', nameVal)
                     .maybeSingle();
 
@@ -530,9 +609,14 @@
                     currentStudentId = student.uid;
 
                     document.getElementById('resName').innerText = student.name;
-                    document.getElementById('resGrade1').innerText = student.student_id || student.grade1_num || "-";
-                    document.getElementById('resGrade2').innerText = student.grade1_num || "-"; // 1학년 입장에서는 아직 2학년 학번이 명확하지 않을 수 있음
+                    document.getElementById('resGrade1').innerText = student.grade1_num || "-";
+                    document.getElementById('resGrade2').innerText = student.student_id || student.grade1_num || "-"; // 1학년 입장에서는 아직 2학년 학번이 명확하지 않을 수 있음
                     document.getElementById('resGrade3').innerText = student.grade3_num || "-";
+
+                    // ✨ 진로 희망 데이터 화면에 세팅 및 표시
+                    document.getElementById('desiredField').value = student.desired_field || "";
+                    document.getElementById('desiredMajor').value = student.desired_major || "";
+                    document.getElementById('careerInfoArea').style.display = 'block';
 
                     // 2. 수강신청 내역 조회 (1학년 데이터)
                     const { data: enrollments, error: enrollErr } = await db
@@ -718,6 +802,27 @@
             } catch (err) {
                 console.error("조회 중 오류:", err);
                 alert("데이터 조회 중 오류가 발생했습니다: " + err.message);
+            }
+        }
+
+        // ✨ 진로 정보 DB 저장 함수 ✨
+        async function saveCareerInfo() {
+            if (!currentStudentId) return alert("먼저 학생 정보를 조회해주세요.");
+
+            const field = document.getElementById('desiredField').value;
+            const major = document.getElementById('desiredMajor').value.trim();
+
+            try {
+                const { error } = await db
+                    .from('students')
+                    .update({ desired_field: field, desired_major: major })
+                    .eq('uid', currentStudentId);
+
+                if (error) throw error;
+                alert("🎓 성공적으로 진로 희망 정보가 저장되었습니다!");
+            } catch (err) {
+                console.error("진로 정보 저장 오류:", err);
+                alert("저장 중 오류가 발생했습니다: " + err.message);
             }
         }
 

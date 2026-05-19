@@ -1225,7 +1225,7 @@
             }));
 
             try {
-                const { error: delErr } = await db.from('course_selections').delete().eq('student_uid', currentStudentId).eq('semester', '3-1'); // ⚠️ G1 파일에서는 '2-1' 로 수정
+                const { error: delErr } = await db.from('course_selections').delete().eq('student_uid', currentStudentId).eq('semester', '2-1'); // ⚠️ G1 파일에서는 '2-1' 로 수정
                 if (delErr) throw delErr;
                 if (insertData.length > 0) {
                     const { error: insErr } = await db.from('course_selections').insert(insertData);
@@ -1416,7 +1416,7 @@
             }));
 
             try {
-                const { error: delErr } = await db.from('course_selections').delete().eq('student_uid', currentStudentId).eq('semester', '3-2'); // ⚠️ G1 파일에서는 '2-2' 로 수정
+                const { error: delErr } = await db.from('course_selections').delete().eq('student_uid', currentStudentId).eq('semester', '2-2'); // ⚠️ G1 파일에서는 '2-2' 로 수정
                 if (delErr) throw delErr;
                 if (insertData.length > 0) {
                     const { error: insErr } = await db.from('course_selections').insert(insertData);

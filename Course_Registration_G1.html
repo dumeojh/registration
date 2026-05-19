@@ -535,8 +535,8 @@
                 <div id="resSubjects" class="result-value" style="margin-top: 15px;"></div>
             </details>
 
-            <details class="subject-area" id="diagnosticArea" style="display: none; border-top-color: #c8d8d3;">
-                <summary class="result-label" style="font-size: 1.05em; color:#155724;">🎯 2학년 선택교과 설계 전 필수 점검사항
+            <details class="subject-area" id="diagnosticArea" style="display: none; border-top-color: #c8d8d3;" open>
+                <summary class="result-label" style="font-size: 1.05em; color:#155724;">🎯 2·3학년 선택교과 설계 전 필수 점검사항
                     (접기/펼치기)</summary>
                 <div id="resDiagnostic" class="result-value" style="margin-top: 15px;"></div>
             </details>
@@ -585,7 +585,7 @@
             }
 
             document.getElementById('subjectsSection').removeAttribute('open');
-            document.getElementById('diagnosticArea').removeAttribute('open');
+            // document.getElementById('diagnosticArea').removeAttribute('open'); // 진단 영역은 기본으로 열려있게 유지
             document.getElementById('grade2Area').removeAttribute('open');
             document.getElementById('grade2Sem2Area').removeAttribute('open');
             document.getElementById('careerInfoArea').style.display = 'none'; // ✨ 진로 영역 초기화
@@ -646,8 +646,6 @@
                     const savedSem1 = savedSelections ? savedSelections.filter(s => s.semester === '2-1') : [];
                     const savedSem2 = savedSelections ? savedSelections.filter(s => s.semester === '2-2') : [];
 
-                    const liberalArtsSubjects = g2Data ? g2Data.filter(sub => sub.subject_group === '교양') : [];
-
                     const regularSem1 = g2Data ? g2Data.filter(sub =>
                         sub.subject_group !== '교양' &&
                         sub.semester1 && sub.semester1.trim() !== '' &&
@@ -671,30 +669,19 @@
                         if (subErr) throw subErr;
 
                         const groupMap = {};
-                        const creditMap = {};
                         if (subjectDetails) {
                             subjectDetails.forEach(sub => {
                                 groupMap[sub.subject_name] = sub.subject_group || "기타";
-                                creditMap[sub.subject_name] = parseInt(sub.credits, 10) || 0;
                             });
                         }
 
-                        const groupCounts = { "국어": 0, "수학": 0, "영어": 0, "사회": 0, "과학": 0, "예술": 0, "교양": 0, "체육": 0 };
-
                         const catSem1 = new Set();
                         const catSem2 = new Set();
-
-                        const takenSocialSubjects = [];
-                        const takenArtSubjects = [];
-                        let totalSocialCredits = 0;
 
                         enrollments.forEach(e => {
                             const sub = e.subject_name;
                             const cat = e.category || '기타 학기';
                             const group = groupMap[sub] || "기타";
-                            const subCredits = creditMap[sub] || 0;
-
-                            if (groupCounts[group] !== undefined) groupCounts[group]++;
 
                             const tagHtml = `<span class="subject-tag">${sub} <small style="color:#777;">[${group}]</small></span>`;
 
@@ -703,14 +690,6 @@
                             } else if (cat.includes('1학년 2학기')) {
                                 catSem2.add(tagHtml);
                             }
-
-                            const detailStr = `[${cat}] <b>${sub}</b> <span style="font-size:0.85em; color:#e83e8c;">(${subCredits}학점)</span>`;
-
-                            if (group === "사회" && !takenSocialSubjects.includes(detailStr)) {
-                                takenSocialSubjects.push(detailStr);
-                                totalSocialCredits += subCredits;
-                            }
-                            if (group === "예술" && !takenArtSubjects.includes(detailStr)) takenArtSubjects.push(detailStr);
                         });
 
                         let badgesHtml = '';
@@ -719,72 +698,37 @@
 
                         if (!badgesHtml) badgesHtml = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';
                         document.getElementById('resSubjects').innerHTML = badgesHtml;
-
-                        // 4. 2학년 진단 시스템 로직 생성 (1학년 데이터 기반)
-                        let diagnosticHtml = `<div style="margin-top:5px; padding:18px; background:#fdfdfe; border-radius:10px; border:1px solid #c8d8d3; font-size:0.95em; line-height:1.6; color:#333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">`;
-
-                        // [점검 1] 사회
-                        if (groupCounts["사회"] === 0) {
-                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;"><b style="color:#d9534f;">1. 사회교과 필수 선택 확인</b><br>1학년 때 공통 사회과목 고를 이수하지 않았다면, <b>2학년 1, 2학기 중 사회교과 한 과목 이상은 필수적으로 선택</b>하시길 권장합니다.</div>`;
-                        } else {
-                            const socialListStr = takenSocialSubjects.join('<br>&nbsp;&nbsp;· ');
-                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;"><b style="color:#28a745;">1. 사회교과 (이수 진행중) - 누적 ${totalSocialCredits}학점</b><br>1학년 사회교과 이수 내역이 확인됩니다. 2학년 필수 이수 조건과 연계하여 선택을 계획해 주세요.<br><div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">✅ <b>나의 이수 내역 (합계: ${totalSocialCredits}학점):</b><br>&nbsp;&nbsp;· ${socialListStr}</div></div>`;
-                        }
-
-                        // [점검 2] 기초교과
-                        diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #0056b3;">
-                            <b style="color:#0056b3;">2. 기초교과(국·영·수 교과군) 선택 유의사항</b><br>
-                            2학년과 3학년 합쳐서 <b>선택교과(국·영·수)는 특정 학점을 초과하여 편중되지 않도록 주의</b>해야 합니다.<br>
-                            (일반적으로 2학년 설계 시, 학기당 국/영/수 밸런스를 맞춰 과목을 장바구니에 담아주세요.)
-                        </div>`;
-
-                        // [점검 3] 예술
-                        if (groupCounts["예술"] === 0) {
-                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;"><b style="color:#d9534f;">3. 예술교과 점검</b><br>1학년에서 예술교과(음악/미술 등)를 수강하지 않았을 경우, <b>2학년 선택 시 배정된 예술과목 이수 조건을 꼭 확인</b>하세요.</div>`;
-                        } else {
-                            const artListStr = takenArtSubjects.join('<br>&nbsp;&nbsp;· ');
-                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;"><b style="color:#28a745;">3. 예술교과 (이수 진행중)</b><br>1학년에서 이수한 예술교과 내역입니다.<br><div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">✅ <b>나의 이수 내역:</b><br>&nbsp;&nbsp;· ${artListStr}</div></div>`;
-                        }
-
-                        // [점검 4] 교양교과
-                        if (liberalArtsSubjects.length > 0) {
-                            let liberalArtsTable = `<div style="overflow-x:auto; margin-top:12px;">
-                                <table style="width:100%; border-collapse: collapse; font-size: 0.9em; text-align: center; border: 1px solid #ffe0b2;">
-                                    <tr style="background-color: #fff3cd; color: #856404; border-bottom: 1px solid #ffe0b2;">
-                                        <th style="padding: 10px; text-align: left;">교양 과목명</th>
-                                        <th style="padding: 10px; width: 60px;">1학기</th>
-                                        <th style="padding: 10px; width: 60px;">2학기</th>
-                                        <th style="padding: 10px; width: 75px;">선택안함</th>
-                                    </tr>`;
-
-                            liberalArtsSubjects.forEach((sub, idx) => {
-                                const creditText = sub.credits ? ` <span style="font-size:0.85em; color:#e83e8c;">[${sub.credits}학점]</span>` : '';
-                                const radioName = `lib_radio_${idx}`;
-                                liberalArtsTable += `
-                                    <tr style="border-bottom: 1px solid #ffe0b2; background-color: #fff;">
-                                        <td style="padding: 10px; text-align: left; font-weight: bold; color: #495057;">${sub.subject_name}${creditText}</td>
-                                        <td style="padding: 10px;"><input type="radio" name="${radioName}" value="sem1" style="transform: scale(1.3); cursor:pointer;"></td>
-                                        <td style="padding: 10px;"><input type="radio" name="${radioName}" value="sem2" style="transform: scale(1.3); cursor:pointer;"></td>
-                                        <td style="padding: 10px;"><input type="radio" name="${radioName}" value="none" checked style="transform: scale(1.3); cursor:pointer;"></td>
-                                    </tr>`;
-                            });
-                            liberalArtsTable += `</table></div>`;
-
-                            diagnosticHtml += `<div style="margin-bottom:0; padding-left:12px; border-left:4px solid #ff9500;">
-                                <b style="color:#d35400;">4. 교양교과 학기별 분산 선택</b><br>
-                                교양 과목 선택 시 <b>1학기와 2학기가 중복되지 않게 분산하여 선택</b>해 주세요.
-                                ${liberalArtsTable}
-                            </div>`;
-                        }
-
-                        diagnosticHtml += `</div>`;
-                        document.getElementById('resDiagnostic').innerHTML = diagnosticHtml;
-                        document.getElementById('diagnosticArea').style.display = 'block';
-
                     } else {
                         document.getElementById('resSubjects').innerHTML = '<span style="font-size:0.9em; color:#888;">등록된 수강 신청 데이터가 없습니다.</span>';
-                        document.getElementById('diagnosticArea').style.display = 'none';
                     }
+
+                    // ✨ 4. 1학년 진단 시스템 로직 생성 (요청하신 4가지 기준 고정 출력) ✨
+                    let diagnosticHtml = `<div style="margin-top:5px; padding:18px; background:#fdfdfe; border-radius:10px; border:1px solid #c8d8d3; font-size:0.95em; line-height:1.6; color:#333; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">`;
+
+                    diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;">
+                        <b style="color:#d9534f;">1. 사회 교과 필수 선택</b><br>
+                        사회 교과의 경우 <b>2, 3학년 중에 1개 과목은 필수적으로 선택</b>해야 합니다.
+                    </div>`;
+
+                    diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;">
+                        <b style="color:#28a745;">2. 과학 교과 위계 고려</b><br>
+                        과학 교과의 경우 <b>계열별 위계를 고려하여 과목을 이수</b>하는 것이 수월합니다.
+                    </div>`;
+
+                    diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #0056b3;">
+                        <b style="color:#0056b3;">3. 기초교과(국·영·수) 선택 제한</b><br>
+                        국, 영, 수 교과의 경우 <b>2, 3학년 동안 총 4개 과목이 초과되지 않도록</b> 선택해야 합니다.
+                    </div>`;
+
+                    diagnosticHtml += `<div style="margin-bottom:0; padding-left:12px; border-left:4px solid #6f42c1;">
+                        <b style="color:#6f42c1;">4. 예술 교과 필수 선택</b><br>
+                        예술 교과의 경우 <b>2, 3학년 중에 1개 과목은 필수적으로 선택</b>해야 합니다.
+                    </div>`;
+
+                    diagnosticHtml += `</div>`;
+
+                    document.getElementById('resDiagnostic').innerHTML = diagnosticHtml;
+                    document.getElementById('diagnosticArea').style.display = 'block';
 
                     resultArea.style.display = 'block';
 

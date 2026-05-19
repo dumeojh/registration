@@ -180,23 +180,6 @@
             opacity: 0.8;
         }
 
-        .subject-list {
-            list-style: none;
-            padding: 0;
-            margin-top: 15px;
-            border-top: 1px solid #eee;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .subject-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #f1f1f1;
-        }
-
         .csv-section {
             background-color: #eef2f5;
             border-color: #d1d9e0;
@@ -253,32 +236,6 @@
             padding: 6px;
             color: #666;
         }
-
-        .tag-container {
-            margin-top: 5px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-        }
-
-        .tag {
-            font-size: 0.75rem;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-
-        .tag-common {
-            background-color: #e9ecef;
-            color: #495057;
-            border: 1px solid #ced4da;
-        }
-
-        .tag-elective {
-            background-color: #e0f3ff;
-            color: #0056b3;
-            border: 1px solid #b8daff;
-        }
     </style>
 </head>
 
@@ -291,10 +248,8 @@
         </div>
 
         <div class="tab-menu">
-            <button class="tab-btn active" onclick="switchTab('tab-student2', this)">👥 학생관리2 (신규)</button>
-
+            <button class="tab-btn active" onclick="switchTab('tab-student2', this)">👥 스마트 학생관리 (고유번호)</button>
             <button class="tab-btn" onclick="switchTab('tab-enrollment', this)">📝 수강신청 등록 (확장)</button>
-
             <button class="tab-btn" onclick="switchTab('tab-subjects', this)">📚 과목 관리 (교과군)</button>
             <button class="tab-btn" onclick="switchTab('tab-booth', this)">📍 박람회 배치교실</button>
         </div>
@@ -305,84 +260,23 @@
                 <span class="label">📚 교육과정 과목 엑셀(CSV) 등록</span>
                 <p style="color: #666; font-size: 0.85rem; margin-top:0;">교과군부터 구분까지 총 16개 항목이 포함된 지정된 양식의 CSV 파일을
                     업로드하세요.</p>
-
-                <details class="csv-guide">
-                    <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
-                    <div style="overflow-x: auto;">
-                        <table class="csv-table" style="min-width: 1000px;">
-                            <thead>
-                                <tr>
-                                    <th>A열 (교과군)</th>
-                                    <th>B열 (과목명)</th>
-                                    <th>C열 (학년)</th>
-                                    <th>D열 (1학기)</th>
-                                    <th>E열 (2학기)</th>
-                                    <th>F열 (입학생 기준)</th>
-                                    <th>G열 (선택유형)</th>
-                                    <th>H열 (선택그룹)</th>
-                                    <th>I열 (학점)</th>
-                                    <th>J열 (비고)</th>
-                                    <th style="color:#0056b3;">K열 (파일1)</th>
-                                    <th style="color:#0056b3;">L열 (파일2)</th>
-                                    <th style="color:#0056b3;">M열 (파일3)</th>
-                                    <th style="color:#0056b3;">N열 (파일4)</th>
-                                    <th style="color:#0056b3;">O열 (파일5)</th>
-                                    <th style="color:#d9534f;">P열 (구분)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>수학</td>
-                                    <td>심화 수학Ⅰ</td>
-                                    <td>3</td>
-                                    <td>O</td>
-                                    <td></td>
-                                    <td>2024년</td>
-                                    <td>진로선택</td>
-                                    <td>택 2</td>
-                                    <td>3</td>
-                                    <td></td>
-                                    <td style="font-weight:bold; color:#0056b3;">46</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td style="font-weight:bold; color:#d9534f;">선택교과</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="16"
-                                        style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
-                                        💡 <b>작성 가이드</b><br>
-                                        - <b>1행(헤더)</b>: 제목 행이므로 데이터로 들어가지 않습니다.<br>
-                                        - <b>B열(과목명)</b>: <span style="color:red;">필수 항목</span>입니다. 띄어쓰기까지 정확하게 기재해
-                                        주세요.<br>
-                                        - <b>K열 ~ O열(파일)</b>: 안내할 자료 이미지의 번호(코드)를 입력합니다. (예: 46)<br>
-                                        - <b>P열(구분)</b>: '선택교과', '학교지정' 등을 기재합니다.<br>
-                                        - 빈칸은 빈칸 그대로 시스템에 등록되므로, 해당 없는 학기나 비고, 파일 란은 비워두셔도 무방합니다.
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </details>
-
                 <input type="file" id="subjectFile" accept=".csv" style="background: white; margin-top: 10px;" />
                 <button onclick="uploadSubjects()" class="btn btn-special" style="margin-top: 5px;">과목 데이터 덮어쓰기 &
                     등록</button>
             </div>
         </div>
 
-
-
-
         <div id="tab-student2" class="tab-content active">
-            <h2 style="color:var(--primary-color);">👥 학생 명단 일괄 등록 (마스터키: 2학년 학번)</h2>
+            <h2 style="color:var(--primary-color);">👥 학생 명단 스마트 업로드 (자동 매핑)</h2>
             <div class="section csv-section">
-                <span class="label">👥 학생 명단 엑셀(CSV) 등록</span>
-                <p style="color: #666; font-size: 0.85rem; margin-top:0;">1학년부터 3학년까지의 학번과 이름 정보가 담긴 CSV 파일을 선택하세요.</p>
+                <span class="label">👥 학생 명단 엑셀(CSV) 등록 (1~3학년 통합)</span>
+                <p style="color: #666; font-size: 0.85rem; margin-top:0;">
+                    <b>[스마트 동기화]</b> 1학년은 신규 고유번호가 발급되며, 진급하는 2·3학년은 과거 학번과 이름을 비교하여 기존 데이터(장바구니 등)를 안전하게 유지하며 학번만
+                    갱신합니다.
+                </p>
 
-                <details class="csv-guide">
-                    <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
+                <details class="csv-guide" open>
+                    <summary>📊 엑셀(CSV) 입력 양식 및 작성 방법</summary>
                     <div style="overflow-x: auto;">
                         <table class="csv-table">
                             <thead>
@@ -396,24 +290,23 @@
                             <tbody>
                                 <tr>
                                     <td>10101</td>
-                                    <td>20101</td>
-                                    <td>30101</td>
-                                    <td>김안성</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td>김신입 (1학년 예시)</td>
                                 </tr>
                                 <tr>
-                                    <td>10102</td>
-                                    <td>20102</td>
+                                    <td>10505</td>
+                                    <td>20101</td>
                                     <td></td>
-                                    <td>이여고</td>
+                                    <td>이진급 (2학년 예시)</td>
                                 </tr>
                                 <tr>
                                     <td colspan="4"
                                         style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
-                                        💡 <b>작성 가이드</b><br>
-                                        - <b>1행(헤더)</b>: 제목 행으로 인식되어 데이터로 들어가지 않습니다.<br>
-                                        - <b>B열(2학년 학번) & D열(이름)</b>: 시스템 등록을 위한 <b>필수 항목</b>입니다. 반드시 기재해 주세요.<br>
-                                        - <b>A열(1학년) & C열(3학년)</b>: 해당 학년의 학번이 있다면 기재하고, 아직 없거나 배정받지 않았다면 빈칸으로 두셔도
-                                        무방합니다.
+                                        💡 <b>학년별 작성 가이드</b><br>
+                                        - <b>1학년 명단:</b> A열(1학년학번)과 D열(이름)만 입력하고 나머지는 비워두세요.<br>
+                                        - <b>2, 3학년 명단:</b> 과거 학번을 반드시 기재해야 기존 수강 데이터와 연결됩니다. (예: 2학년은 A열과 B열 모두 기재)<br>
+                                        - 1, 2, 3학년 명단을 엑셀 파일 하나에 합쳐서 올려도 시스템이 알아서 분류합니다.
                                     </td>
                                 </tr>
                             </tbody>
@@ -421,116 +314,29 @@
                     </div>
                 </details>
                 <input type="file" id="studentFile2" accept=".csv" style="background: white; margin-top: 10px;" />
-                <button onclick="uploadStudents2()" class="btn btn-save" style="margin-top: 5px;">학생 명단 업로드</button>
+                <button onclick="uploadStudentsSmart()" class="btn btn-save" style="margin-top: 5px;"
+                    id="studentUploadBtn">학생 명단 스마트 업로드</button>
             </div>
         </div>
-
-
 
         <div id="tab-enrollment" class="tab-content">
-            <h2 style="color:#34c759;">📝 수강신청 데이터 일괄 등록 (확장 양식)</h2>
+            <h2 style="color:#34c759;">📝 수강신청 데이터 일괄 등록 (고유번호 기반)</h2>
             <div class="section csv-section">
                 <span class="label">📝 수강신청 결과 엑셀(CSV) 등록</span>
-                <p style="color: #666; font-size: 0.85rem; margin-top:0;">A~D열에 학번 및 이름, E열부터 ED열까지 수강신청 데이터가 담긴 CSV 파일을
-                    선택하세요.</p>
-
-                <details class="csv-guide">
-                    <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
-                    <div style="overflow-x: auto;">
-                        <table class="csv-table">
-                            <thead>
-                                <tr>
-                                    <th>A열(1학년 학번)</th>
-                                    <th>B열(2학년 학번)</th>
-                                    <th>C열(3학년 학번)</th>
-                                    <th>D열(이름)</th>
-                                    <th>E열(1-1선택)</th>
-                                    <th>F열(과목명...)</th>
-                                    <th>...</th>
-                                    <th>ED열(3-2선택)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>10101</td>
-                                    <td>20101</td>
-                                    <td>30101</td>
-                                    <td>김안성</td>
-                                    <td>1</td>
-                                    <td></td>
-                                    <td>...</td>
-                                    <td>Y</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="8"
-                                        style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
-                                        💡 <b>작성 가이드</b><br>
-                                        - <b>1행(헤더)</b>: E열부터 ED열까지 정확한 과목명이 기재되어 있어야 합니다. (1행은 데이터로 등록되지 않습니다)<br>
-                                        - <b>A열 ~ C열(학번)</b>: 학번을 기재하되, 시스템의 기준(마스터키)이 되는 <b>B열(2학년 학번)은 반드시 입력</b>되어야
-                                        합니다.<br>
-                                        - <b>D열(이름)</b>: 학생의 이름을 입력합니다.<br>
-                                        - <b>E열 ~ ED열(과목)</b>: 수강하는 과목의 셀에 <b>1, O, Y</b> 중 하나를 입력합니다. (해당 과목을 수강하지 않으면
-                                        빈칸)
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </details>
+                <p style="color: #666; font-size: 0.85rem; margin-top:0;">학생의 학번과 이름으로 시스템의 '고유번호(uid)'를 찾아 수강신청 데이터를
+                    등록합니다.</p>
                 <input type="file" id="enrollmentFile" accept=".csv" style="background: white; margin-top: 10px;" />
-                <button onclick="uploadEnrollments()" class="btn btn-add">수강신청 업로드</button>
+                <button onclick="uploadEnrollmentsSmart()" class="btn btn-add" id="enrollmentBtn">수강신청 업로드</button>
             </div>
         </div>
 
-
-
         <div id="tab-booth" class="tab-content">
-            <h2 style="color:#d9534f;">📍 박람회 배치교실 관리</h2>
+            <h2 style="color:#d9534f;">📍 박람회 배치교실 관리 (고유번호 기반)</h2>
             <div class="section fair-csv-section">
                 <span class="label">📍 박람회 배치교실 엑셀(CSV) 일괄 등록</span>
-                <p style="color: #666; font-size: 0.85rem; margin-top:0;">A열부터 D열까지 학번, 이름, 과목명, 배치교실 정보가 담긴 CSV 파일을
-                    선택하세요.</p>
-
-                <details class="csv-guide">
-                    <summary>📊 엑셀(CSV) 입력 양식 확인하기 (클릭)</summary>
-                    <div style="overflow-x: auto;">
-                        <table class="csv-table">
-                            <thead>
-                                <tr>
-                                    <th>A열 (학번)</th>
-                                    <th>B열 (이름)</th>
-                                    <th>C열 (과목명)</th>
-                                    <th>D열 (배치교실)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>20101</td>
-                                    <td>김안성</td>
-                                    <td>심화 수학Ⅰ</td>
-                                    <td>2학년 1반</td>
-                                </tr>
-                                <tr>
-                                    <td>20102</td>
-                                    <td>이여고</td>
-                                    <td>프로그래밍</td>
-                                    <td>컴퓨터실</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="4"
-                                        style="text-align: left; background-color: #fafafa; color: #555; padding: 12px; line-height: 1.5;">
-                                        💡 <b>작성 가이드</b><br>
-                                        - <b>1행(헤더)</b>: 제목 행으로 인식되어 데이터로 들어가지 않습니다. 실제 데이터는 2행부터 작성하세요.<br>
-                                        - <b>A열(1번째 열)</b>: 학생 식별을 위한 <b>학번</b>이 반드시 입력되어야 합니다.<br>
-                                        - <b>B열 ~ D열</b>: 각각 이름, 과목명, 배치될 교실(부스) 이름을 빈칸 없이 정확히 기재합니다.
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </details>
+                <p style="color: #666; font-size: 0.85rem; margin-top:0;">학생 정보를 매핑하여 배치 교실을 등록합니다.</p>
                 <input type="file" id="csvBoothInput" accept=".csv" style="background: white; margin-top: 10px;">
-                <button class="btn btn-fair" id="csvBoothBtn" onclick="uploadBoothCSV()">배치교실 데이터 덮어쓰기 & 등록</button>
+                <button class="btn btn-fair" id="csvBoothBtn" onclick="uploadBoothSmart()">배치교실 데이터 등록</button>
             </div>
         </div>
 
@@ -544,81 +350,96 @@
             const buttons = document.querySelectorAll('.tab-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
 
-            const targetContent = document.getElementById(tabId);
-            if (targetContent) {
-                targetContent.classList.add('active');
-            }
-
-            if (btnElement) {
-                btnElement.classList.add('active');
-            }
+            document.getElementById(tabId).classList.add('active');
+            if (btnElement) btnElement.classList.add('active');
         }
 
         const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
-        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-            auth: {
-                persistSession: false
-            }
-        });
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 
 
-        async function uploadBoothCSV() {
-            const fileInput = document.getElementById('csvBoothInput');
-            if (!fileInput.files[0]) {
-                alert('박람회 배치교실 CSV 파일을 선택해 주세요.');
-                return;
-            }
+        // ✨ 1. 학생 명단 스마트 업로드 로직 ✨
+        async function uploadStudentsSmart() {
+            const fileInput = document.getElementById('studentFile2');
+            if (!fileInput.files[0]) { alert('CSV 파일을 선택해 주세요.'); return; }
 
-            const btn = document.getElementById('csvBoothBtn');
-            const originalText = btn.innerText;
-            btn.innerText = '기존 데이터 비우고 덮어쓰는 중... ⏳';
+            const btn = document.getElementById('studentUploadBtn');
+            btn.innerText = 'DB와 동기화 중... ⏳';
             btn.disabled = true;
 
             Papa.parse(fileInput.files[0], {
                 complete: async function (results) {
                     try {
+                        // 1. 기존 DB의 학생 명단을 모두 불러옴
+                        const { data: existingStudents, error: fetchErr } = await db.from('students').select('*');
+                        if (fetchErr) throw fetchErr;
+
                         const data = results.data;
-                        const boothsToInsert = [];
+                        const newStudentsToInsert = [];
+                        const existingStudentsToUpdate = [];
 
                         for (let i = 1; i < data.length; i++) {
                             const row = data[i];
-                            if (!row[0] || String(row[0]).trim() === '') continue;
+                            const grade1 = row[0] ? String(row[0]).trim() : null;
+                            const grade2 = row[1] ? String(row[1]).trim() : null;
+                            const grade3 = row[2] ? String(row[2]).trim() : null;
+                            const name = row[3] ? String(row[3]).trim() : null;
 
-                            boothsToInsert.push({
-                                student_id: String(row[0]).trim(),
-                                student_name: String(row[1]).trim(),
-                                subject_name: String(row[2]).trim(),
-                                booth_location: String(row[3]).trim()
-                            });
+                            if (!name) continue; // 이름이 없으면 무시
+
+                            // 2. 입력된 정보로 기존 학생 찾기 (이름이 같고, 1학년 또는 2학년 학번이 일치하면 동일인물로 간주)
+                            const matchedStudent = existingStudents.find(s =>
+                                s.name === name &&
+                                (
+                                    (grade1 && s.grade1_num === grade1) ||
+                                    (grade2 && s.grade2_num === grade2) ||
+                                    (grade3 && s.grade3_num === grade3)
+                                )
+                            );
+
+                            if (matchedStudent) {
+                                // 기존 학생인 경우: 고유번호(uid)를 유지한 채로 학번만 업데이트 배열에 담기
+                                existingStudentsToUpdate.push({
+                                    uid: matchedStudent.uid, // ✨ 매우 중요: 고유번호 유지!
+                                    grade1_num: grade1 || matchedStudent.grade1_num,
+                                    grade2_num: grade2 || matchedStudent.grade2_num, // 기존 student_id 컬럼을 대체
+                                    student_id: grade2 || matchedStudent.student_id, // 혹시 모를 기존 호환성을 위해 유지
+                                    grade3_num: grade3 || matchedStudent.grade3_num,
+                                    name: name
+                                });
+                            } else {
+                                // 신규 학생인 경우: insert 배열에 담기 (uid는 Supabase가 자동 생성)
+                                newStudentsToInsert.push({
+                                    grade1_num: grade1,
+                                    grade2_num: grade2,
+                                    student_id: grade2, // 기존 호환성용
+                                    grade3_num: grade3,
+                                    name: name
+                                });
+                            }
                         }
 
-                        if (boothsToInsert.length === 0) {
-                            alert('업로드할 유효한 데이터가 없습니다.');
-                            return;
+                        // 3. 신규 학생 Insert 처리
+                        if (newStudentsToInsert.length > 0) {
+                            const { error: insErr } = await db.from('students').insert(newStudentsToInsert);
+                            if (insErr) throw insErr;
                         }
 
-                        const { error: deleteErr } = await db
-                            .from('expo_booths')
-                            .delete()
-                            .neq('student_id', '');
+                        // 4. 기존 학생 Update (Upsert) 처리
+                        if (existingStudentsToUpdate.length > 0) {
+                            const { error: upErr } = await db.from('students').upsert(existingStudentsToUpdate, { onConflict: 'uid' });
+                            if (upErr) throw upErr;
+                        }
 
-                        if (deleteErr) throw deleteErr;
-
-                        const { error: insertErr } = await db
-                            .from('expo_booths')
-                            .insert(boothsToInsert);
-
-                        if (insertErr) throw insertErr;
-
-                        alert(`🎉 총 ${boothsToInsert.length}명의 배치교실 데이터가 성공적으로 덮어쓰기 되었습니다!`);
+                        alert(`🎉 성공! 신규등록 ${newStudentsToInsert.length}명, 진급/업데이트 ${existingStudentsToUpdate.length}명이 동기화되었습니다.`);
                         fileInput.value = '';
 
                     } catch (err) {
-                        console.error("🚨 업로드 에러:", err);
-                        alert('업로드 중 오류가 발생했습니다: ' + err.message);
+                        console.error("🚨 동기화 에러:", err);
+                        alert('동기화 중 오류가 발생했습니다: ' + err.message);
                     } finally {
-                        btn.innerText = originalText;
+                        btn.innerText = '학생 명단 스마트 업로드';
                         btn.disabled = false;
                     }
                 }
@@ -626,65 +447,11 @@
         }
 
 
-
-        function uploadStudents2() {
-            const fileInput = document.getElementById('studentFile2');
-            if (!fileInput.files[0]) {
-                alert('CSV 파일을 선택해 주세요.');
-                return;
-            }
-
-            Papa.parse(fileInput.files[0], {
-                complete: async function (results) {
-                    const data = results.data;
-                    const studentsToInsert = [];
-
-                    for (let i = 1; i < data.length; i++) {
-                        const row = data[i];
-                        if (!row[1] || String(row[1]).trim() === '' || !row[3] || String(row[3]).trim() === '') continue;
-
-                        studentsToInsert.push({
-                            student_id: String(row[1]).trim(),
-                            grade1_num: row[0] ? String(row[0]).trim() : null,
-                            grade2_num: String(row[1]).trim(),
-                            grade3_num: row[2] ? String(row[2]).trim() : null,
-                            name: String(row[3]).trim()
-                        });
-                    }
-
-                    if (studentsToInsert.length === 0) {
-                        alert('업로드할 유효한 학생 데이터가 없습니다.');
-                        return;
-                    }
-
-                    try {
-                        const { error } = await db
-                            .from('students')
-                            .upsert(studentsToInsert, { onConflict: 'student_id' });
-
-                        if (error) throw error;
-
-                        alert(`🎉 총 ${studentsToInsert.length}명의 학생 등록이 완료되었습니다!`);
-                        fileInput.value = '';
-
-                    } catch (err) {
-                        console.error("🚨 학생 등록 에러:", err);
-                        alert('학생 등록 중 오류가 발생했습니다: ' + err.message);
-                    }
-                }
-            });
-        }
-
-
-        function uploadEnrollments() {
+        // ✨ 2. 수강신청 명단 스마트 업로드 (student_uid 매핑) ✨
+        async function uploadEnrollmentsSmart() {
             const fileInput = document.getElementById('enrollmentFile');
-            if (!fileInput.files[0]) {
-                alert('수강신청 CSV 파일을 선택해 주세요.');
-                return;
-            }
+            if (!fileInput.files[0]) { alert('수강신청 CSV 파일을 선택해 주세요.'); return; }
 
-            // 요청하신 새로운 열(Column) 인덱스 매핑 (A열=0 기준)
-            // E~N(4~13), O~X(14~23), Y~AN(24~39), AO~BD(40~55), BE~BW(56~74), BX~CP(75~93)
             const subjectRanges = [
                 { start: 4, end: 13, category: '1학년 1학기' },
                 { start: 14, end: 23, category: '1학년 2학기' },
@@ -694,45 +461,44 @@
                 { start: 75, end: 93, category: '3학년 2학기' }
             ];
 
-            // 업로드 중 버튼 상태 변경 (중복 클릭 방지)
-            const btn = document.querySelector('#tab-enrollment .btn-add');
-            const originalText = btn.innerText;
-            btn.innerText = '데이터 덮어쓰는 중... ⏳';
+            const btn = document.getElementById('enrollmentBtn');
+            btn.innerText = '수강 데이터 변환 및 등록 중... ⏳';
             btn.disabled = true;
 
             Papa.parse(fileInput.files[0], {
                 complete: async function (results) {
                     try {
+                        // 1. 학생 고유번호 매핑을 위해 전체 학생 불러오기
+                        const { data: students, error: stdErr } = await db.from('students').select('uid, name, grade1_num, grade2_num, grade3_num');
+                        if (stdErr) throw stdErr;
+
                         const data = results.data;
                         const enrollmentsToInsert = [];
-
-                        if (data.length < 2) {
-                            alert('업로드할 데이터가 충분하지 않습니다.');
-                            return;
-                        }
-
                         const headers = data[0];
 
                         for (let i = 1; i < data.length; i++) {
                             const row = data[i];
-                            const studentId = row[1] ? String(row[1]).trim() : null;
+                            const g1 = row[0] ? String(row[0]).trim() : null;
+                            const g2 = row[1] ? String(row[1]).trim() : null;
+                            const g3 = row[2] ? String(row[2]).trim() : null;
+                            const name = row[3] ? String(row[3]).trim() : null;
 
-                            // 2학년 학번이 없으면 건너뜀
-                            if (!studentId) continue;
+                            if (!name) continue;
+
+                            // 엑셀의 학번+이름으로 DB에서 해당 학생의 고유번호(uid) 찾기
+                            const matchedStudent = students.find(s => s.name === name && (s.grade1_num === g1 || s.grade2_num === g2 || s.grade3_num === g3));
+                            if (!matchedStudent) continue; // 등록되지 않은 학생의 수강 데이터는 스킵
 
                             subjectRanges.forEach(range => {
                                 for (let j = range.start; j <= range.end; j++) {
                                     const cellValue = row[j];
-
                                     if (cellValue) {
                                         const valStr = String(cellValue).trim().toUpperCase();
-                                        // 1, O, Y 등으로 체크된 항목만 데이터로 생성
                                         if (valStr === '1' || valStr === 'O' || valStr === 'Y') {
                                             const subjectName = headers[j];
-
                                             if (subjectName && String(subjectName).trim() !== '') {
                                                 enrollmentsToInsert.push({
-                                                    student_id: studentId,
+                                                    student_uid: matchedStudent.uid, // ✨ student_id 대신 student_uid 저장
                                                     subject_name: String(subjectName).trim(),
                                                     category: range.category
                                                 });
@@ -744,34 +510,24 @@
                         }
 
                         if (enrollmentsToInsert.length === 0) {
-                            alert('업로드할 유효한 수강신청 데이터(1, O, Y로 체크된 항목)가 없습니다.');
+                            alert('업로드할 유효한 데이터가 없거나, 등록된 학생과 매칭되지 않습니다.');
                             return;
                         }
 
-                        // ✨ 중복 방지 로직: 기존 수강신청 데이터를 지우고 새 데이터로 덮어쓰기
-                        const { error: deleteErr } = await db
-                            .from('student_enrollments')
-                            .delete()
-                            .neq('student_id', '');
-
+                        const { error: deleteErr } = await db.from('student_enrollments').delete().neq('student_uid', '00000000-0000-0000-0000-000000000000'); // 전체 삭제
                         if (deleteErr) throw deleteErr;
 
-                        // 새 수강신청 데이터 일괄 삽입
-                        const { error: insertErr } = await db
-                            .from('student_enrollments')
-                            .insert(enrollmentsToInsert);
-
+                        const { error: insertErr } = await db.from('student_enrollments').insert(enrollmentsToInsert);
                         if (insertErr) throw insertErr;
 
-                        alert(`🎉 총 ${enrollmentsToInsert.length}건의 수강신청 과목이 성공적으로 덮어쓰기 등록되었습니다!`);
+                        alert(`🎉 총 ${enrollmentsToInsert.length}건의 수강신청이 성공적으로 등록되었습니다!`);
                         fileInput.value = '';
 
                     } catch (err) {
-                        console.error("🚨 수강신청 등록 에러:", err);
-                        alert('수강신청 등록 중 오류가 발생했습니다: ' + err.message);
+                        console.error("🚨 수강신청 에러:", err);
+                        alert('오류가 발생했습니다: ' + err.message);
                     } finally {
-                        // 버튼 상태 복구
-                        btn.innerText = originalText;
+                        btn.innerText = '수강신청 업로드';
                         btn.disabled = false;
                     }
                 }
@@ -779,6 +535,72 @@
         }
 
 
+        // ✨ 3. 박람회 부스 업로드 (student_uid 매핑) ✨
+        async function uploadBoothSmart() {
+            const fileInput = document.getElementById('csvBoothInput');
+            if (!fileInput.files[0]) { alert('박람회 배치교실 CSV 파일을 선택해 주세요.'); return; }
+
+            const btn = document.getElementById('csvBoothBtn');
+            btn.innerText = '부스 데이터 변환 및 등록 중... ⏳';
+            btn.disabled = true;
+
+            Papa.parse(fileInput.files[0], {
+                complete: async function (results) {
+                    try {
+                        const { data: students, error: stdErr } = await db.from('students').select('uid, name, grade1_num, grade2_num, grade3_num');
+                        if (stdErr) throw stdErr;
+
+                        const data = results.data;
+                        const boothsToInsert = [];
+
+                        for (let i = 1; i < data.length; i++) {
+                            const row = data[i];
+                            const inputId = row[0] ? String(row[0]).trim() : null; // 학번
+                            const name = row[1] ? String(row[1]).trim() : null;    // 이름
+
+                            if (!inputId || !name) continue;
+
+                            // 입력된 학번이 1/2/3학년 중 어디든 맞으면 매칭
+                            const matchedStudent = students.find(s => s.name === name && (s.grade1_num === inputId || s.grade2_num === inputId || s.grade3_num === inputId));
+
+                            if (matchedStudent) {
+                                boothsToInsert.push({
+                                    student_uid: matchedStudent.uid, // ✨ 고유번호 저장
+                                    student_id: inputId, // 호환성용 임시 저장
+                                    student_name: name,
+                                    subject_name: String(row[2]).trim(),
+                                    booth_location: String(row[3]).trim()
+                                });
+                            }
+                        }
+
+                        if (boothsToInsert.length === 0) {
+                            alert('매칭되는 학생 데이터가 없습니다.');
+                            return;
+                        }
+
+                        // 기존 데이터 날리기 (테이블에 데이터가 있을 때 삭제)
+                        await db.from('expo_booths').delete().neq('student_name', '');
+
+                        const { error: insertErr } = await db.from('expo_booths').insert(boothsToInsert);
+                        if (insertErr) throw insertErr;
+
+                        alert(`🎉 총 ${boothsToInsert.length}명의 부스 데이터가 성공적으로 등록되었습니다!`);
+                        fileInput.value = '';
+
+                    } catch (err) {
+                        console.error("🚨 부스 에러:", err);
+                        alert('오류가 발생했습니다: ' + err.message);
+                    } finally {
+                        btn.innerText = '배치교실 데이터 등록';
+                        btn.disabled = false;
+                    }
+                }
+            });
+        }
+
+
+        // 4. 과목 등록 (변경 없음)
         function uploadSubjects() {
             const fileInput = document.getElementById('subjectFile');
             if (!fileInput.files[0]) {
@@ -793,27 +615,25 @@
 
                     for (let i = 1; i < data.length; i++) {
                         const row = data[i];
-                        // B열(인덱스 1) 과목명이 비어있으면 건너뛰기
                         if (!row[1] || String(row[1]).trim() === '') continue;
 
-                        // ✨ 새로 추가된 구분(subject_type) 포함 K~P열 매핑 로직 ✨
                         subjectsToInsert.push({
-                            subject_group: row[0] ? String(row[0]).trim() : null,    // A열: 교과군
-                            subject_name: String(row[1]).trim(),                     // B열: 과목명
-                            grade: row[2] ? String(row[2]).trim() : null,            // C열: 학년
-                            semester1: row[3] ? String(row[3]).trim() : null,        // D열: 1학기
-                            semester2: row[4] ? String(row[4]).trim() : null,        // E열: 2학기
-                            admission_year: row[5] ? String(row[5]).trim() : null,   // F열: 입학생 기준
-                            selection_type: row[6] ? String(row[6]).trim() : null,   // G열: 선택유형
-                            selection_group: row[7] ? String(row[7]).trim() : null,  // H열: 선택그룹
-                            credits: row[8] ? String(row[8]).trim() : null,          // I열: 학점
-                            remarks: row[9] ? String(row[9]).trim() : null,          // J열: 비고
-                            file1: row[10] ? String(row[10]).trim() : null,          // K열: 파일1
-                            file2: row[11] ? String(row[11]).trim() : null,          // L열: 파일2
-                            file3: row[12] ? String(row[12]).trim() : null,          // M열: 파일3
-                            file4: row[13] ? String(row[13]).trim() : null,          // N열: 파일4
-                            file5: row[14] ? String(row[14]).trim() : null,          // O열: 파일5
-                            subject_type: row[15] ? String(row[15]).trim() : null    // P열: 구분 (선택교과, 학교지정 등)
+                            subject_group: row[0] ? String(row[0]).trim() : null,
+                            subject_name: String(row[1]).trim(),
+                            grade: row[2] ? String(row[2]).trim() : null,
+                            semester1: row[3] ? String(row[3]).trim() : null,
+                            semester2: row[4] ? String(row[4]).trim() : null,
+                            admission_year: row[5] ? String(row[5]).trim() : null,
+                            selection_type: row[6] ? String(row[6]).trim() : null,
+                            selection_group: row[7] ? String(row[7]).trim() : null,
+                            credits: row[8] ? String(row[8]).trim() : null,
+                            remarks: row[9] ? String(row[9]).trim() : null,
+                            file1: row[10] ? String(row[10]).trim() : null,
+                            file2: row[11] ? String(row[11]).trim() : null,
+                            file3: row[12] ? String(row[12]).trim() : null,
+                            file4: row[13] ? String(row[13]).trim() : null,
+                            file5: row[14] ? String(row[14]).trim() : null,
+                            subject_type: row[15] ? String(row[15]).trim() : null
                         });
                     }
 
@@ -823,23 +643,14 @@
                     }
 
                     try {
-                        // 기존 과목 데이터를 깔끔하게 지우고 새 데이터로 덮어쓰기
-                        const { error: delErr } = await db
-                            .from('subjects')
-                            .delete()
-                            .neq('subject_name', ''); // 모든 데이터 삭제 조건
-
+                        const { error: delErr } = await db.from('subjects').delete().neq('subject_name', '');
                         if (delErr) throw delErr;
 
-                        // 새 데이터 일괄 삽입
-                        const { error: insErr } = await db
-                            .from('subjects')
-                            .insert(subjectsToInsert);
-
+                        const { error: insErr } = await db.from('subjects').insert(subjectsToInsert);
                         if (insErr) throw insErr;
 
-                        alert(`🎉 총 ${subjectsToInsert.length}개의 과목 데이터가 지정된 순서대로 성공적으로 등록되었습니다! (구분 포함)`);
-                        fileInput.value = ''; // 성공 시 파일 입력창 초기화
+                        alert(`🎉 총 ${subjectsToInsert.length}개의 과목 데이터가 성공적으로 등록되었습니다!`);
+                        fileInput.value = '';
 
                     } catch (err) {
                         console.error("🚨 과목 등록 에러:", err);

@@ -306,7 +306,7 @@
                                         💡 <b>학년별 작성 가이드</b><br>
                                         - <b>1학년 명단:</b> A열(1학년학번)과 D열(이름)만 입력하고 나머지는 비워두세요.<br>
                                         - <b>2, 3학년 명단:</b> 과거 학번을 반드시 기재해야 기존 수강 데이터와 연결됩니다. (예: 2학년은 A열과 B열 모두 기재)<br>
-                                        - 1, 2, 3학년 명단을 엑셀 파일 하나에 합쳐서 올려도 시스템이 알아서 분류합니다.
+                                        - 1, 2, 3학년 명단을 엑셀 파일 하나에 합쳐서 올려도 시스템이 알아서 분류합니다. (중복은 자동 제거됩니다)
                                     </td>
                                 </tr>
                             </tbody>
@@ -386,9 +386,9 @@
                             const grade3 = row[2] ? String(row[2]).trim() : null;
                             const name = row[3] ? String(row[3]).trim() : null;
 
-                            if (!name) continue; // 이름이 없으면 무시
+                            if (!name) continue;
 
-                            // 2. 입력된 정보로 기존 학생 찾기 (이름이 같고, 1학년 또는 2학년 학번이 일치하면 동일인물로 간주)
+                            // 2. 입력된 정보로 기존 학생 찾기
                             const matchedStudent = existingStudents.find(s =>
                                 s.name === name &&
                                 (
@@ -399,40 +399,64 @@
                             );
 
                             if (matchedStudent) {
-                                // 기존 학생인 경우: 고유번호(uid)를 유지한 채로 학번만 업데이트 배열에 담기
+                                // 기존 학생 업데이트 배열
                                 existingStudentsToUpdate.push({
-                                    uid: matchedStudent.uid, // ✨ 매우 중요: 고유번호 유지!
+                                    uid: matchedStudent.uid,
                                     grade1_num: grade1 || matchedStudent.grade1_num,
-                                    grade2_num: grade2 || matchedStudent.grade2_num, // 기존 student_id 컬럼을 대체
-                                    student_id: grade2 || matchedStudent.student_id, // 혹시 모를 기존 호환성을 위해 유지
+                                    grade2_num: grade2 || matchedStudent.grade2_num,
+                                    student_id: grade2 || matchedStudent.student_id,
                                     grade3_num: grade3 || matchedStudent.grade3_num,
                                     name: name
                                 });
                             } else {
-                                // 신규 학생인 경우: insert 배열에 담기 (uid는 Supabase가 자동 생성)
+                                // 신규 학생 추가 배열
                                 newStudentsToInsert.push({
                                     grade1_num: grade1,
                                     grade2_num: grade2,
-                                    student_id: grade2, // 기존 호환성용
+                                    student_id: grade2,
                                     grade3_num: grade3,
                                     name: name
                                 });
                             }
                         }
 
-                        // 3. 신규 학생 Insert 처리
-                        if (newStudentsToInsert.length > 0) {
-                            const { error: insErr } = await db.from('students').insert(newStudentsToInsert);
+                        // 🌟 [핵심] 엑셀에 똑같은 학생이 중복으로 적혀있을 경우를 대비한 강력한 필터링
+
+                        // 업데이트할 명단에서 고유번호(uid)가 겹치는 애들을 하나만 남기고 쳐냄
+                        const uniqueExisting = [];
+                        const uidSet = new Set();
+                        existingStudentsToUpdate.forEach(student => {
+                            if (!uidSet.has(student.uid)) {
+                                uidSet.add(student.uid);
+                                uniqueExisting.push(student);
+                            }
+                        });
+
+                        // 신규 추가할 명단에서 이름+학번 조합이 겹치는 애들을 하나만 남기고 쳐냄
+                        const uniqueNew = [];
+                        const newSet = new Set();
+                        newStudentsToInsert.forEach(student => {
+                            const key = student.name + "_" + student.grade1_num + "_" + student.grade2_num;
+                            if (!newSet.has(key)) {
+                                newSet.add(key);
+                                uniqueNew.push(student);
+                            }
+                        });
+
+
+                        // 3. 필터링된 배열로 DB에 신규 삽입
+                        if (uniqueNew.length > 0) {
+                            const { error: insErr } = await db.from('students').insert(uniqueNew);
                             if (insErr) throw insErr;
                         }
 
-                        // 4. 기존 학생 Update (Upsert) 처리
-                        if (existingStudentsToUpdate.length > 0) {
-                            const { error: upErr } = await db.from('students').upsert(existingStudentsToUpdate, { onConflict: 'uid' });
+                        // 4. 필터링된 배열로 DB에 덮어쓰기 (Upsert)
+                        if (uniqueExisting.length > 0) {
+                            const { error: upErr } = await db.from('students').upsert(uniqueExisting, { onConflict: 'uid' });
                             if (upErr) throw upErr;
                         }
 
-                        alert(`🎉 성공! 신규등록 ${newStudentsToInsert.length}명, 진급/업데이트 ${existingStudentsToUpdate.length}명이 동기화되었습니다.`);
+                        alert(`🎉 성공! 신규등록 ${uniqueNew.length}명, 진급/업데이트 ${uniqueExisting.length}명이 동기화되었습니다.`);
                         fileInput.value = '';
 
                     } catch (err) {
@@ -468,7 +492,6 @@
             Papa.parse(fileInput.files[0], {
                 complete: async function (results) {
                     try {
-                        // 1. 학생 고유번호 매핑을 위해 전체 학생 불러오기
                         const { data: students, error: stdErr } = await db.from('students').select('uid, name, grade1_num, grade2_num, grade3_num');
                         if (stdErr) throw stdErr;
 
@@ -485,9 +508,8 @@
 
                             if (!name) continue;
 
-                            // 엑셀의 학번+이름으로 DB에서 해당 학생의 고유번호(uid) 찾기
                             const matchedStudent = students.find(s => s.name === name && (s.grade1_num === g1 || s.grade2_num === g2 || s.grade3_num === g3));
-                            if (!matchedStudent) continue; // 등록되지 않은 학생의 수강 데이터는 스킵
+                            if (!matchedStudent) continue;
 
                             subjectRanges.forEach(range => {
                                 for (let j = range.start; j <= range.end; j++) {
@@ -498,7 +520,7 @@
                                             const subjectName = headers[j];
                                             if (subjectName && String(subjectName).trim() !== '') {
                                                 enrollmentsToInsert.push({
-                                                    student_uid: matchedStudent.uid, // ✨ student_id 대신 student_uid 저장
+                                                    student_uid: matchedStudent.uid,
                                                     subject_name: String(subjectName).trim(),
                                                     category: range.category
                                                 });
@@ -514,7 +536,7 @@
                             return;
                         }
 
-                        const { error: deleteErr } = await db.from('student_enrollments').delete().neq('student_uid', '00000000-0000-0000-0000-000000000000'); // 전체 삭제
+                        const { error: deleteErr } = await db.from('student_enrollments').delete().neq('student_uid', '00000000-0000-0000-0000-000000000000');
                         if (deleteErr) throw deleteErr;
 
                         const { error: insertErr } = await db.from('student_enrollments').insert(enrollmentsToInsert);
@@ -555,18 +577,17 @@
 
                         for (let i = 1; i < data.length; i++) {
                             const row = data[i];
-                            const inputId = row[0] ? String(row[0]).trim() : null; // 학번
-                            const name = row[1] ? String(row[1]).trim() : null;    // 이름
+                            const inputId = row[0] ? String(row[0]).trim() : null;
+                            const name = row[1] ? String(row[1]).trim() : null;
 
                             if (!inputId || !name) continue;
 
-                            // 입력된 학번이 1/2/3학년 중 어디든 맞으면 매칭
                             const matchedStudent = students.find(s => s.name === name && (s.grade1_num === inputId || s.grade2_num === inputId || s.grade3_num === inputId));
 
                             if (matchedStudent) {
                                 boothsToInsert.push({
-                                    student_uid: matchedStudent.uid, // ✨ 고유번호 저장
-                                    student_id: inputId, // 호환성용 임시 저장
+                                    student_uid: matchedStudent.uid,
+                                    student_id: inputId,
                                     student_name: name,
                                     subject_name: String(row[2]).trim(),
                                     booth_location: String(row[3]).trim()
@@ -579,7 +600,6 @@
                             return;
                         }
 
-                        // 기존 데이터 날리기 (테이블에 데이터가 있을 때 삭제)
                         await db.from('expo_booths').delete().neq('student_name', '');
 
                         const { error: insertErr } = await db.from('expo_booths').insert(boothsToInsert);

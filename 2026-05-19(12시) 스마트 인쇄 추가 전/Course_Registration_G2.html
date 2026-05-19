@@ -54,6 +54,7 @@
         }
 
         .print-btn {
+            margin-left: auto;
             background-color: #e2ece9;
             font-weight: bold;
             color: #155724;
@@ -161,6 +162,7 @@
             word-break: break-all;
         }
 
+        /* ✨ 진로 정보 영역 스타일 ✨ */
         .career-box {
             background-color: #fff;
             border: 2px dashed #4a90e2;
@@ -168,6 +170,7 @@
             padding: 20px;
             margin-bottom: 20px;
             display: none;
+            /* 검색 전에는 숨김 */
         }
 
         .career-box h3 {
@@ -295,6 +298,49 @@
             }
         }
 
+        @media print {
+
+            .nav-buttons,
+            .search-box,
+            .action-btn {
+                display: none !important;
+            }
+
+            body {
+                padding: 0;
+                background-color: white;
+            }
+
+            .container {
+                box-shadow: none;
+                border: none;
+                max-width: 100%;
+            }
+
+            #resultArea {
+                display: block !important;
+                border: 1px solid #000;
+                background: white;
+            }
+
+            .career-box {
+                border: 1px solid #000;
+            }
+
+            .reason-box {
+                display: block !important;
+                border: 1px solid #ccc;
+            }
+
+            details {
+                display: block !important;
+            }
+
+            details>*:not(summary) {
+                display: block !important;
+            }
+        }
+
         /* --- 듀얼 리스트 UI 공통 스타일 --- */
         .dual-list-container {
             display: flex;
@@ -411,117 +457,6 @@
                 text-align: center;
             }
         }
-
-        /* ✨ 인쇄 전용 스타일 세팅 ✨ */
-        @media print {
-
-            .nav-buttons,
-            .search-box,
-            .action-btn {
-                display: none !important;
-            }
-
-            body {
-                padding: 0;
-                background-color: white;
-            }
-
-            .container {
-                box-shadow: none;
-                border: none;
-                max-width: 100%;
-            }
-
-            #resultArea {
-                display: block !important;
-                border: 1px solid #000;
-                background: white;
-                padding: 20px;
-            }
-
-            .career-box {
-                border: 1px solid #000;
-            }
-
-            .reason-box {
-                display: block !important;
-                border: 1px solid #ccc;
-            }
-
-            details {
-                display: block !important;
-            }
-
-            details>*:not(summary) {
-                display: block !important;
-            }
-
-            /* 📑 스마트 인쇄 모드 (상담용 2페이지 강제 분할) */
-            body.smart-print-mode #smartPrintHeader {
-                display: block !important;
-            }
-
-            body.smart-print-mode h1 {
-                display: none !important;
-            }
-
-            body.smart-print-mode #sem1InteractiveArea,
-            body.smart-print-mode #sem2InteractiveArea,
-            body.smart-print-mode .preview-text {
-                display: none !important;
-            }
-
-            body.smart-print-mode #sem1ReasonSection,
-            body.smart-print-mode #sem2ReasonSection {
-                display: block !important;
-                margin-top: 0;
-            }
-
-            body.smart-print-mode .subject-area {
-                border-top: none;
-                margin-top: 0;
-                padding-top: 0;
-            }
-
-            body.smart-print-mode details {
-                border: 2px solid #555 !important;
-                border-radius: 8px;
-                padding: 15px;
-                margin-bottom: 20px;
-                page-break-inside: avoid;
-            }
-
-            body.smart-print-mode details>summary {
-                border-bottom: 2px solid #eee;
-                padding-bottom: 10px;
-                margin-bottom: 10px;
-            }
-
-            /* 핵심: 3학년 1학기 설계 영역부터 무조건 2번째 페이지로 넘김 */
-            body.smart-print-mode #grade3Area {
-                page-break-before: always;
-            }
-
-            /* 상담용 프린트 글씨 및 칸 다듬기 */
-            body.smart-print-mode .career-inputs select,
-            body.smart-print-mode .career-inputs input {
-                border: none;
-                border-bottom: 1px solid #000;
-                border-radius: 0;
-                appearance: none;
-                -webkit-appearance: none;
-                padding-left: 0;
-                color: #000;
-                font-weight: bold;
-            }
-
-            body.smart-print-mode .reason-box {
-                border: none;
-                border-bottom: 1px dashed #bbb;
-                background: transparent;
-                resize: none;
-            }
-        }
     </style>
 </head>
 
@@ -531,12 +466,7 @@
         <div class="nav-buttons">
             <button type="button" class="nav-btn" onclick="history.back()">⬅ 이전 단계로</button>
             <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
-            <div style="margin-left: auto; display: flex; gap: 10px;">
-                <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 일반 인쇄</button>
-                <button type="button" class="nav-btn print-btn"
-                    style="background-color: #cce5ff; color: #004085; border-color: #b8daff;" onclick="smartPrint()">📑
-                    스마트 인쇄(상담용)</button>
-            </div>
+            <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 정보 인쇄</button>
         </div>
 
         <h1>2학년 수강신청 정보 조회 및 설계</h1>
@@ -548,11 +478,6 @@
                 <input type="text" id="studentNameInput" placeholder="이름 (예: 장한샘)">
             </div>
             <button class="action-btn" onclick="searchStudent()">학생 정보 조회하기</button>
-        </div>
-
-        <div id="smartPrintHeader"
-            style="display: none; text-align: center; font-size: 1.8em; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; color: #000;">
-            학생 맞춤형 진로·수강신청 상담 기초자료
         </div>
 
         <div id="resultArea">
@@ -671,11 +596,11 @@
             document.getElementById('grade3Sem2Area').style.display = 'none';
 
             try {
-                // 1. 학생 기본 정보 조회
+                // 1. 학생 기본 정보 조회 (진로 정보 컬럼 추가)
                 const { data: student, error: studentErr } = await db
                     .from('students')
                     .select('uid, name, grade1_num, student_id, grade2_num, grade3_num, desired_field, desired_major')
-                    .eq('grade2_num', idVal)
+                    .eq('grade2_num', idVal) // 2학년 학번 기준
                     .eq('name', nameVal)
                     .maybeSingle();
 
@@ -689,6 +614,7 @@
                     document.getElementById('resGrade2').innerText = student.grade2_num || student.student_id || "-";
                     document.getElementById('resGrade3').innerText = student.grade3_num || "-";
 
+                    // ✨ 진로 희망 데이터 화면에 세팅 및 표시
                     document.getElementById('desiredField').value = student.desired_field || "";
                     document.getElementById('desiredMajor').value = student.desired_major || "";
                     document.getElementById('careerInfoArea').style.display = 'block';
@@ -725,6 +651,7 @@
                     const regularSem1 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester1 && sub.semester1.trim() !== '' && (sub.selection_type === '진로선택' || sub.selection_type === '융합선택')) : [];
                     const regularSem2 = g3Data ? g3Data.filter(sub => sub.subject_group !== '교양' && sub.semester2 && sub.semester2.trim() !== '' && (sub.selection_type === '진로선택' || sub.selection_type === '융합선택')) : [];
 
+                    // [수강과목 태그 및 진단 로직] (기존과 동일하므로 생략 없이 유지)
                     if (enrollments && enrollments.length > 0) {
                         const subjectNames = [...new Set(enrollments.map(e => e.subject_name))];
 
@@ -880,6 +807,7 @@
             }
         }
 
+        // ✨ 진로 정보 DB 저장 함수 ✨
         async function saveCareerInfo() {
             if (!currentStudentId) return alert("먼저 학생 정보를 조회해주세요.");
 
@@ -900,6 +828,9 @@
             }
         }
 
+        // ========================================================
+        // 🔮 3학년 1학기 듀얼 리스트 로직
+        // ========================================================
         let sem1Available = [];
         let sem1Selected = [];
         let sem1Reasons = {};
@@ -1175,10 +1106,7 @@
         }
 
         function moveRightSem2(subName) {
-            if (sem2Selected.length >= 5) {
-                alert("과목은 최대 5개까지만 선택할 수 있습니다.");
-                return;
-            }
+            if (sem2Selected.length >= 5) return alert("과목은 최대 5개까지만 선택할 수 있습니다.");
             const idx = sem2Available.findIndex(s => s.subject_name === subName);
             if (idx > -1) {
                 sem2Selected.push(sem2Available[idx]);
@@ -1197,20 +1125,26 @@
         }
 
         function completeSem2() {
-            if (sem2Selected.length === 0) {
-                alert("선택된 과목이 없습니다. 최소 1개 이상의 과목을 선택해 주세요.");
-                return;
-            }
+            if (sem2Selected.length === 0) return alert("선택된 과목이 없습니다. 최소 1개 이상의 과목을 선택해 주세요.");
+
             document.getElementById('sem2InteractiveArea').style.display = 'none';
             document.getElementById('sem2ReasonSection').style.display = 'block';
 
             document.getElementById('sem2ReasonList').innerHTML = sem2Selected.map(sub => {
                 const groupText = sub.selection_group ? ` <small style="color:#888;">(${sub.selection_group})</small>` : '';
-                const savedText = sem2Reasons[sub.subject_name] || '';
+                const savedText = sem2Reasons[sub.subject_name] ? sem2Reasons[sub.subject_name] : '';
+                let fileLinksHtml = '';
+                for (let i = 1; i <= 5; i++) {
+                    const fileKey = `file${i}`;
+                    if (sub[fileKey]) {
+                        const fileName = sub[fileKey].includes('.jpg') ? sub[fileKey] : sub[fileKey] + '.jpg';
+                        fileLinksHtml += `<a href="https://dumeojh.github.io/high/jpgs/${fileName}" target="_blank" style="color: #0056b3; font-size: 0.85em; text-decoration: none; font-weight: bold; margin-left: 6px; background-color: #e2ece9; padding: 2px 6px; border-radius: 4px; border: 1px solid #c3e6cb;">[파일${i}]</a>`;
+                    }
+                }
                 return `
                 <div class="future-subject-item">
                     <label class="future-subject-header" style="cursor: default;">
-                        <span style="font-size:1.05em; color:#6f42c1;">✅ ${sub.subject_name}${groupText}</span>
+                        <span style="font-size:1.05em; color:#6f42c1;">✅ ${sub.subject_name}${groupText}${fileLinksHtml}</span>
                     </label>
                     <textarea class="reason-box" style="display:block; width:100%; min-height:80px; margin-top:12px;" placeholder="${sub.subject_name} 과목을 선택한 이유를 자유롭게 적어보세요.">${savedText}</textarea>
                 </div>`;
@@ -1219,20 +1153,16 @@
 
         function modifySem2() {
             const textareas = document.querySelectorAll('#sem2ReasonList .reason-box');
-            sem2Selected.forEach((sub, idx) => {
-                if (textareas[idx]) sem2Reasons[sub.subject_name] = textareas[idx].value;
-            });
+            sem2Selected.forEach((sub, idx) => { if (textareas[idx]) sem2Reasons[sub.subject_name] = textareas[idx].value; });
             document.getElementById('sem2InteractiveArea').style.display = 'block';
             document.getElementById('sem2ReasonSection').style.display = 'none';
         }
 
         async function saveSem2Selections() {
-            if (!currentStudentId) { alert("학생 정보가 없습니다. 다시 조회해주세요."); return; }
+            if (!currentStudentId) return alert("학생 정보가 없습니다. 다시 조회해주세요.");
 
             const textareas = document.querySelectorAll('#sem2ReasonList .reason-box');
-            sem2Selected.forEach((sub, idx) => {
-                if (textareas[idx]) sem2Reasons[sub.subject_name] = textareas[idx].value;
-            });
+            sem2Selected.forEach((sub, idx) => { if (textareas[idx]) sem2Reasons[sub.subject_name] = textareas[idx].value; });
 
             const insertData = sem2Selected.map(sub => ({
                 student_uid: currentStudentId,
@@ -1255,37 +1185,8 @@
             }
         }
 
-        // 🌟 스마트 인쇄(상담용) 실행 함수 🌟
-        function smartPrint() {
-            if (!currentStudentId) {
-                alert("먼저 학생 정보를 조회해주세요.");
-                return;
-            }
-
-            // 1. 모든 아코디언 강제 펼침
-            document.querySelectorAll('details').forEach(d => d.setAttribute('open', 'true'));
-
-            // 2. 텍스트에어리어 높이 자동 조절 (내용 잘림 방지)
-            document.querySelectorAll('.reason-box').forEach(el => {
-                el.style.height = 'auto';
-                if (el.scrollHeight > 50) {
-                    el.style.height = (el.scrollHeight + 10) + 'px';
-                }
-            });
-
-            // 3. 스마트 인쇄용 CSS 클래스 적용
-            document.body.classList.add('smart-print-mode');
-
-            // 4. 인쇄 다이얼로그 호출
-            window.print();
-
-            // 5. 인쇄 후 원래 화면으로 복구
-            document.body.classList.remove('smart-print-mode');
-        }
-
-        // 엔터키 입력 이벤트 바인딩
-        document.getElementById('studentIdInput').addEventListener('keypress', e => { if (e.key === 'Enter') searchStudent(); });
-        document.getElementById('studentNameInput').addEventListener('keypress', e => { if (e.key === 'Enter') searchStudent(); });
+        document.getElementById('studentIdInput').addEventListener('keypress', function (e) { if (e.key === 'Enter') searchStudent(); });
+        document.getElementById('studentNameInput').addEventListener('keypress', function (e) { if (e.key === 'Enter') searchStudent(); });
     </script>
 </body>
 

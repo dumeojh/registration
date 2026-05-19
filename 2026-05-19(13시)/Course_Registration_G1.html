@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1학년 수강신청 정보 조회 및 설계</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .nav-btn {
+            padding: 8px 15px;
+            background-color: #f8f9fa;
+            color: #495057;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        .print-btn {
+            background-color: #e2ece9;
+            font-weight: bold;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        h1 {
+            color: #0056b3;
+            text-align: center;
+            font-size: 1.6em;
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            border-color: #4a90e2;
+            outline: none;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .action-btn:hover {
+            background-color: #004494;
+        }
+
+        #resultArea {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border: 2px solid #c3e6cb;
+            background-color: #f0fdf4;
+            border-radius: 10px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .info-box {
+            background: #ffffff;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 15px 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+        }
+
+        .result-label {
+            font-size: 0.85em;
+            color: #155724;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .result-value {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #000;
+            word-break: break-all;
+        }
+
+        .career-box {
+            background-color: #fff;
+            border: 2px dashed #4a90e2;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .career-box h3 {
+            margin-top: 0;
+            color: #4a90e2;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .career-inputs {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .career-inputs>div {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .career-inputs select,
+        .career-inputs input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+
+        .subject-area {
+            border-top: 1px dashed #c3e6cb;
+            padding-top: 20px;
+            margin-top: 15px;
+            display: block;
+        }
+
+        summary.result-label {
+            cursor: pointer;
+            outline: none;
+            padding: 5px 0;
+            transition: color 0.2s;
+        }
+
+        summary.result-label:hover {
+            opacity: 0.8;
+        }
+
+        .subject-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .subject-tag {
+            background-color: #e2ece9;
+            color: #0056b3;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: normal;
+            border: 1px solid #c8d8d3;
+        }
+
+        .future-subject-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .future-subject-item {
+            background-color: #f3eef5;
+            border: 1px solid #d8cce2;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.2s;
+        }
+
+        .future-subject-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: bold;
+            color: #6f42c1;
+        }
+
+        .reason-box {
+            display: none;
+            width: 100%;
+            margin-top: 12px;
+            padding: 10px;
+            border: 1px solid #c8b8e0;
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 0.9em;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* --- 듀얼 리스트 UI 공통 스타일 --- */
+        .dual-list-container {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .list-box {
+            flex: 1;
+            border: 2px solid #d8cce2;
+            border-radius: 10px;
+            padding: 15px;
+            background: #fdfdfe;
+            min-height: 250px;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .list-box h4 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 1.05em;
+            color: #6f42c1;
+            text-align: center;
+            border-bottom: 2px dashed #f3eef5;
+            padding-bottom: 8px;
+        }
+
+        .dual-subject-item {
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background-color: #f3eef5;
+            border: 1px solid #d8cce2;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .dual-subject-item:hover {
+            background-color: #e5d9f0;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .credit-summary {
+            text-align: right;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #0056b3;
+            margin-top: 15px;
+            background-color: #e0f3ff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: inline-block;
+            float: right;
+        }
+
+        .complete-btn-container {
+            clear: both;
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 15px;
+        }
+
+        .complete-btn {
+            background-color: #6f42c1;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .complete-btn:hover {
+            background-color: #5a32a3;
+        }
+
+        .reason-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .preview-text {
+            display: block;
+            font-size: 0.85em;
+            color: #0056b3;
+            margin-top: 8px;
+            font-weight: normal;
+        }
+
+        details[open] .preview-text {
+            display: none;
+        }
+
+        /* 교양과목 저장 버튼 스타일 */
+        .save-liberal-btn {
+            background-color: #ff9500;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            float: right;
+            transition: 0.2s;
+        }
+
+        .save-liberal-btn:hover {
+            background-color: #e68600;
+        }
+
+        /* ✨ 세련된 스마트 인쇄(상담용) 전용 스타일 세팅 ✨ */
+        @media print {
+
+            .nav-buttons,
+            .search-box,
+            .action-btn,
+            .save-liberal-btn {
+                display: none !important;
+            }
+
+            body {
+                padding: 0;
+                background-color: white;
+                color: #333;
+            }
+
+            .container {
+                box-shadow: none;
+                border: none;
+                max-width: 100%;
+                padding: 0;
+            }
+
+            #resultArea {
+                display: block !important;
+                border: none;
+                background: white;
+                padding: 0;
+            }
+
+            body.smart-print-mode {
+                font-size: 11pt;
+                line-height: 1.5;
+            }
+
+            body.smart-print-mode #smartPrintHeader {
+                display: block !important;
+                text-align: center;
+                font-size: 1.6em;
+                font-weight: bold;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #2c3e50;
+                padding-bottom: 10px;
+                color: #2c3e50;
+            }
+
+            body.smart-print-mode h1 {
+                display: none !important;
+            }
+
+            body.smart-print-mode #sem1InteractiveArea,
+            body.smart-print-mode #sem2InteractiveArea,
+            body.smart-print-mode .preview-text,
+            body.smart-print-mode .complete-btn-container {
+                display: none !important;
+            }
+
+            body.smart-print-mode #sem1ReasonSection,
+            body.smart-print-mode #sem2ReasonSection {
+                display: block !important;
+                margin-top: 0;
+            }
+
+            /* 요약 문구 숨김 */
+            body.smart-print-mode p {
+                display: none !important;
+            }
+
+            body.smart-print-mode .subject-area {
+                border-top: none;
+                margin-top: 0;
+                padding-top: 0;
+            }
+
+            body.smart-print-mode details {
+                border: 1px solid #ddd !important;
+                border-radius: 6px;
+                padding: 15px;
+                margin-bottom: 15px;
+                page-break-inside: avoid;
+            }
+
+            body.smart-print-mode details>summary {
+                border-bottom: 1px solid #eee;
+                padding-bottom: 8px;
+                margin-bottom: 10px;
+                font-size: 1.05em !important;
+                color: #2c3e50 !important;
+            }
+
+            /* (접기/펼치기) 문구 삭제 */
+            body.smart-print-mode summary::after {
+                content: "";
+            }
+
+            /* 학생 정보 표 */
+            body.smart-print-mode .info-grid {
+                display: flex;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                margin-bottom: 15px;
+                gap: 0;
+                background: #fdfdfd;
+            }
+
+            body.smart-print-mode .info-box {
+                flex: 1;
+                border: none;
+                border-right: 1px solid #eee;
+                padding: 10px 5px;
+                box-shadow: none;
+            }
+
+            body.smart-print-mode .result-label {
+                font-size: 0.8em;
+                color: #666;
+                margin-bottom: 4px;
+            }
+
+            body.smart-print-mode .result-value {
+                font-size: 1.05em;
+                color: #000;
+            }
+
+            /* 진로 입력창 */
+            body.smart-print-mode .career-inputs select,
+            body.smart-print-mode .career-inputs input {
+                border: none;
+                border-bottom: 1px solid #999;
+                border-radius: 0;
+                padding: 4px 0;
+                color: #000;
+                font-weight: bold;
+            }
+
+            /* 1학년은 2학년 1학기 설계부터 페이지 분할 */
+            body.smart-print-mode #grade2Area {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="nav-buttons">
+            <button type="button" class="nav-btn" onclick="history.back()">⬅ 이전 단계로</button>
+            <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
+            <div style="margin-left: auto; display: flex; gap: 10px;">
+                <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 일반 인쇄</button>
+                <button type="button" class="nav-btn print-btn"
+                    style="background-color: #cce5ff; color: #004085; border-color: #b8daff;" onclick="smartPrint()">📑
+                    스마트 인쇄(상담용)</button>
+            </div>
+        </div>
+
+        <h1>1학년 수강신청 정보 조회 및 설계</h1>
+
+        <div class="search-box">
+            <label>학번과 이름을 모두 입력하세요</label>
+            <div class="input-group">
+                <input type="text" id="studentIdInput" placeholder="1학년 학번 (예: 10101)" maxlength="5">
+                <input type="text" id="studentNameInput" placeholder="이름 (예: 홍길동)">
+            </div>
+            <button class="action-btn" onclick="searchStudent()">학생 정보 조회하기</button>
+        </div>
+
+        <div id="smartPrintHeader">
+            학생 맞춤형 진로·수강신청 상담 기초자료
+        </div>
+
+        <div id="resultArea">
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="result-label">이름</div>
+                    <div id="resName" class="result-value">-</div>
+                </div>
+                <div class="info-box">
+                    <div class="result-label">1학년 학번</div>
+                    <div id="resGrade1" class="result-value">-</div>
+                </div>
+                <div class="info-box">
+                    <div class="result-label">2학년 학번</div>
+                    <div id="resGrade2" class="result-value">-</div>
+                </div>
+                <div class="info-box">
+                    <div class="result-label">3학년 학번</div>
+                    <div id="resGrade3" class="result-value">-</div>
+                </div>
+            </div>
+
+            <div class="career-box" id="careerInfoArea">
+                <h3>🎓 나의 진로 희망</h3>
+                <div class="career-inputs">
+                    <div>
+                        <label style="font-size: 0.85em; color: #555; display:block; margin-bottom:5px;">📌 희망
+                            계열</label>
+                        <select id="desiredField">
+                            <option value="">-- 선택하세요 --</option>
+                            <option value="인문계열">인문계열</option>
+                            <option value="사회계열">사회계열</option>
+                            <option value="교육계열">교육계열</option>
+                            <option value="자연계열">자연계열</option>
+                            <option value="공학계열">공학계열</option>
+                            <option value="의약보건계열">의약보건계열</option>
+                            <option value="예체능계열">예체능계열</option>
+                            <option value="미정">미정</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.85em; color: #555; display:block; margin-bottom:5px;">🎯 희망
+                            학과</label>
+                        <input type="text" id="desiredMajor" placeholder="입력하세요">
+                    </div>
+                    <div>
+                        <button onclick="saveCareerInfo()" class="action-btn"
+                            style="padding: 10px; font-size: 1em; margin-bottom:0;">💾 진로 저장</button>
+                    </div>
+                </div>
+            </div>
+
+            <details class="subject-area" id="subjectsSection">
+                <summary class="result-label" style="font-size: 1.05em; color:#0056b3;">📘 1학년 수강과목</summary>
+                <div id="resSubjects" class="result-value" style="margin-top: 15px;"></div>
+            </details>
+
+            <details class="subject-area" id="diagnosticArea" style="display: none; border-top-color: #c8d8d3;" open>
+                <summary class="result-label" style="font-size: 1.05em; color:#155724;">🎯 2·3학년 선택교과 설계 전 필수 점검사항
+                </summary>
+                <div id="resDiagnostic" class="result-value" style="margin-top: 15px;"></div>
+            </details>
+
+            <details class="subject-area" id="grade2Area" style="display: none; border-top-color: #d8cce2;">
+                <summary class="result-label" style="font-size: 1.05em; color:#6f42c1;">
+                    🔮 2학년 1학기 선택교과 설계
+                    <div id="sem1Preview" class="preview-text"></div>
+                </summary>
+                <div style="margin-top: 10px;">
+                    <div id="resGrade2Subjects" class="future-subject-list"></div>
+                </div>
+            </details>
+
+            <details class="subject-area" id="grade2Sem2Area" style="display: none; border-top-color: #d8cce2;">
+                <summary class="result-label" style="font-size: 1.05em; color:#6f42c1;">
+                    🔮 2학년 2학기 선택교과 설계
+                    <div id="sem2Preview" class="preview-text"></div>
+                </summary>
+                <div style="margin-top: 10px;">
+                    <div id="resGrade2Sem2Subjects" class="future-subject-list"></div>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentStudentId = '';
+        let globalLiberalArtsSubjects = [];
+
+        async function searchStudent() {
+            const idVal = document.getElementById('studentIdInput').value.trim();
+            const nameVal = document.getElementById('studentNameInput').value.trim();
+            if (!idVal || !nameVal) { alert("조회할 학번과 이름을 입력해 주세요."); return; }
+
+            try {
+                const { data: student, error: studentErr } = await db
+                    .from('students')
+                    .select('uid, name, grade1_num, student_id, grade3_num, desired_field, desired_major')
+                    .eq('grade1_num', idVal)
+                    .eq('name', nameVal)
+                    .maybeSingle();
+
+                if (studentErr) throw studentErr;
+
+                if (student) {
+                    currentStudentId = student.uid;
+                    document.getElementById('resName').innerText = student.name;
+                    document.getElementById('resGrade1').innerText = student.grade1_num || "-";
+                    document.getElementById('resGrade2').innerText = student.student_id || "-";
+                    document.getElementById('resGrade3').innerText = student.grade3_num || "-";
+                    document.getElementById('desiredField').value = student.desired_field || "";
+                    document.getElementById('desiredMajor').value = student.desired_major || "";
+                    document.getElementById('careerInfoArea').style.display = 'block';
+
+                    const { data: enrollments } = await db.from('student_enrollments').select('subject_name, category').eq('student_uid', currentStudentId);
+                    const { data: g2Data } = await db.from('subjects').select('*').eq('grade', '2').order('selection_group', { ascending: true });
+                    const { data: savedSelections } = await db.from('course_selections').select('*').eq('student_uid', currentStudentId);
+
+                    const savedSem1 = savedSelections ? savedSelections.filter(s => s.semester === '2-1') : [];
+                    const savedSem2 = savedSelections ? savedSelections.filter(s => s.semester === '2-2') : [];
+                    const savedLiberalArts = savedSelections ? savedSelections.filter(s => s.semester === '교양') : [];
+
+                    globalLiberalArtsSubjects = g2Data ? g2Data.filter(sub => sub.subject_group === '교양') : [];
+
+                    // [결과 출력 및 듀얼 리스트 초기화 로직은 기존과 동일]
+                    // (생략: 위에서 복사한 코드의 해당 부분들을 모두 포함하세요)
+                    document.getElementById('resultArea').style.display = 'block';
+                    // ... [하단 initDualList 및 이벤트 리스너 동일하게 유지] ...
+                }
+            } catch (err) { alert("조회 오류: " + err.message); }
+        }
+
+        // [이하 saveCareerInfo, saveLiberalArts, initDualListSem1, initDualListSem2, smartPrint 등 동일 유지]
+        // (필요시 위 코드 전체 복사)
+    </script>
+</body>
+
+</html>

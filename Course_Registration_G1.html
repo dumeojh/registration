@@ -494,7 +494,7 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let currentStudentId = ''; // ✨ [수정됨] 현재 로그인(조회)한 학생의 '고유번호(uid)'를 저장할 전역 변수로 역할 변경
+        let currentStudentId = ''; // 현재 로그인(조회)한 학생의 '고유번호(uid)'를 저장할 전역 변수로 역할 변경
 
         async function searchStudent() {
             const idVal = document.getElementById('studentIdInput').value.trim();
@@ -505,8 +505,6 @@
                 alert("조회할 학번과 이름을 모두 입력해 주세요.");
                 return;
             }
-
-            // ✨ [수정됨] 기존에 학번을 바로 변수에 넣던 currentStudentId = idVal; 코드 삭제
 
             document.getElementById('subjectsSection').removeAttribute('open');
             document.getElementById('diagnosticArea').removeAttribute('open');
@@ -521,15 +519,14 @@
                 // 1. 학생 기본 정보 조회
                 const { data: student, error: studentErr } = await db
                     .from('students')
-                    .select('uid, name, grade1_num, student_id, grade3_num') // ✨ [수정됨] uid 컬럼 추가
-                    .eq('student_id', idVal)
+                    .select('uid, name, grade1_num, student_id, grade3_num')
+                    .eq('grade1_num', idVal) // ✨ [수정됨] 1학년 학번 컬럼(grade1_num)으로 검색하도록 수정!
                     .eq('name', nameVal)
                     .maybeSingle();
 
                 if (studentErr) throw studentErr;
 
                 if (student) {
-                    // ✨ [수정됨] 이제 DB에서 가져온 진짜 고유번호(uid)를 기준으로 삼습니다!
                     currentStudentId = student.uid;
 
                     document.getElementById('resName').innerText = student.name;
@@ -541,7 +538,7 @@
                     const { data: enrollments, error: enrollErr } = await db
                         .from('student_enrollments')
                         .select('subject_name, category')
-                        .eq('student_uid', currentStudentId); // ✨ [수정됨] student_id -> student_uid 로 변경
+                        .eq('student_uid', currentStudentId);
 
                     if (enrollErr) throw enrollErr;
 
@@ -558,7 +555,7 @@
                     const { data: savedSelections, error: saveErr } = await db
                         .from('course_selections')
                         .select('*')
-                        .eq('student_uid', currentStudentId); // ✨ [수정됨] student_id -> student_uid 로 변경
+                        .eq('student_uid', currentStudentId);
 
                     if (saveErr) console.error("저장된 데이터 로드 오류:", saveErr);
 
@@ -644,7 +641,7 @@
 
                         // [점검 1] 사회
                         if (groupCounts["사회"] === 0) {
-                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;"><b style="color:#d9534f;">1. 사회교과 필수 선택 확인</b><br>1학년 때 공통 사회과목을 이수하지 않았다면, <b>2학년 1, 2학기 중 사회교과 한 과목 이상은 필수적으로 선택</b>하시길 권장합니다.</div>`;
+                            diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #d9534f;"><b style="color:#d9534f;">1. 사회교과 필수 선택 확인</b><br>1학년 때 공통 사회과목 고를 이수하지 않았다면, <b>2학년 1, 2학기 중 사회교과 한 과목 이상은 필수적으로 선택</b>하시길 권장합니다.</div>`;
                         } else {
                             const socialListStr = takenSocialSubjects.join('<br>&nbsp;&nbsp;· ');
                             diagnosticHtml += `<div style="margin-bottom:15px; padding-left:12px; border-left:4px solid #28a745;"><b style="color:#28a745;">1. 사회교과 (이수 진행중) - 누적 ${totalSocialCredits}학점</b><br>1학년 사회교과 이수 내역이 확인됩니다. 2학년 필수 이수 조건과 연계하여 선택을 계획해 주세요.<br><div style="margin-top:6px; font-size:0.9em; color:#155724; background-color:#e2ece9; padding:8px 12px; border-radius:6px; display:inline-block; line-height:1.6;">✅ <b>나의 이수 내역 (합계: ${totalSocialCredits}학점):</b><br>&nbsp;&nbsp;· ${socialListStr}</div></div>`;
@@ -883,14 +880,13 @@
             });
 
             const insertData = sem1Selected.map(sub => ({
-                student_uid: currentStudentId, // ✨ [수정됨] student_id -> student_uid 로 변경
-                semester: '2-1', // 2학년 1학기로 저장
+                student_uid: currentStudentId,
+                semester: '2-1',
                 subject_name: sub.subject_name,
                 reason: sem1Reasons[sub.subject_name]
             }));
 
             try {
-                // ✨ [수정됨] student_id -> student_uid 로 변경
                 const { error: delErr } = await db.from('course_selections').delete().eq('student_uid', currentStudentId).eq('semester', '2-1');
                 if (delErr) throw delErr;
                 if (insertData.length > 0) {
@@ -1064,14 +1060,13 @@
             });
 
             const insertData = sem2Selected.map(sub => ({
-                student_uid: currentStudentId, // ✨ [수정됨] student_id -> student_uid 로 변경
-                semester: '2-2', // 2학년 2학기로 저장
+                student_uid: currentStudentId,
+                semester: '2-2',
                 subject_name: sub.subject_name,
                 reason: sem2Reasons[sub.subject_name]
             }));
 
             try {
-                // ✨ [수정됨] student_id -> student_uid 로 변경
                 const { error: delErr } = await db.from('course_selections').delete().eq('student_uid', currentStudentId).eq('semester', '2-2');
                 if (delErr) throw delErr;
                 if (insertData.length > 0) {

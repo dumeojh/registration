@@ -1541,7 +1541,20 @@
             summaryLabel.innerHTML = `총 선택 합계: <span id="sem1CreditTotal" style="font-size:1.3em; color:#e83e8c;">${totalCredits}</span>학점 <span style="font-size:0.8em; color:#555;">(${sem1Selected.length}/5과목)</span>`;
 
             if (previewEl) {
-                previewEl.innerText = sem1Selected.length > 0 ? `✅ 담은 과목: ${sem1Selected.map(s => s.subject_name).join(', ')}` : '';
+                if (sem1Selected.length > 0) {
+                    // 각 과목을 순회하며 교양 과목인 경우 주황색 굵은 글씨로 변경
+                    const subSpans = sem1Selected.map(s => {
+                        const isLiberal = (s.subject_group === '교양' || s.selection_group === '교양');
+                        if (isLiberal) {
+                            return `<span style="color: #d35400; font-weight: bold;">${s.subject_name}</span>`;
+                        }
+                        return `<span>${s.subject_name}</span>`;
+                    }).join(', ');
+
+                    previewEl.innerHTML = `✅ 담은 과목: ${subSpans}`;
+                } else {
+                    previewEl.innerHTML = '';
+                }
             }
         }
 
@@ -1761,7 +1774,20 @@
             const totalCredits = sem2Selected.length * 3;
             summaryLabel.innerHTML = `총 선택 합계: <span id="sem2CreditTotal" style="font-size:1.3em; color:#e83e8c;">${totalCredits}</span>학점 <span style="font-size:0.8em; color:#555;">(${sem2Selected.length}/6과목)</span>`;
             if (previewEl) {
-                previewEl.innerText = sem2Selected.length > 0 ? `✅ 담은 과목: ${sem2Selected.map(s => s.subject_name).join(', ')}` : '';
+                if (sem2Selected.length > 0) {
+                    // 각 과목을 순회하며 교양 과목인 경우 주황색 굵은 글씨로 변경
+                    const subSpans = sem2Selected.map(s => {
+                        const isLiberal = (s.subject_group === '교양' || s.selection_group === '교양');
+                        if (isLiberal) {
+                            return `<span style="color: #d35400; font-weight: bold;">${s.subject_name}</span>`;
+                        }
+                        return `<span>${s.subject_name}</span>`;
+                    }).join(', ');
+
+                    previewEl.innerHTML = `✅ 담은 과목: ${subSpans}`;
+                } else {
+                    previewEl.innerHTML = '';
+                }
             }
         }
 

@@ -1222,16 +1222,28 @@
                                 <th style="padding: 10px; width: 75px;">선택안함</th>
                             </tr>`;
 
+
+
                     globalLiberalArtsSubjects.forEach((sub, idx) => {
                         const creditText = sub.credits ? ` <span style="font-size:0.85em; color:#e83e8c;">[${sub.credits}학점]</span>` : '';
                         const radioName = `lib_radio_${idx}`;
 
+                        // ✨ 학생이 교양 저장을 깜빡했더라도, 1/2학기 저장 데이터가 있으면 자동으로 추적해서 복원
+                        let savedValue = 'none';
                         const savedRecord = savedLiberalArts.find(item => item.subject_name === sub.subject_name);
-                        const savedValue = savedRecord ? savedRecord.reason : 'none';
+                        if (savedRecord) {
+                            savedValue = savedRecord.reason;
+                        } else if (savedSem1.find(s => s.subject_name === sub.subject_name)) {
+                            savedValue = 'sem1';
+                        } else if (savedSem2.find(s => s.subject_name === sub.subject_name)) {
+                            savedValue = 'sem2';
+                        }
 
                         const chkSem1 = savedValue === 'sem1' ? 'checked' : '';
                         const chkSem2 = savedValue === 'sem2' ? 'checked' : '';
                         const chkNone = savedValue === 'none' ? 'checked' : '';
+
+
 
                         liberalArtsTable += `
                             <tr style="border-bottom: 1px solid #ffe0b2; background-color: #fff;">
@@ -1264,23 +1276,44 @@
                     let hasSem1 = savedSem1 && savedSem1.length > 0;
                     let hasSem2 = savedSem2 && savedSem2.length > 0;
 
-                    savedLiberalArts.forEach(savedLib => {
-                        const sub = globalLiberalArtsSubjects.find(s => s.subject_name === savedLib.subject_name);
-                        if (sub) {
-                            const subObj = { ...sub, selection_group: '교양', subject_group: '교양' };
-                            if (savedLib.reason === 'sem1') {
-                                sem1Selected.push(subObj);
-                                const textReasonObj = savedSem1.find(s => s.subject_name === sub.subject_name);
-                                if (textReasonObj) sem1Reasons[sub.subject_name] = textReasonObj.reason;
-                                hasSem1 = true;
-                            } else if (savedLib.reason === 'sem2') {
-                                sem2Selected.push(subObj);
-                                const textReasonObj = savedSem2.find(s => s.subject_name === sub.subject_name);
-                                if (textReasonObj) sem2Reasons[sub.subject_name] = textReasonObj.reason;
-                                hasSem2 = true;
-                            }
+                    // ✨ 전체 교양 과목을 하나씩 확인하면서, 학생이 어디에든 저장해둔 기록이 있는지 샅샅이 찾습니다.
+                    globalLiberalArtsSubjects.forEach(sub => {
+                        const subObj = { ...sub, selection_group: '교양', subject_group: '교양' };
+
+                        let targetSem = 'none';
+
+                        // 1순위: 주황색 '교양 전용 저장' 버튼을 눌러서 저장된 기록이 있는지 확인
+                        const savedRecord = savedLiberalArts.find(item => item.subject_name === sub.subject_name);
+
+                        if (savedRecord) {
+                            targetSem = savedRecord.reason;
+                        }
+                        // 2순위: 깜빡하고 교양 저장을 안 했더라도, 초록색 '1학기 저장' 버튼으로 저장한 기록이 있으면 1학기로 복구!
+                        else if (savedSem1.find(s => s.subject_name === sub.subject_name)) {
+                            targetSem = 'sem1';
+                        }
+                        // 3순위: 마찬가지로 초록색 '2학기 저장' 기록이 있다면 2학기로 복구!
+                        else if (savedSem2.find(s => s.subject_name === sub.subject_name)) {
+                            targetSem = 'sem2';
+                        }
+
+                        // 찾아낸 학기 정보(targetSem)를 바탕으로 장바구니에 다시 예쁘게 담아줍니다.
+                        if (targetSem === 'sem1') {
+                            sem1Selected.push(subObj);
+                            const textReasonObj = savedSem1.find(s => s.subject_name === sub.subject_name);
+                            if (textReasonObj) sem1Reasons[sub.subject_name] = textReasonObj.reason; // 적어둔 이유(텍스트) 복구
+                            hasSem1 = true;
+                        } else if (targetSem === 'sem2') {
+                            sem2Selected.push(subObj);
+                            const textReasonObj = savedSem2.find(s => s.subject_name === sub.subject_name);
+                            if (textReasonObj) sem2Reasons[sub.subject_name] = textReasonObj.reason; // 적어둔 이유(텍스트) 복구
+                            hasSem2 = true;
                         }
                     });
+
+
+
+
 
                     renderDualListsSem1();
                     renderDualListsSem2();

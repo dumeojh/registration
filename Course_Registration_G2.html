@@ -2085,20 +2085,26 @@
             }
         }
 
-        // ✨ 교양 미저장 방지: 다른 아코디언(탭) 열기 원천 차단
+        // ✨ 교양 미저장 방지: 다른 탭 열기 및 현재 교양 탭 닫기 원천 차단
         document.querySelectorAll('summary').forEach(summary => {
             summary.addEventListener('click', function (e) {
                 const detailsEl = this.closest('details');
 
-                // 변경사항이 있는데, 클릭한 탭이 교양 영역이 아니라면 차단!
-                if (isLiberalArtsChanged && detailsEl.id !== 'liberalArtsArea') {
-                    e.preventDefault(); // 아코디언 열리는 동작 즉시 취소
+                // 교양 과목에 변경 사항(저장 안 됨)이 있을 경우
+                if (isLiberalArtsChanged) {
+                    e.preventDefault(); // 탭을 여닫는 HTML 기본 동작 자체를 즉시 취소(차단)
+
                     alert("🚨 교양 과목 선택에 변경 사항이 있습니다.\n먼저 빨간색 [교양 과목 저장하기] 버튼을 눌러 확정해주세요!");
-                    // 사용자가 볼 수 있도록 교양 영역으로 화면 자동 스크롤
-                    document.getElementById('liberalArtsArea').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // 만약 다른 탭을 누른 거라면 교양 영역으로 화면을 끌어당겨줌
+                    if (detailsEl.id !== 'liberalArtsArea') {
+                        document.getElementById('liberalArtsArea').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                 }
             });
         });
+
+
     </script>
 </body>
 

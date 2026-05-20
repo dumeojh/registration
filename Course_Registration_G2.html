@@ -1518,14 +1518,24 @@
                         </div>`;
             }).join('');
 
+
+
             selContainer.innerHTML = sem1Selected.map(sub => {
                 const safeName = sub.subject_name.replace(/'/g, "\\'");
                 const groupText = sub.selection_group ? `<span style="font-size:0.8em; color:#888; font-weight:normal;"> (${sub.selection_group})</span>` : '';
+
+                // ✨ 교양 과목 시각적 구분 로직 추가
+                const isLiberal = (sub.subject_group === '교양' || sub.selection_group === '교양');
+                const textColor = isLiberal ? '#d35400' : 'inherit'; // 교양은 주황색, 일반은 기본색
+                const liberalBadge = isLiberal ? ' <span style="font-size:0.75em; background-color:#ffe0b2; color:#d35400; padding:2px 6px; border-radius:4px; margin-left:4px;">자동추가됨</span>' : '';
+
                 return `<div class="dual-subject-item" style="background-color:#e0eafa; border-color:#b8daff;" onclick="moveLeft('${safeName}')">
                             <span style="color:#d9534f;">◀</span>
-                            <span>${sub.subject_name}${groupText}</span>
+                            <span style="color: ${textColor};">${sub.subject_name}${groupText}${liberalBadge}</span>
                         </div>`;
             }).join('');
+
+
 
             const totalCredits = sem1Selected.length * 3;
             summaryLabel.innerHTML = `총 선택 합계: <span id="sem1CreditTotal" style="font-size:1.3em; color:#e83e8c;">${totalCredits}</span>학점 <span style="font-size:0.8em; color:#555;">(${sem1Selected.length}/5과목)</span>`;
@@ -1559,7 +1569,7 @@
         }
 
         function completeSem1() {
-            if (sem1Selected.length === 0) return alert("선택된 과목이 없습니다. 최소 1개 이상의 과목을 선택해 주세요.");
+            if (sem1Selected.length === 0) return alert("선택된 과목이 없습니다.");
 
             document.getElementById('sem1InteractiveArea').style.display = 'none';
             document.getElementById('sem1ReasonSection').style.display = 'block';
@@ -1575,15 +1585,26 @@
                         fileLinksHtml += `<a href="https://dumeojh.github.io/high/jpgs/${fileName}" target="_blank" style="color: #0056b3; font-size: 0.85em; text-decoration: none; font-weight: bold; margin-left: 6px; background-color: #e2ece9; padding: 2px 6px; border-radius: 4px; border: 1px solid #c3e6cb;">[파일${i}]</a>`;
                     }
                 }
+
+
+
                 // ✨ DOM 꼬임 현상 해결: 명시적인 ID 매핑
+                const isLiberal = (sub.subject_group === '교양' || sub.selection_group === '교양');
+                const titleColor = isLiberal ? '#d35400' : '#6f42c1'; // 교양은 주황색, 일반은 보라색
+                const liberalBadge = isLiberal ? ' <span style="font-size:0.8em; background-color:#ffe0b2; color:#d35400; padding:3px 8px; border-radius:12px; margin-left:6px; font-weight:normal;">📙 교양 자동배치</span>' : '';
+
                 return `
-                <div class="future-subject-item">
+                <div class="future-subject-item" ${isLiberal ? 'style="border-color:#ffe0b2; background-color:#fffdfa;"' : ''}>
                     <label class="future-subject-header" style="cursor: default;">
-                        <span style="font-size:1.05em; color:#6f42c1;">✅ ${sub.subject_name}${groupText}${fileLinksHtml}</span>
+                        <span style="font-size:1.05em; color:${titleColor};">✅ ${sub.subject_name}${groupText}${liberalBadge}${fileLinksHtml}</span>
                     </label>
                     <textarea id="reason_sem1_${encodeURIComponent(sub.subject_name)}" class="reason-box" style="display:block; width:100%; min-height:80px; margin-top:12px;" placeholder="${sub.subject_name} 과목을 선택한 이유를 자유롭게 적어보세요.">${savedText}</textarea>
                 </div>`;
             }).join('');
+
+
+
+
         }
 
         function modifySem1() {
@@ -1717,14 +1738,25 @@
                         </div>`;
             }).join('');
 
+
+
             selContainer.innerHTML = sem2Selected.map(sub => {
                 const safeName = sub.subject_name.replace(/'/g, "\\'");
                 const groupText = sub.selection_group ? `<span style="font-size:0.8em; color:#888; font-weight:normal;"> (${sub.selection_group})</span>` : '';
+
+                // ✨ 교양 과목 시각적 구분
+                const isLiberal = (sub.subject_group === '교양' || sub.selection_group === '교양');
+                const textColor = isLiberal ? '#d35400' : 'inherit';
+                const liberalBadge = isLiberal ? ' <span style="font-size:0.75em; background-color:#ffe0b2; color:#d35400; padding:2px 6px; border-radius:4px; margin-left:4px;">자동추가됨</span>' : '';
+
                 return `<div class="dual-subject-item" style="background-color:#e0eafa; border-color:#b8daff;" onclick="moveLeftSem2('${safeName}')">
                             <span style="color:#d9534f;">◀</span>
-                            <span>${sub.subject_name}${groupText}</span>
+                            <span style="color: ${textColor};">${sub.subject_name}${groupText}${liberalBadge}</span>
                         </div>`;
             }).join('');
+
+
+
 
             const totalCredits = sem2Selected.length * 3;
             summaryLabel.innerHTML = `총 선택 합계: <span id="sem2CreditTotal" style="font-size:1.3em; color:#e83e8c;">${totalCredits}</span>학점 <span style="font-size:0.8em; color:#555;">(${sem2Selected.length}/6과목)</span>`;
@@ -1778,15 +1810,24 @@
                         fileLinksHtml += `<a href="https://dumeojh.github.io/high/jpgs/${fileName}" target="_blank" style="color: #0056b3; font-size: 0.85em; text-decoration: none; font-weight: bold; margin-left: 6px; background-color: #e2ece9; padding: 2px 6px; border-radius: 4px; border: 1px solid #c3e6cb;">[파일${i}]</a>`;
                     }
                 }
+
+
                 // ✨ DOM 꼬임 현상 해결: 명시적인 ID 매핑
+                const isLiberal = (sub.subject_group === '교양' || sub.selection_group === '교양');
+                const titleColor = isLiberal ? '#d35400' : '#6f42c1'; // 교양은 주황색, 일반은 보라색
+                const liberalBadge = isLiberal ? ' <span style="font-size:0.8em; background-color:#ffe0b2; color:#d35400; padding:3px 8px; border-radius:12px; margin-left:6px; font-weight:normal;">📙 교양 자동배치</span>' : '';
+
                 return `
-                <div class="future-subject-item">
+                <div class="future-subject-item" ${isLiberal ? 'style="border-color:#ffe0b2; background-color:#fffdfa;"' : ''}>
                     <label class="future-subject-header" style="cursor: default;">
-                        <span style="font-size:1.05em; color:#6f42c1;">✅ ${sub.subject_name}${groupText}${fileLinksHtml}</span>
+                        <span style="font-size:1.05em; color:${titleColor};">✅ ${sub.subject_name}${groupText}${liberalBadge}${fileLinksHtml}</span>
                     </label>
                     <textarea id="reason_sem2_${encodeURIComponent(sub.subject_name)}" class="reason-box" style="display:block; width:100%; min-height:80px; margin-top:12px;" placeholder="${sub.subject_name} 과목을 선택한 이유를 자유롭게 적어보세요.">${savedText}</textarea>
                 </div>`;
             }).join('');
+
+
+
         }
 
         function modifySem2() {

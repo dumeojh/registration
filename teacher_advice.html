@@ -380,25 +380,34 @@
             }
         }
 
-        // ✨ 학년 선택 변경 시 동작하는 함수
+
+        // ✨ 학년 선택 변경 시 동작하는 함수 (수정됨)
         function updateClassDropdown() {
             const gradeFilter = document.getElementById('gradeFilter').value;
 
-            // 학년 필터링 핵심 로직
+            // 학년 필터링 핵심 로직: 데이터 타입 및 공백, 문자열 'null' 방어 코드 추가
             if (gradeFilter === '1') {
-                // 1학년: grade1_num이 있으면서, grade2_num은 없는(진급하지 않은) 학생
-                currentGradeStudents = allStudents.filter(s => s.grade1_num && (!s.grade2_num || s.grade2_num.trim() === ''));
-                currentGradeStudents.sort((a, b) => a.grade1_num.localeCompare(b.grade1_num));
+                currentGradeStudents = allStudents.filter(s => {
+                    const g1 = s.grade1_num ? String(s.grade1_num).trim() : '';
+                    const g2 = s.grade2_num ? String(s.grade2_num).trim() : '';
+                    return g1 !== '' && (g2 === '' || g2 === 'null');
+                });
+                currentGradeStudents.sort((a, b) => String(a.grade1_num || '').trim().localeCompare(String(b.grade1_num || '').trim()));
             } else if (gradeFilter === '2') {
-                // 2학년: grade2_num이 있으면서, grade3_num은 없는(진급하지 않은) 학생
-                currentGradeStudents = allStudents.filter(s => s.grade2_num && (!s.grade3_num || s.grade3_num.trim() === ''));
-                currentGradeStudents.sort((a, b) => a.grade2_num.localeCompare(b.grade2_num));
+                currentGradeStudents = allStudents.filter(s => {
+                    const g2 = s.grade2_num ? String(s.grade2_num).trim() : '';
+                    const g3 = s.grade3_num ? String(s.grade3_num).trim() : '';
+                    return g2 !== '' && (g3 === '' || g3 === 'null');
+                });
+                currentGradeStudents.sort((a, b) => String(a.grade2_num || '').trim().localeCompare(String(b.grade2_num || '').trim()));
             }
 
             // 필터링된 학생들의 반(Class) 목록 추출
             const classSet = new Set();
             currentGradeStudents.forEach(s => {
-                const stuId = gradeFilter === '1' ? s.grade1_num : s.grade2_num;
+                const rawId = gradeFilter === '1' ? s.grade1_num : s.grade2_num;
+                const stuId = rawId ? String(rawId).trim() : ""; // 강제 문자열 변환 및 공백 제거
+
                 if (stuId && stuId.length >= 5) {
                     classSet.add(stuId.substring(1, 3));
                 }
@@ -418,6 +427,7 @@
             renderTable();
         }
 
+        // ✨ 학생 데이터를 테이블에 그려주는 함수 (수정됨)
         function renderTable() {
             const gradeFilter = document.getElementById('gradeFilter').value;
             const classFilter = document.getElementById('classFilter').value;
@@ -427,9 +437,11 @@
 
             let filteredStudents = currentGradeStudents;
 
+            // 특정 반을 선택했을 때 필터링 로직 수정
             if (classFilter !== 'all' && classFilter !== '') {
                 filteredStudents = currentGradeStudents.filter(s => {
-                    const stuId = gradeFilter === '1' ? s.grade1_num : s.grade2_num;
+                    const rawId = gradeFilter === '1' ? s.grade1_num : s.grade2_num;
+                    const stuId = rawId ? String(rawId).trim() : "";
                     return stuId && stuId.length >= 5 && stuId.substring(1, 3) === classFilter;
                 });
             }
@@ -443,29 +455,26 @@
 
             let html = '';
             filteredStudents.forEach(student => {
-                const stuId = gradeFilter === '1' ? student.grade1_num : student.grade2_num;
+                const rawId = gradeFilter === '1' ? student.grade1_num : student.grade2_num;
+                const stuId = rawId ? String(rawId).trim() : "";
                 const field = student.desired_field ? student.desired_field : '<span class="empty-cell">미입력</span>';
                 const major = student.desired_major ? student.desired_major : '<span class="empty-cell">미입력</span>';
 
                 html += `
-                    <tr>
-                        <td style="font-weight: bold; color: #495057;">${stuId}</td>
-                        <td style="font-weight: bold;">${student.name}</td>
-                        <td>${field}</td>
-                        <td>${major}</td>
-                        <td></td> 
-                    </tr>
-                `;
+            <tr>
+                <td style="font-weight: bold; color: #495057;">${stuId}</td>
+                <td style="font-weight: bold;">${student.name}</td>
+                <td>${field}</td>
+                <td>${major}</td>
+                <td></td> 
+            </tr>
+        `;
             });
 
             tbody.innerHTML = html;
             countSpan.innerText = filteredStudents.length;
             tableContainer.style.display = 'block';
         }
-
-        window.onload = function () {
-            document.getElementById('adminPassword').focus();
-        };
     </script>
 </body>
 

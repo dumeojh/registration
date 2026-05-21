@@ -161,6 +161,46 @@
             font-style: italic;
         }
 
+        /* ✨ 비밀번호 오버레이 스타일 */
+        #passwordOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f4f7f6;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .password-box {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .password-box input {
+            padding: 12px;
+            font-size: 1.2em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 80%;
+            text-align: center;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        .password-box input:focus {
+            border-color: #28a745;
+        }
+
         /* ✨ 인쇄 전용 스타일 */
         @media print {
             body {
@@ -178,7 +218,8 @@
 
             .nav-buttons,
             .controls,
-            .subtitle {
+            .subtitle,
+            #passwordOverlay {
                 display: none !important;
             }
 
@@ -211,7 +252,22 @@
 
 <body>
 
-    <div class="container">
+    <div id="passwordOverlay">
+        <div class="password-box">
+            <h2 style="color: #28a745; margin-top: 0; font-size: 1.8em;">👩‍🏫 교사용 페이지</h2>
+            <p style="color: #666; margin-bottom: 25px; line-height: 1.5;">학생들의 진학 상담 데이터가 포함되어 있습니다.<br>비밀번호를 입력해 주세요.
+            </p>
+            <input type="password" id="adminPassword" placeholder="비밀번호 입력"
+                onkeypress="if(event.key === 'Enter') checkPassword()">
+            <br>
+            <button class="action-btn" onclick="checkPassword()" style="width: 80%;">접속하기</button>
+            <div style="margin-top: 15px;">
+                <a href="index.html" style="color: #0056b3; text-decoration: none; font-size: 0.9em;">⬅ 메인 화면으로 돌아가기</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer" style="display: none;">
         <div class="nav-buttons">
             <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
             <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 명단 인쇄하기</button>
@@ -251,20 +307,37 @@
     </div>
 
     <script>
+        // ✨ 비밀번호 확인 로직
+        function checkPassword() {
+            const pwdInput = document.getElementById('adminPassword').value;
+
+            // 👇 여기에 원하시는 비밀번호를 설정하세요 (현재: teacher2026)
+            const correctPassword = 'teacher2026';
+
+            if (pwdInput === correctPassword) {
+                // 비밀번호가 맞으면 입력창을 숨기고 본문을 보여준 뒤 데이터를 불러옴
+                document.getElementById('passwordOverlay').style.display = 'none';
+                document.getElementById('mainContainer').style.display = 'block';
+                initData(); // 데이터 불러오기 시작
+            } else {
+                alert('비밀번호가 일치하지 않습니다.');
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').focus();
+            }
+        }
+
         const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let allGrade1Students = [];
 
-        // 1000개 제한을 넘을 경우를 대비한 반복 Fetch 함수 (index.html 로직 차용)
         async function fetchAllStudents() {
             let allData = [];
             let start = 0;
             const limit = 1000;
 
             while (true) {
-                // grade1_num 이 존재하는(1학년) 학생만 가져오기
                 const { data, error } = await db.from('students')
                     .select('grade1_num, name, desired_field, desired_major')
                     .not('grade1_num', 'is', null)
@@ -292,7 +365,6 @@
             try {
                 allGrade1Students = await fetchAllStudents();
 
-                // 반(Class) 목록 추출 (예: '10101' -> '01')
                 const classSet = new Set();
                 allGrade1Students.forEach(s => {
                     if (s.grade1_num && s.grade1_num.length >= 5) {
@@ -310,7 +382,6 @@
                 selectEl.innerHTML = optionsHtml;
                 loadingMsg.style.display = 'none';
 
-                // 초기 렌더링
                 renderTable();
 
             } catch (err) {
@@ -353,7 +424,8 @@
                         <td style="font-weight: bold;">${student.name}</td>
                         <td>${field}</td>
                         <td>${major}</td>
-                        <td></td> </tr>
+                        <td></td> 
+                    </tr>
                 `;
             });
 
@@ -362,8 +434,10 @@
             tableContainer.style.display = 'block';
         }
 
-        // 페이지 로드 시 데이터 초기화 실행
-        window.onload = initData;
+        // 페이지가 열리면 비밀번호 입력창에 자동으로 커서가 가도록 설정
+        window.onload = function () {
+            document.getElementById('adminPassword').focus();
+        };
     </script>
 </body>
 

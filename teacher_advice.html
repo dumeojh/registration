@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1학년 진학 상담 조회 (교사용)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .nav-btn {
+            padding: 8px 15px;
+            background-color: #f8f9fa;
+            color: #495057;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        .print-btn {
+            background-color: #cce5ff;
+            font-weight: bold;
+            color: #004085;
+            border-color: #b8daff;
+            margin-left: auto;
+        }
+
+        h1 {
+            color: #28a745;
+            text-align: center;
+            font-size: 1.6em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 30px;
+        }
+
+        select {
+            padding: 10px 15px;
+            font-size: 1.1em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        select:focus {
+            border-color: #28a745;
+        }
+
+        .action-btn {
+            padding: 10px 25px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .action-btn:hover {
+            background-color: #218838;
+        }
+
+        #loadingMsg {
+            text-align: center;
+            color: #0056b3;
+            font-weight: bold;
+            display: none;
+            margin: 20px 0;
+        }
+
+        /* 테이블 스타일 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.95em;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        th,
+        td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #e2ece9;
+            color: #155724;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+
+        tr:hover {
+            background-color: #f0fdf4;
+        }
+
+        td.empty-cell {
+            color: #adb5bd;
+            font-style: italic;
+        }
+
+        /* ✨ 인쇄 전용 스타일 */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                color: black;
+            }
+
+            .container {
+                box-shadow: none;
+                border: none;
+                max-width: 100%;
+                padding: 0;
+            }
+
+            .nav-buttons,
+            .controls,
+            .subtitle {
+                display: none !important;
+            }
+
+            h1 {
+                color: black;
+                font-size: 1.8em;
+                margin-bottom: 20px;
+                border-bottom: 2px solid black;
+                padding-bottom: 10px;
+            }
+
+            table {
+                font-size: 11pt;
+            }
+
+            th {
+                background-color: #eee !important;
+                color: black !important;
+                -webkit-print-color-adjust: exact;
+            }
+
+            th,
+            td {
+                border: 1px solid #000;
+                color: black;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
+            <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 명단 인쇄하기</button>
+        </div>
+
+        <h1>👩‍🏫 1학년 진학 및 학업설계 상담 자료</h1>
+        <p class="subtitle">학생들이 '1학년 학업설계서'에서 직접 저장한 희망 계열 및 희망 학과 명단입니다.</p>
+
+        <div class="controls">
+            <label for="classFilter" style="font-weight: bold; color: #333;">조회할 학급 선택 :</label>
+            <select id="classFilter">
+                <option value="">데이터를 불러오는 중...</option>
+            </select>
+            <button class="action-btn" onclick="renderTable()">조회하기</button>
+        </div>
+
+        <div id="loadingMsg">⏳ 학생 데이터를 불러오고 있습니다...</div>
+
+        <div id="tableContainer" style="display: none;">
+            <div style="text-align: right; margin-bottom: 10px; font-size: 0.9em; color: #666;">
+                총 <span id="studentCount" style="font-weight: bold; color: #d9534f;">0</span>명
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">학번</th>
+                        <th style="width: 15%;">이름</th>
+                        <th style="width: 25%;">희망 계열</th>
+                        <th style="width: 30%;">희망 학과</th>
+                        <th style="width: 20%;">비고 (상담내용)</th>
+                    </tr>
+                </thead>
+                <tbody id="studentTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let allGrade1Students = [];
+
+        // 1000개 제한을 넘을 경우를 대비한 반복 Fetch 함수 (index.html 로직 차용)
+        async function fetchAllStudents() {
+            let allData = [];
+            let start = 0;
+            const limit = 1000;
+
+            while (true) {
+                // grade1_num 이 존재하는(1학년) 학생만 가져오기
+                const { data, error } = await db.from('students')
+                    .select('grade1_num, name, desired_field, desired_major')
+                    .not('grade1_num', 'is', null)
+                    .neq('grade1_num', '')
+                    .order('grade1_num', { ascending: true })
+                    .range(start, start + limit - 1);
+
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+
+                allData = allData.concat(data);
+
+                if (data.length < limit) break;
+                start += limit;
+            }
+            return allData;
+        }
+
+        async function initData() {
+            const loadingMsg = document.getElementById('loadingMsg');
+            const selectEl = document.getElementById('classFilter');
+
+            loadingMsg.style.display = 'block';
+
+            try {
+                allGrade1Students = await fetchAllStudents();
+
+                // 반(Class) 목록 추출 (예: '10101' -> '01')
+                const classSet = new Set();
+                allGrade1Students.forEach(s => {
+                    if (s.grade1_num && s.grade1_num.length >= 5) {
+                        classSet.add(s.grade1_num.substring(1, 3));
+                    }
+                });
+
+                const classArray = Array.from(classSet).sort();
+
+                let optionsHtml = '<option value="all">전체 반 보기</option>';
+                classArray.forEach(cls => {
+                    optionsHtml += `<option value="${cls}">${parseInt(cls, 10)}반</option>`;
+                });
+
+                selectEl.innerHTML = optionsHtml;
+                loadingMsg.style.display = 'none';
+
+                // 초기 렌더링
+                renderTable();
+
+            } catch (err) {
+                console.error("데이터 로드 오류:", err);
+                alert("데이터를 불러오는 중 오류가 발생했습니다.");
+                loadingMsg.style.display = 'none';
+                selectEl.innerHTML = '<option value="">불러오기 실패</option>';
+            }
+        }
+
+        function renderTable() {
+            const classFilter = document.getElementById('classFilter').value;
+            const tbody = document.getElementById('studentTableBody');
+            const tableContainer = document.getElementById('tableContainer');
+            const countSpan = document.getElementById('studentCount');
+
+            if (allGrade1Students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">등록된 1학년 학생 데이터가 없습니다.</td></tr>';
+                tableContainer.style.display = 'block';
+                countSpan.innerText = 0;
+                return;
+            }
+
+            let filteredStudents = allGrade1Students;
+
+            if (classFilter !== 'all' && classFilter !== '') {
+                filteredStudents = allGrade1Students.filter(s => {
+                    return s.grade1_num && s.grade1_num.length >= 5 && s.grade1_num.substring(1, 3) === classFilter;
+                });
+            }
+
+            let html = '';
+            filteredStudents.forEach(student => {
+                const field = student.desired_field ? student.desired_field : '<span class="empty-cell">미입력</span>';
+                const major = student.desired_major ? student.desired_major : '<span class="empty-cell">미입력</span>';
+
+                html += `
+                    <tr>
+                        <td style="font-weight: bold; color: #495057;">${student.grade1_num}</td>
+                        <td style="font-weight: bold;">${student.name}</td>
+                        <td>${field}</td>
+                        <td>${major}</td>
+                        <td></td> </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+            countSpan.innerText = filteredStudents.length;
+            tableContainer.style.display = 'block';
+        }
+
+        // 페이지 로드 시 데이터 초기화 실행
+        window.onload = initData;
+    </script>
+</body>
+
+</html>

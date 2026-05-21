@@ -157,11 +157,6 @@
             background-color: #f0fdf4;
         }
 
-        td.empty-cell {
-            color: #adb5bd;
-            font-style: italic;
-        }
-
         /* ✨ 비밀번호 오버레이 스타일 */
         #passwordOverlay {
             position: fixed;
@@ -200,6 +195,26 @@
 
         .password-box input:focus {
             border-color: #28a745;
+        }
+
+        /* ✨ 입력 상태 구분 뱃지 스타일 */
+        .status-entered {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+
+        .status-missing {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
         }
 
         /* ✨ 인쇄 전용 스타일 */
@@ -285,8 +300,15 @@
             </select>
 
             <label for="classFilter" style="font-weight: bold; color: #333; margin-left: 15px;">학급 :</label>
-            <select id="classFilter">
+            <select id="classFilter" onchange="renderTable()">
                 <option value="">데이터를 불러오는 중...</option>
+            </select>
+
+            <label for="statusFilter" style="font-weight: bold; color: #333; margin-left: 15px;">상태 :</label>
+            <select id="statusFilter" onchange="renderTable()">
+                <option value="all">전체 보기</option>
+                <option value="entered">✅ 입력 완료</option>
+                <option value="missing">❌ 미입력</option>
             </select>
 
             <button class="action-btn" onclick="renderTable()">조회하기</button>
@@ -343,7 +365,6 @@
             const limit = 1000;
 
             while (true) {
-                // ✨ 1, 2, 3학년 학번을 모두 불러옵니다.
                 const { data, error } = await db.from('students')
                     .select('grade1_num, grade2_num, grade3_num, name, desired_field, desired_major')
                     .range(start, start + limit - 1);
@@ -369,7 +390,6 @@
                 allStudents = await fetchAllStudents();
                 loadingMsg.style.display = 'none';
 
-                // 처음 데이터 로드 후 1학년 세팅으로 학급 드롭다운 및 테이블 렌더링
                 updateClassDropdown();
 
             } catch (err) {
@@ -384,12 +404,10 @@
         function updateClassDropdown() {
             const gradeFilter = document.getElementById('gradeFilter').value;
 
-            // 💡 핵심 수정: 쓰레기 값("0", "-", " ")이 들어있어도 학번의 '첫 글자'로 정확히 학년을 구분합니다.
             if (gradeFilter === '1') {
                 currentGradeStudents = allStudents.filter(s => {
                     const g1 = s.grade1_num ? String(s.grade1_num).trim() : '';
                     const g2 = s.grade2_num ? String(s.grade2_num).trim() : '';
-                    // 1학년 학번이 '1'로 시작하고, 2학년 학번이 '2'로 시작하지 않는 학생만 추출
                     return g1.startsWith('1') && !g2.startsWith('2');
                 });
                 currentGradeStudents.sort((a, b) => String(a.grade1_num || '').trim().localeCompare(String(b.grade1_num || '').trim()));
@@ -397,24 +415,21 @@
                 currentGradeStudents = allStudents.filter(s => {
                     const g2 = s.grade2_num ? String(s.grade2_num).trim() : '';
                     const g3 = s.grade3_num ? String(s.grade3_num).trim() : '';
-                    // 2학년 학번이 '2'로 시작하고, 3학년 학번이 '3'로 시작하지 않는 학생만 추출
                     return g2.startsWith('2') && !g3.startsWith('3');
                 });
                 currentGradeStudents.sort((a, b) => String(a.grade2_num || '').trim().localeCompare(String(b.grade2_num || '').trim()));
             }
 
-            // 필터링된 학생들의 반(Class) 목록 추출
             const classSet = new Set();
             currentGradeStudents.forEach(s => {
                 const rawId = gradeFilter === '1' ? s.grade1_num : s.grade2_num;
                 const stuId = rawId ? String(rawId).trim() : "";
 
-                // 💡 4자리 학번(예: 1301)과 5자리 학번(예: 10301) 혼재 시 오류 방지
                 if (stuId) {
                     if (stuId.length === 5) {
-                        classSet.add(stuId.substring(1, 3)); // 10301 -> "03"
+                        classSet.add(stuId.substring(1, 3));
                     } else if (stuId.length === 4) {
-                        classSet.add('0' + stuId.substring(1, 2)); // 1301 -> "03"
+                        classSet.add('0' + stuId.substring(1, 2));
                     }
                 }
             });
@@ -433,19 +448,20 @@
             renderTable();
         }
 
-        // ✨ 학생 데이터를 테이블에 그려주는 함수 (완벽 방어 로직 적용)
+        // ✨ 학생 데이터를 테이블에 그려주는 함수 (입력 상태 필터 및 라벨 적용)
         function renderTable() {
             const gradeFilter = document.getElementById('gradeFilter').value;
             const classFilter = document.getElementById('classFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
             const tbody = document.getElementById('studentTableBody');
             const tableContainer = document.getElementById('tableContainer');
             const countSpan = document.getElementById('studentCount');
 
             let filteredStudents = currentGradeStudents;
 
-            // 특정 반을 선택했을 때 필터링 로직 수정 (4자리, 5자리 학번 모두 호환)
+            // 1. 반 필터링
             if (classFilter !== 'all' && classFilter !== '') {
-                filteredStudents = currentGradeStudents.filter(s => {
+                filteredStudents = filteredStudents.filter(s => {
                     const rawId = gradeFilter === '1' ? s.grade1_num : s.grade2_num;
                     const stuId = rawId ? String(rawId).trim() : "";
 
@@ -460,8 +476,15 @@
                 });
             }
 
+            // 2. ✨ 입력 상태 필터링 추가
+            if (statusFilter === 'entered') {
+                filteredStudents = filteredStudents.filter(s => s.desired_field && s.desired_field.trim() !== '');
+            } else if (statusFilter === 'missing') {
+                filteredStudents = filteredStudents.filter(s => !s.desired_field || s.desired_field.trim() === '');
+            }
+
             if (filteredStudents.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5">등록된 데이터가 없습니다.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5">해당 조건에 맞는 학생 데이터가 없습니다.</td></tr>`;
                 tableContainer.style.display = 'block';
                 countSpan.innerText = 0;
                 return;
@@ -471,15 +494,25 @@
             filteredStudents.forEach(student => {
                 const rawId = gradeFilter === '1' ? student.grade1_num : student.grade2_num;
                 const stuId = rawId ? String(rawId).trim() : "";
-                const field = student.desired_field ? student.desired_field : '<span class="empty-cell">미입력</span>';
-                const major = student.desired_major ? student.desired_major : '<span class="empty-cell">미입력</span>';
+
+                // ✨ 값 존재 여부에 따라 라벨 스타일 분기 처리
+                const isFieldEntered = student.desired_field && student.desired_field.trim() !== '';
+                const isMajorEntered = student.desired_major && student.desired_major.trim() !== '';
+
+                const fieldHtml = isFieldEntered
+                    ? `<span class="status-entered">${student.desired_field}</span>`
+                    : `<span class="status-missing">미입력</span>`;
+
+                const majorHtml = isMajorEntered
+                    ? `<span class="status-entered">${student.desired_major}</span>`
+                    : `<span class="status-missing">미입력</span>`;
 
                 html += `
             <tr>
                 <td style="font-weight: bold; color: #495057;">${stuId}</td>
                 <td style="font-weight: bold;">${student.name}</td>
-                <td>${field}</td>
-                <td>${major}</td>
+                <td>${fieldHtml}</td>
+                <td>${majorHtml}</td>
                 <td></td> 
             </tr>
         `;

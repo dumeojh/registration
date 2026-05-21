@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1학년 진학 상담 조회 (교사용)</title>
+    <title>1·2학년 진학 상담 조회 (교사용)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
@@ -85,6 +85,7 @@
             border-radius: 10px;
             border: 1px solid #dee2e6;
             margin-bottom: 30px;
+            flex-wrap: wrap;
         }
 
         select {
@@ -273,14 +274,21 @@
             <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 명단 인쇄하기</button>
         </div>
 
-        <h1>👩‍🏫 1학년 진학 및 학업설계 상담 자료</h1>
-        <p class="subtitle">학생들이 '1학년 학업설계서'에서 직접 저장한 희망 계열 및 희망 학과 명단입니다.</p>
+        <h1>👩‍🏫 1·2학년 진학 및 학업설계 상담 자료</h1>
+        <p class="subtitle">학생들이 학업설계서에서 직접 저장한 희망 계열 및 희망 학과 명단입니다.</p>
 
         <div class="controls">
-            <label for="classFilter" style="font-weight: bold; color: #333;">조회할 학급 선택 :</label>
+            <label for="gradeFilter" style="font-weight: bold; color: #333;">학년 :</label>
+            <select id="gradeFilter" onchange="updateClassDropdown()">
+                <option value="1">1학년</option>
+                <option value="2">2학년</option>
+            </select>
+
+            <label for="classFilter" style="font-weight: bold; color: #333; margin-left: 15px;">학급 :</label>
             <select id="classFilter">
                 <option value="">데이터를 불러오는 중...</option>
             </select>
+
             <button class="action-btn" onclick="renderTable()">조회하기</button>
         </div>
 
@@ -307,18 +315,14 @@
     </div>
 
     <script>
-        // ✨ 비밀번호 확인 로직
         function checkPassword() {
             const pwdInput = document.getElementById('adminPassword').value;
-
-            // 👇 여기에 원하시는 비밀번호를 설정하세요 (현재: teacher2026)
             const correctPassword = 'teacher2026';
 
             if (pwdInput === correctPassword) {
-                // 비밀번호가 맞으면 입력창을 숨기고 본문을 보여준 뒤 데이터를 불러옴
                 document.getElementById('passwordOverlay').style.display = 'none';
                 document.getElementById('mainContainer').style.display = 'block';
-                initData(); // 데이터 불러오기 시작
+                initData();
             } else {
                 alert('비밀번호가 일치하지 않습니다.');
                 document.getElementById('adminPassword').value = '';
@@ -330,7 +334,8 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let allGrade1Students = [];
+        let allStudents = [];
+        let currentGradeStudents = [];
 
         async function fetchAllStudents() {
             let allData = [];
@@ -338,11 +343,9 @@
             const limit = 1000;
 
             while (true) {
+                // ✨ 1, 2, 3학년 학번을 모두 불러옵니다.
                 const { data, error } = await db.from('students')
-                    .select('grade1_num, name, desired_field, desired_major')
-                    .not('grade1_num', 'is', null)
-                    .neq('grade1_num', '')
-                    .order('grade1_num', { ascending: true })
+                    .select('grade1_num, grade2_num, grade3_num, name, desired_field, desired_major')
                     .range(start, start + limit - 1);
 
                 if (error) throw error;
@@ -363,26 +366,11 @@
             loadingMsg.style.display = 'block';
 
             try {
-                allGrade1Students = await fetchAllStudents();
-
-                const classSet = new Set();
-                allGrade1Students.forEach(s => {
-                    if (s.grade1_num && s.grade1_num.length >= 5) {
-                        classSet.add(s.grade1_num.substring(1, 3));
-                    }
-                });
-
-                const classArray = Array.from(classSet).sort();
-
-                let optionsHtml = '<option value="all">전체 반 보기</option>';
-                classArray.forEach(cls => {
-                    optionsHtml += `<option value="${cls}">${parseInt(cls, 10)}반</option>`;
-                });
-
-                selectEl.innerHTML = optionsHtml;
+                allStudents = await fetchAllStudents();
                 loadingMsg.style.display = 'none';
 
-                renderTable();
+                // 처음 데이터 로드 후 1학년 세팅으로 학급 드롭다운 및 테이블 렌더링
+                updateClassDropdown();
 
             } catch (err) {
                 console.error("데이터 로드 오류:", err);
@@ -392,35 +380,76 @@
             }
         }
 
+        // ✨ 학년 선택 변경 시 동작하는 함수
+        function updateClassDropdown() {
+            const gradeFilter = document.getElementById('gradeFilter').value;
+
+            // 학년 필터링 핵심 로직
+            if (gradeFilter === '1') {
+                // 1학년: grade1_num이 있으면서, grade2_num은 없는(진급하지 않은) 학생
+                currentGradeStudents = allStudents.filter(s => s.grade1_num && (!s.grade2_num || s.grade2_num.trim() === ''));
+                currentGradeStudents.sort((a, b) => a.grade1_num.localeCompare(b.grade1_num));
+            } else if (gradeFilter === '2') {
+                // 2학년: grade2_num이 있으면서, grade3_num은 없는(진급하지 않은) 학생
+                currentGradeStudents = allStudents.filter(s => s.grade2_num && (!s.grade3_num || s.grade3_num.trim() === ''));
+                currentGradeStudents.sort((a, b) => a.grade2_num.localeCompare(b.grade2_num));
+            }
+
+            // 필터링된 학생들의 반(Class) 목록 추출
+            const classSet = new Set();
+            currentGradeStudents.forEach(s => {
+                const stuId = gradeFilter === '1' ? s.grade1_num : s.grade2_num;
+                if (stuId && stuId.length >= 5) {
+                    classSet.add(stuId.substring(1, 3));
+                }
+            });
+
+            const classArray = Array.from(classSet).sort();
+
+            const selectEl = document.getElementById('classFilter');
+            let optionsHtml = '<option value="all">전체 반 보기</option>';
+            classArray.forEach(cls => {
+                optionsHtml += `<option value="${cls}">${parseInt(cls, 10)}반</option>`;
+            });
+
+            selectEl.innerHTML = optionsHtml;
+
+            // 드롭다운 업데이트 후 테이블 렌더링
+            renderTable();
+        }
+
         function renderTable() {
+            const gradeFilter = document.getElementById('gradeFilter').value;
             const classFilter = document.getElementById('classFilter').value;
             const tbody = document.getElementById('studentTableBody');
             const tableContainer = document.getElementById('tableContainer');
             const countSpan = document.getElementById('studentCount');
 
-            if (allGrade1Students.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5">등록된 1학년 학생 데이터가 없습니다.</td></tr>';
+            let filteredStudents = currentGradeStudents;
+
+            if (classFilter !== 'all' && classFilter !== '') {
+                filteredStudents = currentGradeStudents.filter(s => {
+                    const stuId = gradeFilter === '1' ? s.grade1_num : s.grade2_num;
+                    return stuId && stuId.length >= 5 && stuId.substring(1, 3) === classFilter;
+                });
+            }
+
+            if (filteredStudents.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5">등록된 ${gradeFilter}학년 학생 데이터가 없습니다.</td></tr>`;
                 tableContainer.style.display = 'block';
                 countSpan.innerText = 0;
                 return;
             }
 
-            let filteredStudents = allGrade1Students;
-
-            if (classFilter !== 'all' && classFilter !== '') {
-                filteredStudents = allGrade1Students.filter(s => {
-                    return s.grade1_num && s.grade1_num.length >= 5 && s.grade1_num.substring(1, 3) === classFilter;
-                });
-            }
-
             let html = '';
             filteredStudents.forEach(student => {
+                const stuId = gradeFilter === '1' ? student.grade1_num : student.grade2_num;
                 const field = student.desired_field ? student.desired_field : '<span class="empty-cell">미입력</span>';
                 const major = student.desired_major ? student.desired_major : '<span class="empty-cell">미입력</span>';
 
                 html += `
                     <tr>
-                        <td style="font-weight: bold; color: #495057;">${student.grade1_num}</td>
+                        <td style="font-weight: bold; color: #495057;">${stuId}</td>
                         <td style="font-weight: bold;">${student.name}</td>
                         <td>${field}</td>
                         <td>${major}</td>
@@ -434,7 +463,6 @@
             tableContainer.style.display = 'block';
         }
 
-        // 페이지가 열리면 비밀번호 입력창에 자동으로 커서가 가도록 설정
         window.onload = function () {
             document.getElementById('adminPassword').focus();
         };

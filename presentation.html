@@ -519,8 +519,11 @@
                 [...classes].sort().forEach(cls => {
                     let grade = Math.floor(cls / 100);
                     let classNum = cls % 100;
+                    // 0학년이거나 0반인 경우 목록에서 제외 (건너뛰기)
+                    if (grade === 0 || classNum === 0) return;
                     selectHTML += `<option value="${cls}">${grade}학년 ${classNum}반</option>`;
                 });
+
 
                 document.getElementById('classSelect').innerHTML = selectHTML;
                 document.getElementById('inputClassSelect').innerHTML = selectHTML;

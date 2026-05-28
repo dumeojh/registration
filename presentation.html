@@ -1141,24 +1141,56 @@
             if (!selectedClass) return alert("반을 선택해주세요.");
 
             try {
+                const startId = parseInt(selectedClass, 10) * 100;
+                const endId = startId + 99;
+
+                // 1. 선택한 반의 학생 명단 불러오기
                 const { data, error } = await db.from('students')
                     .select('student_id, name')
-                    .gte('student_id', parseInt(selectedClass, 10) * 100)
-                    .lte('student_id', parseInt(selectedClass, 10) * 100 + 99)
+                    .gte('student_id', startId)
+                    .lte('student_id', endId)
                     .order('student_id', { ascending: true });
 
                 if (error) throw error;
+
+                // 2. 해당 반 학생들의 '기존 관리자 일괄입력' 데이터 횟수만 가져오기
+                const { data: adminInputs, error: adminError } = await db.from('presentation')
+                    .select('student_id')
+                    .gte('student_id', startId)
+                    .lte('student_id', endId)
+                    .eq('content', '[관리자 기초입력] 수동 반영'); // 수동 입력된 기록만 필터링
+
+                if (adminError) throw adminError;
+
+                // 3. 학생별 기존 입력 횟수 집계
+                let existingCounts = {};
+                if (adminInputs) {
+                    adminInputs.forEach(row => {
+                        existingCounts[row.student_id] = (existingCounts[row.student_id] || 0) + 1;
+                    });
+                }
+
+                // 4. 테이블 그리기
                 let tbodyHTML = '';
                 data.forEach(row => {
+                    const count = existingCounts[row.student_id] || 0;
+
+                    // 기존 횟수가 있으면 파란색으로 눈에 띄게, 없으면 회색으로 표시
+                    const countBadge = count > 0
+                        ? `<span style="color: #2980b9; font-weight: bold; font-size: 12px; margin-left: 5px;">(기존: ${count}회)</span>`
+                        : `<span style="color: #95a5a6; font-size: 12px; margin-left: 5px;">(기존: 0회)</span>`;
+
                     tbodyHTML += `
                     <tr class="existing-student-row">
                         <td>${row.student_id}</td>
-                        <td>${row.name}</td>
+                        <td>${row.name} ${countBadge}</td>
                         <td><input type="number" class="table-input bulk-count" data-id="${row.student_id}" data-name="${row.name}" placeholder="0" min="0"></td>
                     </tr>`;
                 });
+
                 if (data.length === 0) tbodyHTML += `<tr><td colspan="3">명단을 찾을 수 없습니다.</td></tr>`;
 
+                // 새로운 학생 추가 행
                 tbodyHTML += `<tr><td colspan="3" style="background:#ecf0f1; font-weight:bold;">새로운 학생 추가 (명단에 없는 경우만)</td></tr>`;
                 for (let i = 0; i < 3; i++) {
                     tbodyHTML += `
@@ -1168,6 +1200,7 @@
                         <td><input type="number" class="table-input new-count" placeholder="0" min="0"></td>
                     </tr>`;
                 }
+
                 document.getElementById('inputTableBody').innerHTML = tbodyHTML;
             } catch (e) { alert("명단 조회 실패: " + e.message); }
         });

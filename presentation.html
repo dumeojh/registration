@@ -75,6 +75,11 @@
             background-color: #3498db;
         }
 
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
         .btn-secondary {
             background-color: #95a5a6;
             margin-top: 10px;
@@ -130,6 +135,17 @@
         .student-stats-table td {
             font-weight: bold;
             color: #2c3e50;
+        }
+
+        .rank-box {
+            display: flex;
+            justify-content: space-around;
+            background: #dfe6e9;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 15px;
+            color: #2d3436;
         }
 
         .hidden {
@@ -455,7 +471,7 @@
         let currentStudentId = null;
         let currentStudentName = '';
 
-        /** 대규모 데이터 분할 호출 헬퍼 */
+        /** 대규모 데이터 분할 호출 헬퍼 (반 기준) */
         async function fetchAllClassPresentations(classPrefix) {
             let allData = [];
             let from = 0;
@@ -478,20 +494,49 @@
             return allData;
         }
 
+        /** 학년 전체 데이터 분할 호출 헬퍼 (등수 계산용) */
+        async function fetchAllGradePresentations(gradePrefix) {
+            let allData = [];
+            let from = 0;
+            let to = 999;
+            let hasMore = true;
+            const startId = parseInt(gradePrefix, 10) * 10000;
+            const endId = startId + 9999;
+
+            while (hasMore) {
+                const { data, error } = await db.from('presentation')
+                    .select('student_id, created_at')
+                    .gte('student_id', startId)
+                    .lte('student_id', endId)
+                    .range(from, to);
+                if (error) throw error;
+                allData = allData.concat(data);
+                if (data.length < 1000) hasMore = false;
+                else { from += 1000; to += 1000; }
+            }
+            return allData;
+        }
+
         // ==========================================
-        // 1. 학생 화면 (조회 및 제출) - 월별 표 형태 렌더링 최적화
+        // 1. 학생 화면 (조회 및 등수 계산 최적화)
         // ==========================================
         document.getElementById('btnSearch').addEventListener('click', async function () {
             const studentIdValue = document.getElementById('searchId').value.trim();
             const studentNameValue = document.getElementById('searchName').value.trim();
+            const searchBtn = document.getElementById('btnSearch');
 
             if (studentIdValue.length !== 5) return alert("학번은 5자리 숫자로 입력해주세요.");
             if (!studentNameValue) return alert("이름을 입력해주세요.");
 
             const studentId = parseInt(studentIdValue, 10);
             const classPrefix = Math.floor(studentId / 100);
+            const gradePrefix = Math.floor(studentId / 10000);
 
             try {
+                // 버튼 로딩 상태 변경
+                searchBtn.innerText = "등수 계산 중...";
+                searchBtn.disabled = true;
+
                 // 1. 학생 이름 검증
                 const { data: studentCheck, error: checkError } = await db.from('students')
                     .select('name')
@@ -502,50 +547,92 @@
                 if (!studentCheck) return alert("등록되지 않은 학번입니다.");
                 if (studentCheck.name !== studentNameValue) return alert(`입력하신 학번과 등록된 이름이 일치하지 않습니다.`);
 
-                // 2. 소속 학급의 월별 마감 상태 가져오기
+                // 2. 해당 학년(Grade)의 모든 학생 목록 가져오기 (0회 발표자도 석차에 포함시키기 위함)
+                const gradeStartId = gradePrefix * 10000;
+                const gradeEndId = gradeStartId + 9999;
+                const { data: gradeStudents, error: gradeError } = await db.from('students')
+                    .select('student_id')
+                    .gte('student_id', gradeStartId)
+                    .lte('student_id', gradeEndId);
+                if (gradeError) throw gradeError;
+
+                let studentTotals = {};
+                gradeStudents.forEach(st => {
+                    studentTotals[st.student_id] = 0;
+                });
+
+                // 3. 학년 전체의 월별 마감(Deadline) 상태 가져오기
                 const { data: deadlines } = await db.from('monthly_deadline')
-                    .select('target_month, is_closed')
-                    .eq('class_prefix', classPrefix);
+                    .select('class_prefix, target_month, is_closed')
+                    .gte('class_prefix', gradePrefix * 100)
+                    .lte('class_prefix', gradePrefix * 100 + 99);
 
-                const closedMonths = (deadlines || []).filter(d => d.is_closed).map(d => d.target_month);
-
-                // 3. 월별 통계 초기화
-                let myMonths = { 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 1: 0, 2: 0 };
-                let myTotal = 0;
-
-                // 4. 마감된 월은 monthly_stats에서 초고속으로 가져오기
-                if (closedMonths.length > 0) {
-                    const { data: statsData } = await db.from('monthly_stats')
-                        .select('target_month, total_count')
-                        .eq('student_id', studentId)
-                        .in('target_month', closedMonths);
-
-                    if (statsData) {
-                        statsData.forEach(row => {
-                            myMonths[row.target_month] += row.total_count;
-                            myTotal += row.total_count;
-                        });
+                let closedMap = {}; // { class_prefix: [마감된 월 배열] }
+                (deadlines || []).forEach(d => {
+                    if (d.is_closed) {
+                        if (!closedMap[d.class_prefix]) closedMap[d.class_prefix] = [];
+                        closedMap[d.class_prefix].push(d.target_month);
                     }
-                }
+                });
+                const myClosedMonths = closedMap[classPrefix] || [];
 
-                // 5. 진행 중인 월은 본인의 실시간 기록(presentation)에서만 가져오기 (반 전체 로딩 X -> 모바일 속도 최적화)
-                const { data: presData, error: presError } = await db.from('presentation')
-                    .select('created_at')
-                    .eq('student_id', studentId);
+                // 4. 학년 전체의 월별 통계(monthly_stats) 반영 (초고속 확정 데이터)
+                let myMonths = { 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 1: 0, 2: 0 };
 
-                if (presError) throw presError;
+                const { data: statsData } = await db.from('monthly_stats')
+                    .select('student_id, target_month, total_count')
+                    .gte('student_id', gradeStartId)
+                    .lte('student_id', gradeEndId);
 
-                if (presData) {
-                    presData.forEach(row => {
-                        let m = new Date(row.created_at).getMonth() + 1;
-                        if (!closedMonths.includes(m)) { // 마감되지 않은 달의 기록만 추가로 더함
-                            myMonths[m]++;
-                            myTotal++;
+                (statsData || []).forEach(row => {
+                    if (studentTotals[row.student_id] !== undefined) {
+                        studentTotals[row.student_id] += row.total_count;
+                    }
+                    if (row.student_id === studentId) {
+                        myMonths[row.target_month] += row.total_count;
+                    }
+                });
+
+                // 5. 진행 중인 월의 데이터는 presentation 에서 집계
+                const gradePresentations = await fetchAllGradePresentations(gradePrefix);
+                gradePresentations.forEach(row => {
+                    const sid = row.student_id;
+                    if (studentTotals[sid] !== undefined) {
+                        const sClassPrefix = Math.floor(sid / 100);
+                        const month = new Date(row.created_at).getMonth() + 1;
+
+                        // 해당 학생 반의 해당 월이 마감되지 않은 경우에만 +1
+                        const isClosed = closedMap[sClassPrefix] && closedMap[sClassPrefix].includes(month);
+                        if (!isClosed) {
+                            studentTotals[sid]++;
+                            if (sid === studentId) {
+                                myMonths[month]++;
+                            }
                         }
-                    });
-                }
+                    }
+                });
 
-                // 6. 통계 박스에 월별 표와 합계 렌더링
+                // 6. 석차 계산 로직 (동점자는 공동 석차)
+                let myTotal = studentTotals[studentId] || 0;
+                let classScores = [];
+                let gradeScores = [];
+
+                Object.keys(studentTotals).forEach(sidStr => {
+                    const sid = parseInt(sidStr, 10);
+                    const score = studentTotals[sid];
+                    gradeScores.push(score);
+                    if (Math.floor(sid / 100) === classPrefix) {
+                        classScores.push(score);
+                    }
+                });
+
+                classScores.sort((a, b) => b - a);
+                gradeScores.sort((a, b) => b - a);
+
+                let classRank = classScores.indexOf(myTotal) + 1;
+                let gradeRank = gradeScores.indexOf(myTotal) + 1;
+
+                // 7. 통계 박스에 월별 표와 합계, 등수 렌더링
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight" style="font-size:20px;">${studentId} ${studentNameValue}</p>
                     <hr style="border: 0.5px solid #bdc3c7; margin: 10px 0;">
@@ -561,25 +648,30 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td ${closedMonths.includes(3) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[3]}</td>
-                                    <td ${closedMonths.includes(4) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[4]}</td>
-                                    <td ${closedMonths.includes(5) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[5]}</td>
-                                    <td ${closedMonths.includes(6) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[6]}</td>
-                                    <td ${closedMonths.includes(7) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[7]}</td>
-                                    <td ${closedMonths.includes(8) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[8]}</td>
-                                    <td ${closedMonths.includes(9) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[9]}</td>
-                                    <td ${closedMonths.includes(10) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[10]}</td>
-                                    <td ${closedMonths.includes(11) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[11]}</td>
-                                    <td ${closedMonths.includes(12) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[12]}</td>
-                                    <td ${closedMonths.includes(1) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[1]}</td>
-                                    <td ${closedMonths.includes(2) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[2]}</td>
+                                    <td ${myClosedMonths.includes(3) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[3]}</td>
+                                    <td ${myClosedMonths.includes(4) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[4]}</td>
+                                    <td ${myClosedMonths.includes(5) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[5]}</td>
+                                    <td ${myClosedMonths.includes(6) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[6]}</td>
+                                    <td ${myClosedMonths.includes(7) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[7]}</td>
+                                    <td ${myClosedMonths.includes(8) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[8]}</td>
+                                    <td ${myClosedMonths.includes(9) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[9]}</td>
+                                    <td ${myClosedMonths.includes(10) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[10]}</td>
+                                    <td ${myClosedMonths.includes(11) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[11]}</td>
+                                    <td ${myClosedMonths.includes(12) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[12]}</td>
+                                    <td ${myClosedMonths.includes(1) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[1]}</td>
+                                    <td ${myClosedMonths.includes(2) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[2]}</td>
                                 </tr>
                             </tbody>
                         </table>
-                        <p style="font-size:11px; color:#7f8c8d; text-align:right; margin:0 0 15px 0;">* 노란색 배경은 관리자 마감이 완료된 월입니다.</p>
+                        <p style="font-size:11px; color:#7f8c8d; text-align:right; margin:0 0 15px 0;">* 노란색 배경은 마감이 완료된 월입니다.</p>
                     </div>
 
-                    <p style="font-size: 16px;">총 발표 횟수: <strong style="color:#e74c3c; font-size: 24px;">${myTotal}</strong> 회</p>
+                    <p style="font-size: 16px; margin-bottom: 5px;">총 발표 횟수: <strong style="color:#e74c3c; font-size: 24px;">${myTotal}</strong> 회</p>
+                    
+                    <div class="rank-box">
+                        <span>반 등수: <strong>${classRank}</strong>위 <span style="font-size:12px; color:#636e72;">/ ${classScores.length}명</span></span>
+                        <span>학년 등수: <strong>${gradeRank}</strong>위 <span style="font-size:12px; color:#636e72;">/ ${gradeScores.length}명</span></span>
+                    </div>
                 `;
 
                 currentStudentId = studentId;
@@ -590,6 +682,10 @@
 
             } catch (error) {
                 alert('오류 발생: ' + error.message);
+            } finally {
+                // 버튼 원상복구
+                searchBtn.innerText = "조회하기";
+                searchBtn.disabled = false;
             }
         });
 

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1·2학년 진학 상담 조회 (교사용)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="common.js"></script>
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -494,9 +495,7 @@
             }
         }
 
-        const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
-        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 
         let allStudents = [];
         let currentGradeStudents = [];

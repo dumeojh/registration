@@ -7,6 +7,7 @@
     <title>2학년 수강신청 정보 조회 및 설계</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="common.js"></script>
 
     <style>
         /* =========================================================
@@ -1003,13 +1004,6 @@
             });
         }
 
-        // [보안 권고사항]
-        // 프론트엔드 코드에 KEY가 노출되는 것은 불가피하지만, 반드시 Supabase 콘솔에서 
-        // 테이블 단위의 RLS (Row Level Security) 정책을 꼼꼼하게 설정하여,
-        // 인가되지 않은 접근(전체 삭제, 타인 데이터 조작 등)을 막으셔야 합니다!
-        const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
-        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 
 

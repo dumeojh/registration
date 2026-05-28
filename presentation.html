@@ -104,6 +104,34 @@
             font-size: 18px;
         }
 
+        /* 학생 월별 통계 테이블 스타일 */
+        .student-stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            background: white;
+        }
+
+        .student-stats-table th,
+        .student-stats-table td {
+            padding: 6px 2px;
+            border: 1px solid #bdc3c7;
+            text-align: center;
+        }
+
+        .student-stats-table th {
+            background-color: #f1f2f6;
+            color: #34495e;
+            font-weight: normal;
+        }
+
+        .student-stats-table td {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -236,7 +264,6 @@
             opacity: 0.5;
         }
 
-        /* 일괄 처리 마스터 체크박스 스타일 */
         .master-dl-cb {
             margin-top: 5px;
         }
@@ -428,7 +455,7 @@
         let currentStudentId = null;
         let currentStudentName = '';
 
-        /** 대규모 데이터 분할 호출 헬퍼 (필요시 사용) */
+        /** 대규모 데이터 분할 호출 헬퍼 */
         async function fetchAllClassPresentations(classPrefix) {
             let allData = [];
             let from = 0;
@@ -452,7 +479,7 @@
         }
 
         // ==========================================
-        // 1. 학생 화면 (조회 및 제출)
+        // 1. 학생 화면 (조회 및 제출) - 월별 표 형태 렌더링 최적화
         // ==========================================
         document.getElementById('btnSearch').addEventListener('click', async function () {
             const studentIdValue = document.getElementById('searchId').value.trim();
@@ -465,7 +492,7 @@
             const classPrefix = Math.floor(studentId / 100);
 
             try {
-                // students 테이블 name 컬럼 검증
+                // 1. 학생 이름 검증
                 const { data: studentCheck, error: checkError } = await db.from('students')
                     .select('name')
                     .eq('student_id', studentId)
@@ -475,16 +502,84 @@
                 if (!studentCheck) return alert("등록되지 않은 학번입니다.");
                 if (studentCheck.name !== studentNameValue) return alert(`입력하신 학번과 등록된 이름이 일치하지 않습니다.`);
 
-                const classRecords = await fetchAllClassPresentations(classPrefix);
-                let myCount = 0;
-                classRecords.forEach(row => {
-                    if (row.student_id === studentId) myCount++;
-                });
+                // 2. 소속 학급의 월별 마감 상태 가져오기
+                const { data: deadlines } = await db.from('monthly_deadline')
+                    .select('target_month, is_closed')
+                    .eq('class_prefix', classPrefix);
 
+                const closedMonths = (deadlines || []).filter(d => d.is_closed).map(d => d.target_month);
+
+                // 3. 월별 통계 초기화
+                let myMonths = { 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 1: 0, 2: 0 };
+                let myTotal = 0;
+
+                // 4. 마감된 월은 monthly_stats에서 초고속으로 가져오기
+                if (closedMonths.length > 0) {
+                    const { data: statsData } = await db.from('monthly_stats')
+                        .select('target_month, total_count')
+                        .eq('student_id', studentId)
+                        .in('target_month', closedMonths);
+
+                    if (statsData) {
+                        statsData.forEach(row => {
+                            myMonths[row.target_month] += row.total_count;
+                            myTotal += row.total_count;
+                        });
+                    }
+                }
+
+                // 5. 진행 중인 월은 본인의 실시간 기록(presentation)에서만 가져오기 (반 전체 로딩 X -> 모바일 속도 최적화)
+                const { data: presData, error: presError } = await db.from('presentation')
+                    .select('created_at')
+                    .eq('student_id', studentId);
+
+                if (presError) throw presError;
+
+                if (presData) {
+                    presData.forEach(row => {
+                        let m = new Date(row.created_at).getMonth() + 1;
+                        if (!closedMonths.includes(m)) { // 마감되지 않은 달의 기록만 추가로 더함
+                            myMonths[m]++;
+                            myTotal++;
+                        }
+                    });
+                }
+
+                // 6. 통계 박스에 월별 표와 합계 렌더링
                 document.getElementById('statsBox').innerHTML = `
-                    <p class="highlight">${studentId} ${studentNameValue}</p>
+                    <p class="highlight" style="font-size:20px;">${studentId} ${studentNameValue}</p>
                     <hr style="border: 0.5px solid #bdc3c7; margin: 10px 0;">
-                    <p>현재까지 발표 횟수: <strong>${myCount}회</strong></p>
+                    
+                    <div style="overflow-x: auto;">
+                        <table class="student-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>3월</th><th>4월</th><th>5월</th><th>6월</th><th>7월</th>
+                                    <th>8월</th><th>9월</th><th>10월</th><th>11월</th><th>12월</th>
+                                    <th>1월</th><th>2월</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td ${closedMonths.includes(3) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[3]}</td>
+                                    <td ${closedMonths.includes(4) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[4]}</td>
+                                    <td ${closedMonths.includes(5) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[5]}</td>
+                                    <td ${closedMonths.includes(6) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[6]}</td>
+                                    <td ${closedMonths.includes(7) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[7]}</td>
+                                    <td ${closedMonths.includes(8) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[8]}</td>
+                                    <td ${closedMonths.includes(9) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[9]}</td>
+                                    <td ${closedMonths.includes(10) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[10]}</td>
+                                    <td ${closedMonths.includes(11) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[11]}</td>
+                                    <td ${closedMonths.includes(12) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[12]}</td>
+                                    <td ${closedMonths.includes(1) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[1]}</td>
+                                    <td ${closedMonths.includes(2) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[2]}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p style="font-size:11px; color:#7f8c8d; text-align:right; margin:0 0 15px 0;">* 노란색 배경은 관리자 마감이 완료된 월입니다.</p>
+                    </div>
+
+                    <p style="font-size: 16px;">총 발표 횟수: <strong style="color:#e74c3c; font-size: 24px;">${myTotal}</strong> 회</p>
                 `;
 
                 currentStudentId = studentId;
@@ -506,7 +601,6 @@
             const classPrefix = Math.floor(currentStudentId / 100);
 
             try {
-                // 제출 전 마감 확인
                 const { data: dlData, error: dlError } = await db.from('monthly_deadline')
                     .select('is_closed')
                     .eq('class_prefix', classPrefix)
@@ -548,7 +642,7 @@
             if (e.ctrlKey) {
                 await populateClassSelect();
                 adminModal.classList.remove('hidden');
-                document.getElementById('btnFetchDeadlineGrid').click(); // 모달 열릴 때 현황판 자동 불러오기
+                document.getElementById('btnFetchDeadlineGrid').click();
             }
         });
 
@@ -576,7 +670,7 @@
         tabs.deadline.btn.addEventListener('click', () => switchTab('deadline'));
         tabs.input.btn.addEventListener('click', () => switchTab('input'));
 
-        let allClassesList = []; // 전체 학급 목록 저장용
+        let allClassesList = [];
 
         async function populateClassSelect() {
             try {
@@ -590,7 +684,7 @@
                     }
                 });
 
-                allClassesList = [...classes].sort(); // 현황판에서 사용하기 위해 저장
+                allClassesList = [...classes].sort();
                 let selectHTML = '<option value="">반을 선택하세요</option>';
 
                 allClassesList.forEach(cls => {
@@ -685,7 +779,7 @@
 
 
         // ==========================================
-        // 4. 월별 마감 현황판 및 일괄 처리(NEW)
+        // 4. 월별 마감 현황판 및 일괄 처리
         // ==========================================
         const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
 
@@ -737,7 +831,6 @@
 
                 document.getElementById('deadlineGridBody').innerHTML = tbodyHTML;
 
-                // 렌더링 직후 마스터 체크박스 상태 동기화
                 monthsOrder.forEach(m => {
                     const monthCbs = document.querySelectorAll(`.individual-cb[data-month="${m}"]`);
                     const masterCb = document.querySelector(`.master-dl-cb[data-month="${m}"]`);
@@ -751,7 +844,6 @@
             }
         });
 
-        // (1) 개별 체크박스 토글 함수
         window.handleCheckboxToggle = async function (checkbox) {
             const classPrefix = parseInt(checkbox.getAttribute('data-class'), 10);
             const month = parseInt(checkbox.getAttribute('data-month'), 10);
@@ -809,7 +901,6 @@
                     checkbox.disabled = false;
                     loader.classList.add('hidden');
 
-                    // 마스터 체크박스 동기화
                     const monthCbs = document.querySelectorAll(`.individual-cb[data-month="${month}"]`);
                     const masterCb = document.querySelector(`.master-dl-cb[data-month="${month}"]`);
                     if (masterCb) masterCb.checked = Array.from(monthCbs).every(cb => cb.checked);
@@ -837,14 +928,12 @@
                     checkbox.disabled = false;
                     loader.classList.add('hidden');
 
-                    // 마스터 체크박스 동기화
                     const masterCb = document.querySelector(`.master-dl-cb[data-month="${month}"]`);
                     if (masterCb) masterCb.checked = false;
                 }
             }
         };
 
-        // (2) 일괄 처리 (마스터) 체크박스 함수
         window.handleBulkMonth = async function (masterCb) {
             const month = parseInt(masterCb.getAttribute('data-month'), 10);
             const isClosing = masterCb.checked;
@@ -871,7 +960,6 @@
                     let allStudents = [];
                     let allPresentations = [];
 
-                    // 모든 학급 데이터 병렬 수집 (고속 처리)
                     await Promise.all(classPrefixes.map(async (cls) => {
                         const startId = cls * 100;
                         const endId = startId + 99;
@@ -897,7 +985,6 @@
                         }
                     });
 
-                    // 삭제 후 통계 재삽입
                     if (studentIds.length > 0) {
                         await db.from('monthly_stats').delete().eq('target_month', month).in('student_id', studentIds);
                     }
@@ -905,7 +992,6 @@
                         await db.from('monthly_stats').insert(statsToInsert);
                     }
 
-                    // 마감 상태 일괄 업데이트
                     await db.from('monthly_deadline').delete().eq('target_month', month).in('class_prefix', classPrefixes);
                     const deadlineInserts = classPrefixes.map(cls => ({ class_prefix: cls, target_month: month, is_closed: true }));
                     await db.from('monthly_deadline').insert(deadlineInserts);
@@ -932,7 +1018,6 @@
                     masterCb.disabled = true;
                     checkboxes.forEach(cb => cb.disabled = true);
 
-                    // 기존 기록 삭제 후 전부 false로 설정
                     await db.from('monthly_deadline').delete().eq('target_month', month).in('class_prefix', classPrefixes);
                     const deadlineInserts = classPrefixes.map(cls => ({ class_prefix: cls, target_month: month, is_closed: false }));
                     await db.from('monthly_deadline').insert(deadlineInserts);

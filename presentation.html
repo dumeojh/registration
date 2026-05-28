@@ -39,7 +39,8 @@
         }
 
         input,
-        textarea {
+        textarea,
+        select {
             width: 100%;
             padding: 14px;
             margin-top: 8px;
@@ -50,7 +51,8 @@
         }
 
         input:focus,
-        textarea:focus {
+        textarea:focus,
+        select:focus {
             border-color: #2980b9;
             outline: none;
         }
@@ -102,16 +104,119 @@
             font-size: 18px;
         }
 
-        /* 화면 전환을 위한 클래스 */
         .hidden {
-            display: none;
+            display: none !important;
+        }
+
+        /* --- 비밀 관리자 모달 스타일 --- */
+        #secretBtn {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background-color: #000;
+            opacity: 0.1;
+            cursor: pointer;
+            z-index: 9999;
+            border-radius: 5px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .close-btn {
+            background: #e74c3c;
+            width: auto;
+            padding: 8px 15px;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            margin: 0;
+            background-color: #bdc3c7;
+        }
+
+        .tab-btn.active {
+            background-color: #2c3e50;
+        }
+
+        /* 테이블 스타일 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #bdc3c7;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        .admin-section {
+            margin-top: 20px;
         }
     </style>
 </head>
 
 <body>
 
-    <!-- 1. 학생 조회 화면 -->
     <div class="form-container" id="searchSection">
         <h2>🔍 학생 조회</h2>
         <label for="searchId">학번</label>
@@ -123,13 +228,10 @@
         <button type="button" id="btnSearch">조회하기</button>
     </div>
 
-    <!-- 2. 발표 기록 화면 (초기에는 숨김) -->
     <div class="form-container hidden" id="recordSection">
         <h2>🎤 발표 기록</h2>
 
-        <div class="stats-box" id="statsBox">
-            <!-- 통계 정보가 JS를 통해 여기에 표시됩니다. -->
-        </div>
+        <div class="stats-box" id="statsBox"></div>
 
         <label for="content">발표 내용</label>
         <textarea id="content" rows="4" placeholder="발표한 내용이나 주제를 요약해서 적어주세요." required></textarea>
@@ -138,17 +240,81 @@
         <button type="button" id="btnCancel" class="btn-secondary">이전으로</button>
     </div>
 
+    <div id="secretBtn" title="관리자"></div>
+
+    <div id="adminModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ 관리자 메뉴</h3>
+                <button class="close-btn" id="btnCloseAdmin">닫기</button>
+            </div>
+
+            <div class="admin-tabs">
+                <button class="tab-btn active" id="tabView">반별조회</button>
+                <button class="tab-btn" id="tabInput">기초입력</button>
+            </div>
+
+            <div id="adminViewSection" class="admin-section">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="classSelect" style="width: auto; margin-top: 0;"></select>
+                    <button id="btnFetchClass" style="width: auto; margin-top: 0; padding: 10px 20px;">조회</button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>학번</th>
+                                <th>이름</th>
+                                <th>3월</th>
+                                <th>4월</th>
+                                <th>5월</th>
+                                <th>6월</th>
+                                <th>7월</th>
+                                <th>8월</th>
+                                <th>9월</th>
+                                <th>10월</th>
+                                <th>11월</th>
+                                <th>12월</th>
+                                <th>1월</th>
+                                <th>2월</th>
+                                <th>합계</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classTableBody">
+                            <tr>
+                                <td colspan="15">반을 선택하고 조회 버튼을 눌러주세요.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="adminInputSection" class="admin-section hidden" style="max-width: 400px; margin: 0 auto;">
+                <h4>기초 발표횟수 수동 입력</h4>
+                <p style="font-size:14px; color:#7f8c8d;">누락된 이전 발표 횟수를 일괄로 추가합니다.</p>
+                <label>학번</label>
+                <input type="number" id="baseId" placeholder="예: 20101">
+                <label>이름</label>
+                <input type="text" id="baseName" placeholder="예: 홍길동">
+                <label>추가할 발표 횟수</label>
+                <input type="number" id="baseCount" placeholder="예: 3">
+                <button id="btnBaseSubmit">일괄 등록하기</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentStudentId = null;
         let currentStudentName = '';
 
-        // 조회 버튼 클릭 이벤트
+        // 기존 조회 버튼 이벤트
         document.getElementById('btnSearch').addEventListener('click', async function () {
             const studentIdValue = document.getElementById('searchId').value.trim();
             const studentNameValue = document.getElementById('searchName').value.trim();
 
             if (studentIdValue.length !== 5) {
-                alert("학번은 5자리 숫자로 입력해주세요. (예: 20101)");
+                alert("학번은 5자리 숫자로 입력해주세요.");
                 return;
             }
             if (!studentNameValue) {
@@ -159,17 +325,12 @@
             const studentId = parseInt(studentIdValue, 10);
 
             try {
-                // Supabase에서 전체 발표 기록을 가져와서 이름 검증 및 통계 계산
-                const { data: records, error } = await db
-                    .from('presentation')
-                    .select('student_id, student_name');
-
+                const { data: records, error } = await db.from('presentation').select('student_id, student_name');
                 if (error) throw error;
 
                 let studentStats = {};
                 let nameMap = {};
 
-                // 데이터 집계
                 records.forEach(row => {
                     if (!studentStats[row.student_id]) {
                         studentStats[row.student_id] = 0;
@@ -178,23 +339,18 @@
                     studentStats[row.student_id]++;
                 });
 
-                // 이름 교차 검증 (다른 학생의 학번에 잘못된 이름을 입력하는 실수 방지)
                 if (nameMap[studentId] && nameMap[studentId] !== studentNameValue) {
-                    alert(`입력하신 학번(${studentId})과 기존에 등록된 이름이 일치하지 않습니다. 다시 확인해주세요.`);
+                    alert(`입력하신 학번(${studentId})과 등록된 이름이 일치하지 않습니다.`);
                     return;
                 }
 
-                // 현재 학생의 통계 계산
                 let myCount = studentStats[studentId] || 0;
-
-                // 학년 및 반 추출 (예: 20101 -> 2학년 1반)
                 let myGrade = Math.floor(studentId / 10000);
                 let myClass = Math.floor((studentId % 10000) / 100);
 
                 let gradeCounts = [];
                 let classCounts = [];
 
-                // 순위 계산을 위한 배열 생성
                 for (let sid in studentStats) {
                     let sIdNum = parseInt(sid, 10);
                     let g = Math.floor(sIdNum / 10000);
@@ -204,21 +360,17 @@
                     if (g === myGrade && c === myClass) classCounts.push(studentStats[sid]);
                 }
 
-                // 본인 기록이 0회인 경우 배열에 포함시켜 순위 기준 마련
                 if (myCount === 0) {
                     gradeCounts.push(0);
                     classCounts.push(0);
                 }
 
-                // 내림차순 정렬
                 gradeCounts.sort((a, b) => b - a);
                 classCounts.sort((a, b) => b - a);
 
-                // 순위 산출 (중복 값이 있을 경우 높은 순위 부여)
                 let gradeRank = gradeCounts.indexOf(myCount) + 1;
                 let classRank = classCounts.indexOf(myCount) + 1;
 
-                // 통계 UI 업데이트
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight">${studentId} ${studentNameValue}</p>
                     <hr style="border: 0.5px solid #bdc3c7; margin: 10px 0;">
@@ -226,7 +378,6 @@
                     <p>반 순위: <strong>${classRank}위</strong> / 학년 순위: <strong>${gradeRank}위</strong></p>
                 `;
 
-                // 상태 저장 및 화면 전환
                 currentStudentId = studentId;
                 currentStudentName = studentNameValue;
 
@@ -234,61 +385,198 @@
                 document.getElementById('recordSection').classList.remove('hidden');
 
             } catch (error) {
-                console.error('Error fetching data:', error);
-                alert('데이터 조회 중 오류가 발생했습니다: ' + error.message);
+                console.error(error);
+                alert('오류 발생: ' + error.message);
             }
         });
 
-        // 제출 버튼 클릭 이벤트
+        // 기존 제출 이벤트
         document.getElementById('btnSubmit').addEventListener('click', async function () {
             const content = document.getElementById('content').value.trim();
+            if (!content) return alert("발표 내용을 입력해주세요.");
 
-            if (!content) {
-                alert("발표 내용을 입력해주세요.");
-                return;
-            }
-
-            const confirmMessage = `[${currentStudentId} ${currentStudentName}]\n해당 내용으로 발표 기록을 저장하시겠습니까?`;
-
-            if (confirm(confirmMessage)) {
+            if (confirm(`해당 내용으로 저장하시겠습니까?`)) {
                 try {
-                    const { error } = await db
-                        .from('presentation')
-                        .insert([
-                            {
-                                student_id: currentStudentId,
-                                student_name: currentStudentName,
-                                content: content
-                            }
-                        ]);
-
+                    const { error } = await db.from('presentation').insert([
+                        { student_id: currentStudentId, student_name: currentStudentName, content: content }
+                    ]);
                     if (error) throw error;
-
-                    alert('발표 기록이 성공적으로 저장되었습니다!');
-
-                    // 초기화 및 화면 복귀
+                    alert('저장 완료!');
                     document.getElementById('content').value = '';
-                    document.getElementById('searchId').value = '';
-                    document.getElementById('searchName').value = '';
-
                     document.getElementById('recordSection').classList.add('hidden');
                     document.getElementById('searchSection').classList.remove('hidden');
-
                 } catch (error) {
-                    console.error('Error saving data:', error);
-                    alert('저장 중 오류가 발생했습니다: ' + error.message);
+                    alert('오류 발생: ' + error.message);
                 }
             }
         });
 
-        // 취소(이전으로) 버튼 이벤트
         document.getElementById('btnCancel').addEventListener('click', function () {
-            document.getElementById('content').value = '';
             document.getElementById('recordSection').classList.add('hidden');
             document.getElementById('searchSection').classList.remove('hidden');
         });
-    </script>
 
+
+        /* ==========================================
+           비밀 관리자 모달 스크립트
+        ========================================== */
+
+        const adminModal = document.getElementById('adminModal');
+
+        // 1. Ctrl + 더블클릭 이벤트 처리
+        document.getElementById('secretBtn').addEventListener('dblclick', async function (e) {
+            if (e.ctrlKey) {
+                // 반 목록 갱신을 위해 데이터 조회 후 셀렉트박스 채우기
+                await populateClassSelect();
+                adminModal.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('btnCloseAdmin').addEventListener('click', () => {
+            adminModal.classList.add('hidden');
+        });
+
+        // 탭 전환 로직
+        const tabView = document.getElementById('tabView');
+        const tabInput = document.getElementById('tabInput');
+        const viewSection = document.getElementById('adminViewSection');
+        const inputSection = document.getElementById('adminInputSection');
+
+        tabView.addEventListener('click', () => {
+            tabView.classList.add('active');
+            tabInput.classList.remove('active');
+            viewSection.classList.remove('hidden');
+            inputSection.classList.add('hidden');
+        });
+
+        tabInput.addEventListener('click', () => {
+            tabInput.classList.add('active');
+            tabView.classList.remove('active');
+            inputSection.classList.remove('hidden');
+            viewSection.classList.add('hidden');
+        });
+
+        // 반 목록 셀렉트박스 생성 함수
+        async function populateClassSelect() {
+            try {
+                const { data, error } = await db.from('presentation').select('student_id');
+                if (error) return;
+
+                let classes = new Set();
+                data.forEach(row => {
+                    // 예: 20101 -> 2학년 1반 -> "201"
+                    let classPrefix = Math.floor(row.student_id / 100);
+                    classes.add(classPrefix);
+                });
+
+                let selectHTML = '<option value="">반을 선택하세요</option>';
+                [...classes].sort().forEach(cls => {
+                    let grade = Math.floor(cls / 100);
+                    let classNum = cls % 100;
+                    selectHTML += `<option value="${cls}">${grade}학년 ${classNum}반</option>`;
+                });
+
+                document.getElementById('classSelect').innerHTML = selectHTML;
+            } catch (err) { console.error(err); }
+        }
+
+        // 반별 조회 기능 (월별 횟수)
+        document.getElementById('btnFetchClass').addEventListener('click', async () => {
+            const selectedClass = document.getElementById('classSelect').value;
+            if (!selectedClass) return alert("반을 선택해주세요.");
+
+            try {
+                // created_at 필드를 포함하여 조회 (월별 구분을 위해 필수)
+                const { data, error } = await db.from('presentation')
+                    .select('student_id, student_name, created_at');
+                if (error) throw error;
+
+                // 해당 반 학생들만 필터링
+                const classData = data.filter(row => Math.floor(row.student_id / 100) == selectedClass);
+
+                let studentRecords = {};
+
+                classData.forEach(row => {
+                    if (!studentRecords[row.student_id]) {
+                        studentRecords[row.student_id] = {
+                            name: row.student_name,
+                            months: { 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 1: 0, 2: 0 },
+                            total: 0
+                        };
+                    }
+                    // 날짜에서 월 추출
+                    let date = new Date(row.created_at);
+                    let month = date.getMonth() + 1;
+
+                    studentRecords[row.student_id].months[month]++;
+                    studentRecords[row.student_id].total++;
+                });
+
+                // 학번 순 정렬
+                let sortedIds = Object.keys(studentRecords).sort((a, b) => parseInt(a) - parseInt(b));
+
+                let tbodyHTML = '';
+                sortedIds.forEach(id => {
+                    let st = studentRecords[id];
+                    tbodyHTML += `<tr>
+                        <td>${id}</td>
+                        <td>${st.name}</td>
+                        <td>${st.months[3]}</td><td>${st.months[4]}</td><td>${st.months[5]}</td>
+                        <td>${st.months[6]}</td><td>${st.months[7]}</td><td>${st.months[8]}</td>
+                        <td>${st.months[9]}</td><td>${st.months[10]}</td><td>${st.months[11]}</td>
+                        <td>${st.months[12]}</td><td>${st.months[1]}</td><td>${st.months[2]}</td>
+                        <td><strong>${st.total}</strong></td>
+                    </tr>`;
+                });
+
+                if (sortedIds.length === 0) {
+                    tbodyHTML = `<tr><td colspan="15">데이터가 없습니다.</td></tr>`;
+                }
+
+                document.getElementById('classTableBody').innerHTML = tbodyHTML;
+
+            } catch (e) {
+                alert("조회 실패: " + e.message);
+            }
+        });
+
+        // 기초 발표횟수 수동 입력
+        document.getElementById('btnBaseSubmit').addEventListener('click', async () => {
+            const baseId = document.getElementById('baseId').value.trim();
+            const baseName = document.getElementById('baseName').value.trim();
+            const baseCount = parseInt(document.getElementById('baseCount').value.trim(), 10);
+
+            if (!baseId || !baseName || isNaN(baseCount) || baseCount < 1) {
+                return alert("학번, 이름, 그리고 추가할 횟수(1 이상)를 정확히 입력해주세요.");
+            }
+
+            if (confirm(`${baseId} ${baseName} 학생에게 ${baseCount}회의 발표 기록을 일괄 추가하시겠습니까?`)) {
+                // 입력할 데이터를 배열로 구성
+                const inserts = [];
+                for (let i = 0; i < baseCount; i++) {
+                    inserts.push({
+                        student_id: parseInt(baseId),
+                        student_name: baseName,
+                        content: "[관리자 기초입력] 수동 반영 누락분"
+                    });
+                }
+
+                try {
+                    // Supabase에 다중 Insert
+                    const { error } = await db.from('presentation').insert(inserts);
+                    if (error) throw error;
+
+                    alert("기초 입력이 성공적으로 완료되었습니다.");
+                    document.getElementById('baseId').value = '';
+                    document.getElementById('baseName').value = '';
+                    document.getElementById('baseCount').value = '';
+
+                } catch (e) {
+                    alert("저장 실패: " + e.message);
+                }
+            }
+        });
+    </script>
 </body>
 
 </html>

@@ -334,7 +334,40 @@
         let currentStudentId = null;
         let currentStudentName = '';
 
-        // 기존 조회 버튼 이벤트
+        /**
+         * [성능 최적화] 특정 반의 모든 발표 기록을 페이지네이션(1000개 단위)으로 안전하게 전량 가져오는 함수
+         */
+        async function fetchAllClassPresentations(classPrefix) {
+            let allData = [];
+            let from = 0;
+            let to = 999;
+            let hasMore = true;
+
+            const startId = parseInt(classPrefix, 10) * 100;
+            const endId = startId + 99;
+
+            while (hasMore) {
+                const { data, error } = await db.from('presentation')
+                    .select('student_id, student_name, created_at')
+                    .gte('student_id', startId)
+                    .lte('student_id', endId)
+                    .range(from, to);
+
+                if (error) throw error;
+
+                allData = allData.concat(data);
+
+                if (data.length < 1000) {
+                    hasMore = false;
+                } else {
+                    from += 1000;
+                    to += 1000;
+                }
+            }
+            return allData;
+        }
+
+        // 최적화된 학생 조회 버튼 이벤트
         document.getElementById('btnSearch').addEventListener('click', async function () {
             const studentIdValue = document.getElementById('searchId').value.trim();
             const studentNameValue = document.getElementById('searchName').value.trim();
@@ -345,56 +378,52 @@
             const studentId = parseInt(studentIdValue, 10);
 
             try {
-                const { data: records, error } = await db.from('presentation').select('student_id, student_name');
-                if (error) throw error;
+                // 1단계: 마스터 테이블(students)에서 해당 학생이 존재하는지 및 이름이 맞는지 단 1건만 바로 조회
+                const { data: studentCheck, error: checkError } = await db.from('students')
+                    .select('student_name')
+                    .eq('student_id', studentId)
+                    .maybeSingle();
 
-                let studentStats = {};
-                let nameMap = {};
+                if (checkError) throw checkError;
+                if (!studentCheck) return alert("등록되지 않은 학번입니다.");
+                if (studentCheck.student_name !== studentNameValue) {
+                    return alert(`입력하신 학번(${studentId})과 등록된 이름이 일치하지 않습니다.`);
+                }
 
-                records.forEach(row => {
-                    if (!studentStats[row.student_id]) {
-                        studentStats[row.student_id] = 0;
-                        nameMap[row.student_id] = row.student_name;
-                    }
-                    studentStats[row.student_id]++;
+                // 2단계: 해당 학생이 속한 '반'의 발표 데이터만 최적화 쿼리로 빌드 및 가져오기
+                const classPrefix = Math.floor(studentId / 100);
+                const classRecords = await fetchAllClassPresentations(classPrefix);
+
+                // 3단계: 반 데이터 기준 발표 통계 및 석차 도출
+                let classStats = {};
+                classRecords.forEach(row => {
+                    classStats[row.student_id] = (classStats[row.student_id] || 0) + 1;
                 });
 
-                if (nameMap[studentId] && nameMap[studentId] !== studentNameValue) {
-                    alert(`입력하신 학번(${studentId})과 등록된 이름이 일치하지 않습니다.`);
-                    return;
-                }
+                const myCount = classStats[studentId] || 0;
 
-                let myCount = studentStats[studentId] || 0;
-                let myGrade = Math.floor(studentId / 10000);
-                let myClass = Math.floor((studentId % 10000) / 100);
+                // 해당 반의 전체 학생 명단을 기반으로 0회 발표자까지 포함하여 정확한 순위 배열 생성
+                const { data: classMates, error: mateError } = await db.from('students')
+                    .select('student_id')
+                    .gte('student_id', classPrefix * 100)
+                    .lte('student_id', classPrefix * 100 + 99);
 
-                let gradeCounts = [], classCounts = [];
+                if (mateError) throw mateError;
 
-                for (let sid in studentStats) {
-                    let sIdNum = parseInt(sid, 10);
-                    let g = Math.floor(sIdNum / 10000);
-                    let c = Math.floor((sIdNum % 10000) / 100);
+                let classCountsArray = [];
+                classMates.forEach(mate => {
+                    classCountsArray.push(classStats[mate.student_id] || 0);
+                });
 
-                    if (g === myGrade) gradeCounts.push(studentStats[sid]);
-                    if (g === myGrade && c === myClass) classCounts.push(studentStats[sid]);
-                }
+                classCountsArray.sort((a, b) => b - a);
+                const classRank = classCountsArray.indexOf(myCount) + 1;
 
-                if (myCount === 0) {
-                    gradeCounts.push(0);
-                    classCounts.push(0);
-                }
-
-                gradeCounts.sort((a, b) => b - a);
-                classCounts.sort((a, b) => b - a);
-
-                let gradeRank = gradeCounts.indexOf(myCount) + 1;
-                let classRank = classCounts.indexOf(myCount) + 1;
-
+                // 과부하 방지를 위해 전체 다운로드가 필요한 '학년 순위' 항목은 지표에서 제외하고 모바일 친화적으로 최적화
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight">${studentId} ${studentNameValue}</p>
                     <hr style="border: 0.5px solid #bdc3c7; margin: 10px 0;">
                     <p>발표 횟수: <strong>${myCount}회</strong></p>
-                    <p>반 순위: <strong>${classRank}위</strong> / 학년 순위: <strong>${gradeRank}위</strong></p>
+                    <p>반 순위: <strong>${classRank}위</strong> (학급 인원 기준)</p>
                 `;
 
                 currentStudentId = studentId;
@@ -471,11 +500,10 @@
             viewSection.classList.add('hidden');
         });
 
-        // 반 셀렉트 박스 채우기 (전체 명단이 있는 expo_booths 기준으로 변경)
+        // 반 셀렉트 박스 채우기 (전체 명단이 있는 students 마스터 테이블 기준으로 조회)
         async function populateClassSelect() {
             try {
-                // presentation 대신 expo_booths 테이블에서 학번을 가져옵니다.
-                const { data, error } = await db.from('expo_booths').select('student_id');
+                const { data, error } = await db.from('students').select('student_id');
                 if (error) return;
 
                 let classes = new Set();
@@ -498,30 +526,40 @@
             } catch (err) { console.error(err); }
         }
 
-        // 반별 조회 기능 (이 부분은 누적 발표 데이터를 보는 것이므로 presentation 유지)
+        // 반별 조회 기능 최적화 (1000행 초과 시 분할 호출 및 순수 학급 필터링 연동)
         document.getElementById('btnFetchClass').addEventListener('click', async () => {
             const selectedClass = document.getElementById('classSelect').value;
             if (!selectedClass) return alert("반을 선택해주세요.");
 
             try {
-                const { data, error } = await db.from('presentation').select('student_id, student_name, created_at');
-                if (error) throw error;
+                // 페이지네이션 헬퍼 함수를 통해 대규모 데이터 분할 처리 다운로드
+                const classData = await fetchAllClassPresentations(selectedClass);
 
-                const classData = data.filter(row => Math.floor(row.student_id / 100) == selectedClass);
+                // students 테이블에서 해당 반의 학생 목록을 먼저 명확하게 빌드하여 동기화
+                const { data: currentClassStudents, error: studentError } = await db.from('students')
+                    .select('student_id, student_name')
+                    .gte('student_id', parseInt(selectedClass, 10) * 100)
+                    .lte('student_id', parseInt(selectedClass, 10) * 100 + 99)
+                    .order('student_id', { ascending: true });
+
+                if (studentError) throw studentError;
+
                 let studentRecords = {};
+                currentClassStudents.forEach(st => {
+                    studentRecords[st.student_id] = {
+                        name: st.student_name,
+                        months: { 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 1: 0, 2: 0 },
+                        total: 0
+                    };
+                });
 
                 classData.forEach(row => {
-                    if (!studentRecords[row.student_id]) {
-                        studentRecords[row.student_id] = {
-                            name: row.student_name,
-                            months: { 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 1: 0, 2: 0 },
-                            total: 0
-                        };
+                    if (studentRecords[row.student_id]) {
+                        let date = new Date(row.created_at);
+                        let month = date.getMonth() + 1;
+                        studentRecords[row.student_id].months[month]++;
+                        studentRecords[row.student_id].total++;
                     }
-                    let date = new Date(row.created_at);
-                    let month = date.getMonth() + 1;
-                    studentRecords[row.student_id].months[month]++;
-                    studentRecords[row.student_id].total++;
                 });
 
                 let sortedIds = Object.keys(studentRecords).sort((a, b) => parseInt(a) - parseInt(b));
@@ -546,44 +584,41 @@
         });
 
         /* ==========================================
-           새로운 반별 일괄 기초입력 로직 (expo_booths 기준)
+           반별 일괄 기초입력 로직 (students 테이블 완벽 매핑)
         ========================================== */
         document.getElementById('btnFetchInput').addEventListener('click', async () => {
             const selectedClass = document.getElementById('inputClassSelect').value;
             if (!selectedClass) return alert("반을 선택해주세요.");
 
             try {
-                // presentation 대신 expo_booths 테이블에서 해당 반 전체 학생을 가져옵니다.
-                const { data, error } = await db.from('expo_booths').select('student_id, student_name');
+                // DB 쿼리 자체에서 지정된 학급 범위 조건과 학번순 정렬 필터를 직접 수행
+                const { data, error } = await db.from('students')
+                    .select('student_id, student_name')
+                    .gte('student_id', parseInt(selectedClass, 10) * 100)
+                    .lte('student_id', parseInt(selectedClass, 10) * 100 + 99)
+                    .order('student_id', { ascending: true });
+
                 if (error) throw error;
 
-                let studentMap = {};
-                data.forEach(row => {
-                    if (Math.floor(row.student_id / 100) == selectedClass) {
-                        studentMap[row.student_id] = row.student_name;
-                    }
-                });
-
-                let sortedIds = Object.keys(studentMap).sort((a, b) => parseInt(a) - parseInt(b));
                 let tbodyHTML = '';
 
-                // 전체 학생 행 렌더링
-                sortedIds.forEach(id => {
+                // 선별된 전체 학생 행 정렬 렌더링
+                data.forEach(row => {
                     tbodyHTML += `
                     <tr class="existing-student-row">
-                        <td>${id}</td>
-                        <td>${studentMap[id]}</td>
+                        <td>${row.student_id}</td>
+                        <td>${row.student_name}</td>
                         <td>
-                            <input type="number" class="table-input bulk-count" data-id="${id}" data-name="${studentMap[id]}" placeholder="0" min="0">
+                            <input type="number" class="table-input bulk-count" data-id="${row.student_id}" data-name="${row.student_name}" placeholder="0" min="0">
                         </td>
                     </tr>`;
                 });
 
-                if (sortedIds.length === 0) {
-                    tbodyHTML += `<tr><td colspan="3">해당 반의 명단을 expo_booths 테이블에서 찾을 수 없습니다.</td></tr>`;
+                if (data.length === 0) {
+                    tbodyHTML += `<tr><td colspan="3">해당 반의 명단을 students 테이블에서 찾을 수 없습니다.</td></tr>`;
                 }
 
-                // 새로운 학생 추가를 위한 빈 행 3개 생성 (전학생 등 예외 상황 대비용)
+                // 예외 학생 수동 입력창 컴포넌트 유지
                 tbodyHTML += `<tr><td colspan="3" style="background:#ecf0f1; font-weight:bold;">새로운 학생 추가 (명단에 없는 경우만)</td></tr>`;
                 for (let i = 0; i < 3; i++) {
                     tbodyHTML += `
@@ -601,7 +636,7 @@
             }
         });
 
-        // 일괄 저장 버튼 이벤트 (여기는 그대로 presentation 테이블에 인서트)
+        // 일괄 저장 버튼 이벤트 (입력 횟수별 다중 행 자동 인서트 보존)
         document.getElementById('btnBulkSave').addEventListener('click', async () => {
             const inserts = [];
 
@@ -613,7 +648,6 @@
                 if (!isNaN(count) && count > 0) {
                     const id = input.getAttribute('data-id');
                     const name = input.getAttribute('data-name');
-                    // 입력한 횟수만큼 배열에 Insert 객체 추가
                     for (let i = 0; i < count; i++) {
                         inserts.push({
                             student_id: parseInt(id, 10),
@@ -641,20 +675,16 @@
                 }
             });
 
-            // 저장할 데이터가 없는 경우
             if (inserts.length === 0) {
                 return alert("추가할 횟수가 입력된 학생이 없습니다. (최소 1 이상의 숫자를 입력해주세요)");
             }
 
             if (confirm(`총 ${inserts.length}건의 발표 기록을 DB에 일괄 저장하시겠습니까?`)) {
                 try {
-                    // 저장 대상은 presentation 테이블로 유지
                     const { error } = await db.from('presentation').insert(inserts);
                     if (error) throw error;
 
                     alert("일괄 저장이 성공적으로 완료되었습니다.");
-
-                    // 입력창 초기화
                     document.querySelectorAll('.bulk-count, .new-id, .new-name, .new-count').forEach(el => el.value = '');
 
                 } catch (e) {

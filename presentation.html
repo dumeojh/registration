@@ -94,21 +94,29 @@
     </div>
 
     <script>
-        // 본인의 수파베이스 URL과 KEY값
         const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
-
-        // 수파베이스 클라이언트 초기화 (오류 수정 완료)
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // 수파베이스 클라이언트 초기화
+        //      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         document.getElementById('presentationForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const studentId = document.getElementById('studentId').value;
+            const studentIdValue = document.getElementById('studentId').value;
             const studentName = document.getElementById('studentName').value;
             const content = document.getElementById('content').value;
 
-            // 학번과 이름이 함께 표출되어 다른 학생의 정보를 실수로 입력하는 것을 방지합니다.
+            // 1. 학번 자릿수 검증 (5자리 숫자인지 확인)
+            if (studentIdValue.length !== 5) {
+                alert("학번은 5자리 숫자로 입력해주세요. (예: 20101)");
+                return;
+            }
+
+            // 2. 데이터베이스 컬럼 타입에 맞춰 학번을 숫자로 변환
+            const studentId = parseInt(studentIdValue, 10);
+
+            // 3. 학번과 이름이 함께 표출되어 다른 학생의 정보를 실수로 입력하는 것을 방지합니다.
             const confirmMessage = `[${studentId} ${studentName}]\n입력하신 정보가 맞습니까?`;
 
             if (confirm(confirmMessage)) {

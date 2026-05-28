@@ -7,6 +7,8 @@
     <title>Presentation Record</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+    <script src="common.js"></script>
+
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -94,11 +96,8 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
-        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        // 수파베이스 클라이언트 초기화
-        //      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // ⭐️ 3. 방금 삭제한 부분: 여기서 URL과 KEY를 적던 3줄을 싹 지웠습니다! 
+        // 이제 common.js에서 설정한 값(supabase)을 자동으로 가져다 씁니다.
 
         document.getElementById('presentationForm').addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -122,7 +121,8 @@
             if (confirm(confirmMessage)) {
                 try {
                     // 수파베이스 presentation 테이블에 데이터 삽입
-                    const { data, error } = await supabase
+                    // (common.js에 정의된 supabase 변수를 그대로 사용)
+                    const { data, error } = await db
                         .from('presentation')
                         .insert([
                             {

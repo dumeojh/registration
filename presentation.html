@@ -1237,7 +1237,8 @@
                     const { error } = await db.from('presentation').insert(inserts);
                     if (error) throw error;
                     alert("일괄 저장 완료!");
-                    document.querySelectorAll('.bulk-count, .new-id, .new-name, .new-count').forEach(el => el.value = '');
+
+                    document.getElementById('btnFetchInput').click();
                 } catch (e) { alert("저장 실패: " + e.message); }
             }
         });

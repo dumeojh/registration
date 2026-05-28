@@ -139,7 +139,6 @@
             background: white;
             width: 95%;
             max-width: 1000px;
-            /* 대시보드를 위해 너비 확장 */
             max-height: 90vh;
             overflow-y: auto;
             border-radius: 12px;
@@ -186,7 +185,6 @@
             background-color: #2c3e50;
         }
 
-        /* 테이블 스타일 */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -226,7 +224,6 @@
             border: 1px solid #ccc;
         }
 
-        /* 체크박스 디자인 (크게) */
         .dl-checkbox {
             width: 20px;
             height: 20px;
@@ -237,6 +234,11 @@
         .dl-checkbox:disabled {
             cursor: not-allowed;
             opacity: 0.5;
+        }
+
+        /* 일괄 처리 마스터 체크박스 스타일 */
+        .master-dl-cb {
+            margin-top: 5px;
         }
 
         .loading-overlay {
@@ -347,26 +349,41 @@
                     <button id="btnFetchDeadlineGrid" style="width: auto; margin: 0; padding: 10px 20px;">현황판
                         불러오기</button>
                 </div>
-                <p style="font-size:13px; color:#2980b9; margin-top:5px; margin-bottom:15px;">* 체크박스를 누르면
-                    <strong>즉시</strong> 해당 반의 월별 통계가 마감(정산)되거나 해제됩니다.</p>
+                <p style="font-size:13px; color:#2980b9; margin-top:5px; margin-bottom:15px;">
+                    * <strong>개별 마감:</strong> 각 칸의 체크박스를 누릅니다.<br>
+                    * <strong>일괄 마감:</strong> 해당 월 제목 아래의 체크박스를 누르면 표시된 모든 반이 동시 마감/해제됩니다.
+                </p>
 
                 <div style="overflow-x: auto; max-height: 500px;">
                     <table>
                         <thead>
                             <tr>
-                                <th style="min-width: 80px; background:#34495e; color:white;">학급</th>
-                                <th>3월</th>
-                                <th>4월</th>
-                                <th>5월</th>
-                                <th>6월</th>
-                                <th>7월</th>
-                                <th>8월</th>
-                                <th>9월</th>
-                                <th>10월</th>
-                                <th>11월</th>
-                                <th>12월</th>
-                                <th>1월</th>
-                                <th>2월</th>
+                                <th style="min-width: 80px; background:#34495e; color:white; vertical-align: middle;">학급
+                                </th>
+                                <th>3월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="3"
+                                        onchange="handleBulkMonth(this)" title="3월 일괄 마감/해제"></th>
+                                <th>4월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="4"
+                                        onchange="handleBulkMonth(this)" title="4월 일괄 마감/해제"></th>
+                                <th>5월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="5"
+                                        onchange="handleBulkMonth(this)" title="5월 일괄 마감/해제"></th>
+                                <th>6월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="6"
+                                        onchange="handleBulkMonth(this)" title="6월 일괄 마감/해제"></th>
+                                <th>7월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="7"
+                                        onchange="handleBulkMonth(this)" title="7월 일괄 마감/해제"></th>
+                                <th>8월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="8"
+                                        onchange="handleBulkMonth(this)" title="8월 일괄 마감/해제"></th>
+                                <th>9월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="9"
+                                        onchange="handleBulkMonth(this)" title="9월 일괄 마감/해제"></th>
+                                <th>10월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="10"
+                                        onchange="handleBulkMonth(this)" title="10월 일괄 마감/해제"></th>
+                                <th>11월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="11"
+                                        onchange="handleBulkMonth(this)" title="11월 일괄 마감/해제"></th>
+                                <th>12월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="12"
+                                        onchange="handleBulkMonth(this)" title="12월 일괄 마감/해제"></th>
+                                <th>1월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="1"
+                                        onchange="handleBulkMonth(this)" title="1월 일괄 마감/해제"></th>
+                                <th>2월<br><input type="checkbox" class="master-dl-cb dl-checkbox" data-month="2"
+                                        onchange="handleBulkMonth(this)" title="2월 일괄 마감/해제"></th>
                             </tr>
                         </thead>
                         <tbody id="deadlineGridBody">
@@ -668,7 +685,7 @@
 
 
         // ==========================================
-        // 4. [신규] 월별 마감 현황판 (대시보드) 로직
+        // 4. 월별 마감 현황판 및 일괄 처리(NEW)
         // ==========================================
         const monthsOrder = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2];
 
@@ -676,7 +693,6 @@
             const selectedGrade = document.getElementById('gradeSelect').value;
 
             try {
-                // 선택된 학년의 반만 필터링 (0학년 필터링 포함)
                 let targetClasses = allClassesList.filter(cls => {
                     let grade = Math.floor(cls / 100);
                     let classNum = cls % 100;
@@ -688,11 +704,9 @@
                     return document.getElementById('deadlineGridBody').innerHTML = `<tr><td colspan="13">해당 학년의 학급 정보가 없습니다.</td></tr>`;
                 }
 
-                // DB에서 모든 마감 상태 가져오기
                 const { data: deadlines, error } = await db.from('monthly_deadline').select('class_prefix, target_month, is_closed');
                 if (error) throw error;
 
-                // 빠른 조회를 위해 Map 구조로 변환
                 let dlMap = {};
                 if (deadlines) {
                     deadlines.forEach(d => {
@@ -701,7 +715,6 @@
                     });
                 }
 
-                // 테이블 렌더링
                 let tbodyHTML = '';
                 targetClasses.forEach(cls => {
                     let grade = Math.floor(cls / 100);
@@ -715,7 +728,7 @@
                         let checkedStr = isClosed ? 'checked' : '';
                         tbodyHTML += `
                             <td>
-                                <input type="checkbox" class="dl-checkbox" data-class="${cls}" data-month="${m}" ${checkedStr} onchange="handleCheckboxToggle(this)">
+                                <input type="checkbox" class="dl-checkbox individual-cb" data-class="${cls}" data-month="${m}" ${checkedStr} onchange="handleCheckboxToggle(this)">
                             </td>
                         `;
                     });
@@ -724,31 +737,37 @@
 
                 document.getElementById('deadlineGridBody').innerHTML = tbodyHTML;
 
+                // 렌더링 직후 마스터 체크박스 상태 동기화
+                monthsOrder.forEach(m => {
+                    const monthCbs = document.querySelectorAll(`.individual-cb[data-month="${m}"]`);
+                    const masterCb = document.querySelector(`.master-dl-cb[data-month="${m}"]`);
+                    if (masterCb && monthCbs.length > 0) {
+                        masterCb.checked = Array.from(monthCbs).every(cb => cb.checked);
+                    }
+                });
+
             } catch (e) {
                 alert("현황판 로드 중 오류: " + e.message);
             }
         });
 
-        // 체크박스 클릭 시 실행되는 함수 (자동 마감/해제 처리)
+        // (1) 개별 체크박스 토글 함수
         window.handleCheckboxToggle = async function (checkbox) {
             const classPrefix = parseInt(checkbox.getAttribute('data-class'), 10);
             const month = parseInt(checkbox.getAttribute('data-month'), 10);
-            const isClosing = checkbox.checked; // 체크됨 = 마감 진행
+            const isClosing = checkbox.checked;
 
             const loader = document.getElementById('dlLoading');
 
             if (isClosing) {
-                // 마감 처리 (Closed)
                 if (!confirm(`${Math.floor(classPrefix / 100)}학년 ${classPrefix % 100}반의 [${month}월] 기록을 최종 마감(정산)하시겠습니까?\n이후 학생들의 기록 추가가 차단됩니다.`)) {
-                    checkbox.checked = false; // 취소 시 롤백
-                    return;
+                    checkbox.checked = false; return;
                 }
 
                 try {
                     loader.classList.remove('hidden');
                     checkbox.disabled = true;
 
-                    // 1. 학생 명단 및 발표 기록(해당 월) 수집
                     const startId = classPrefix * 100;
                     const endId = startId + 99;
                     const { data: students } = await db.from('students').select('student_id, name').gte('student_id', startId).lte('student_id', endId);
@@ -761,7 +780,6 @@
                         }
                     });
 
-                    // 2. monthly_stats 업데이트
                     const statsToInsert = [];
                     const studentIds = [];
                     students.forEach(st => {
@@ -778,7 +796,6 @@
                         await db.from('monthly_stats').insert(statsToInsert);
                     }
 
-                    // 3. monthly_deadline 잠금 업데이트
                     const { data: existingDl } = await db.from('monthly_deadline').select('id').eq('class_prefix', classPrefix).eq('target_month', month).maybeSingle();
                     if (existingDl) {
                         await db.from('monthly_deadline').update({ is_closed: true }).eq('id', existingDl.id);
@@ -791,13 +808,16 @@
                 } finally {
                     checkbox.disabled = false;
                     loader.classList.add('hidden');
+
+                    // 마스터 체크박스 동기화
+                    const monthCbs = document.querySelectorAll(`.individual-cb[data-month="${month}"]`);
+                    const masterCb = document.querySelector(`.master-dl-cb[data-month="${month}"]`);
+                    if (masterCb) masterCb.checked = Array.from(monthCbs).every(cb => cb.checked);
                 }
 
             } else {
-                // 마감 해제 처리 (Open)
                 if (!confirm(`${Math.floor(classPrefix / 100)}학년 ${classPrefix % 100}반의 [${month}월] 마감을 해제하시겠습니까?\n해제하면 학생들이 다시 기록을 추가할 수 있습니다.`)) {
-                    checkbox.checked = true; // 취소 시 롤백
-                    return;
+                    checkbox.checked = true; return;
                 }
 
                 try {
@@ -815,6 +835,117 @@
                     checkbox.checked = true;
                 } finally {
                     checkbox.disabled = false;
+                    loader.classList.add('hidden');
+
+                    // 마스터 체크박스 동기화
+                    const masterCb = document.querySelector(`.master-dl-cb[data-month="${month}"]`);
+                    if (masterCb) masterCb.checked = false;
+                }
+            }
+        };
+
+        // (2) 일괄 처리 (마스터) 체크박스 함수
+        window.handleBulkMonth = async function (masterCb) {
+            const month = parseInt(masterCb.getAttribute('data-month'), 10);
+            const isClosing = masterCb.checked;
+            const loader = document.getElementById('dlLoading');
+
+            const checkboxes = document.querySelectorAll(`.individual-cb[data-month="${month}"]`);
+            if (checkboxes.length === 0) {
+                masterCb.checked = !isClosing;
+                return;
+            }
+
+            const classPrefixes = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-class'), 10));
+
+            if (isClosing) {
+                if (!confirm(`[${month}월] 현재 화면에 표시된 ${classPrefixes.length}개 반 전체를 한 번에 일괄 마감(정산)하시겠습니까?`)) {
+                    masterCb.checked = false; return;
+                }
+
+                try {
+                    loader.classList.remove('hidden');
+                    masterCb.disabled = true;
+                    checkboxes.forEach(cb => cb.disabled = true);
+
+                    let allStudents = [];
+                    let allPresentations = [];
+
+                    // 모든 학급 데이터 병렬 수집 (고속 처리)
+                    await Promise.all(classPrefixes.map(async (cls) => {
+                        const startId = cls * 100;
+                        const endId = startId + 99;
+                        const { data: stds } = await db.from('students').select('student_id, name').gte('student_id', startId).lte('student_id', endId);
+                        if (stds) allStudents.push(...stds);
+
+                        const pres = await fetchAllClassPresentations(cls);
+                        allPresentations.push(...pres);
+                    }));
+
+                    let monthCounts = {};
+                    allPresentations.forEach(row => {
+                        if (new Date(row.created_at).getMonth() + 1 === month) {
+                            monthCounts[row.student_id] = (monthCounts[row.student_id] || 0) + 1;
+                        }
+                    });
+
+                    const statsToInsert = [];
+                    const studentIds = allStudents.map(st => st.student_id);
+                    allStudents.forEach(st => {
+                        if (monthCounts[st.student_id]) {
+                            statsToInsert.push({ student_id: st.student_id, student_name: st.name, target_month: month, total_count: monthCounts[st.student_id] });
+                        }
+                    });
+
+                    // 삭제 후 통계 재삽입
+                    if (studentIds.length > 0) {
+                        await db.from('monthly_stats').delete().eq('target_month', month).in('student_id', studentIds);
+                    }
+                    if (statsToInsert.length > 0) {
+                        await db.from('monthly_stats').insert(statsToInsert);
+                    }
+
+                    // 마감 상태 일괄 업데이트
+                    await db.from('monthly_deadline').delete().eq('target_month', month).in('class_prefix', classPrefixes);
+                    const deadlineInserts = classPrefixes.map(cls => ({ class_prefix: cls, target_month: month, is_closed: true }));
+                    await db.from('monthly_deadline').insert(deadlineInserts);
+
+                    checkboxes.forEach(cb => cb.checked = true);
+                    alert(`${month}월 일괄 마감이 완료되었습니다.`);
+
+                } catch (e) {
+                    alert("일괄 마감 오류: " + e.message);
+                    masterCb.checked = false;
+                } finally {
+                    masterCb.disabled = false;
+                    checkboxes.forEach(cb => cb.disabled = false);
+                    loader.classList.add('hidden');
+                }
+
+            } else {
+                if (!confirm(`[${month}월] 현재 화면에 표시된 ${classPrefixes.length}개 반 전체의 마감을 일괄 해제하시겠습니까?`)) {
+                    masterCb.checked = true; return;
+                }
+
+                try {
+                    loader.classList.remove('hidden');
+                    masterCb.disabled = true;
+                    checkboxes.forEach(cb => cb.disabled = true);
+
+                    // 기존 기록 삭제 후 전부 false로 설정
+                    await db.from('monthly_deadline').delete().eq('target_month', month).in('class_prefix', classPrefixes);
+                    const deadlineInserts = classPrefixes.map(cls => ({ class_prefix: cls, target_month: month, is_closed: false }));
+                    await db.from('monthly_deadline').insert(deadlineInserts);
+
+                    checkboxes.forEach(cb => cb.checked = false);
+                    alert(`${month}월 일괄 마감 해제가 완료되었습니다.`);
+
+                } catch (e) {
+                    alert("일괄 해제 오류: " + e.message);
+                    masterCb.checked = true;
+                } finally {
+                    masterCb.disabled = false;
+                    checkboxes.forEach(cb => cb.disabled = false);
                     loader.classList.add('hidden');
                 }
             }

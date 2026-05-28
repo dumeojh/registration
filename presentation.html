@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Presentation Record</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            padding: 20px;
+            margin: 0;
+        }
+        
+
+        .form-container {
+            max-width: 400px;
+            margin: 20px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 25px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 15px;
+            color: #34495e;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 14px;
+            margin-top: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        input:focus,
+        textarea:focus {
+            border-color: #2980b9;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 25px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #3498db;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="form-container">
+        <h2>🎤 Presentation Record</h2>
+        <form id="presentationForm">
+
+            <label for="studentId">학번</label>
+            <input type="number" id="studentId" placeholder="예: 20101" required>
+
+            <label for="studentName">이름</label>
+            <input type="text" id="studentName" placeholder="이름을 입력하세요" required>
+
+            <label for="content">발표 내용</label>
+            <textarea id="content" rows="4" placeholder="발표한 내용이나 주제를 요약해서 적어주세요." required></textarea>
+
+            <button type="submit">제출하기</button>
+
+        </form>
+    </div>
+
+    <script>
+        // 수파베이스 대시보드 [Project Settings] -> [API]에서 확인한 값으로 변경해야 합니다.
+        const SUPABASE_URL = '여기에_본인의_SUPABASE_URL_입력';
+        const SUPABASE_ANON_KEY = '여기에_본인의_SUPABASE_ANON_KEY_입력';
+
+        // 수파베이스 클라이언트 초기화
+        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        document.getElementById('presentationForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const studentId = document.getElementById('studentId').value;
+            const studentName = document.getElementById('studentName').value;
+            const content = document.getElementById('content').value;
+
+            const confirmMessage = `[${studentId} ${studentName}]\n입력하신 정보가 맞습니까?`;
+
+            if (confirm(confirmMessage)) {
+                try {
+                    // 수파베이스 presentation 테이블에 데이터 삽입 (날짜인 created_at은 DB에서 자동 입력됨)
+                    const { data, error } = await supabase
+                        .from('presentation')
+                        .insert([
+                            {
+                                student_id: studentId,
+                                student_name: studentName,
+                                content: content
+                            }
+                        ]);
+
+                    if (error) throw error;
+
+                    alert('발표 기록이 성공적으로 제출되었습니다!');
+                    this.reset(); // 폼 초기화
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('저장 중 오류가 발생했습니다: ' + error.message);
+                }
+            }
+        });
+    </script>
+
+</body>
+
+</html>

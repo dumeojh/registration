@@ -137,8 +137,8 @@
 
         .modal-content {
             background: white;
-            width: 90%;
-            max-width: 800px;
+            width: 95%;
+            max-width: 900px;
             max-height: 90vh;
             overflow-y: auto;
             border-radius: 12px;
@@ -178,6 +178,7 @@
             flex: 1;
             margin: 0;
             background-color: #bdc3c7;
+            font-size: 15px;
         }
 
         .tab-btn.active {
@@ -214,7 +215,6 @@
             margin-top: 20px;
         }
 
-        /* 테이블 내부 인풋 스타일 조정 */
         .table-input {
             width: 100%;
             margin: 0;
@@ -222,6 +222,23 @@
             font-size: 14px;
             text-align: center;
             border: 1px solid #ccc;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+        }
+
+        .status-open {
+            background-color: #27ae60;
+        }
+
+        .status-closed {
+            background-color: #e74c3c;
         }
     </style>
 </head>
@@ -261,8 +278,9 @@
             </div>
 
             <div class="admin-tabs">
-                <button class="tab-btn active" id="tabView">반별조회</button>
-                <button class="tab-btn" id="tabInput">기초입력 (반별 일괄)</button>
+                <button class="tab-btn active" id="tabView">반별조회 (종합)</button>
+                <button class="tab-btn" id="tabDeadline">월별 마감관리</button>
+                <button class="tab-btn" id="tabInput">기초입력 (일괄)</button>
             </div>
 
             <div id="adminViewSection" class="admin-section">
@@ -270,7 +288,8 @@
                     <select id="classSelect" style="width: auto; margin-top: 0;"></select>
                     <button id="btnFetchClass" style="width: auto; margin-top: 0; padding: 10px 20px;">조회</button>
                 </div>
-
+                <p style="font-size:13px; color:#e74c3c; margin-top:5px;">* 마감된 월은 초고속 통계(monthly_stats)에서, 진행 중인 월은 실시간
+                    기록(presentation)에서 조회합니다.</p>
                 <div style="overflow-x: auto;">
                     <table>
                         <thead>
@@ -298,6 +317,47 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <div id="adminDeadlineSection" class="admin-section hidden">
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                    <h4 style="margin-top:0; color:#2c3e50;">🔒 학급별/월별 마감 설정</h4>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                        <select id="dlClassSelect" style="width: 150px; margin: 0;"></select>
+                        <select id="dlMonthSelect" style="width: 100px; margin: 0;">
+                            <option value="">월 선택</option>
+                            <option value="3">3월</option>
+                            <option value="4">4월</option>
+                            <option value="5">5월</option>
+                            <option value="6">6월</option>
+                            <option value="7">7월</option>
+                            <option value="8">8월</option>
+                            <option value="9">9월</option>
+                            <option value="10">10월</option>
+                            <option value="11">11월</option>
+                            <option value="12">12월</option>
+                            <option value="1">1월</option>
+                            <option value="2">2월</option>
+                        </select>
+                        <button id="btnCheckDeadline" style="width: auto; margin: 0; padding: 10px 20px;">상태 확인</button>
+                    </div>
+
+                    <div id="deadlineStatusBox" class="hidden"
+                        style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                        <p style="font-size: 16px; margin-bottom: 15px;">현재 상태: <span id="dlStatusBadge"
+                                class="status-badge">확인중</span></p>
+
+                        <div id="dlActionButtons">
+                            <button id="btnCloseMonth" style="background-color: #e74c3c; width: 48%; display: none;">🔒
+                                마감하기 (통계 확정)</button>
+                            <button id="btnOpenMonth" style="background-color: #27ae60; width: 48%; display: none;">🔓
+                                마감 풀기 (수정 가능)</button>
+                        </div>
+                        <p style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
+                            * 마감하기를 누르면 실시간 기록을 합산하여 <strong>월별 통계(monthly_stats)</strong>에 영구 저장하고, 학생들의 추가 입력을 차단합니다.
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -334,41 +394,32 @@
         let currentStudentId = null;
         let currentStudentName = '';
 
-        /**
-         * [성능 최적화] 특정 반의 모든 발표 기록을 페이지네이션(1000개 단위)으로 안전하게 전량 가져오는 함수
-         */
+        /** 대규모 데이터 분할 호출 헬퍼 (필요시 사용) */
         async function fetchAllClassPresentations(classPrefix) {
             let allData = [];
             let from = 0;
             let to = 999;
             let hasMore = true;
-
             const startId = parseInt(classPrefix, 10) * 100;
             const endId = startId + 99;
 
             while (hasMore) {
-                // presentation 테이블의 이름 컬럼은 student_name 유지
                 const { data, error } = await db.from('presentation')
                     .select('student_id, student_name, created_at')
                     .gte('student_id', startId)
                     .lte('student_id', endId)
                     .range(from, to);
-
                 if (error) throw error;
-
                 allData = allData.concat(data);
-
-                if (data.length < 1000) {
-                    hasMore = false;
-                } else {
-                    from += 1000;
-                    to += 1000;
-                }
+                if (data.length < 1000) hasMore = false;
+                else { from += 1000; to += 1000; }
             }
             return allData;
         }
 
-        // 최적화된 학생 조회 버튼 이벤트
+        // ==========================================
+        // 1. 학생 화면 (조회 및 제출)
+        // ==========================================
         document.getElementById('btnSearch').addEventListener('click', async function () {
             const studentIdValue = document.getElementById('searchId').value.trim();
             const studentNameValue = document.getElementById('searchName').value.trim();
@@ -377,9 +428,10 @@
             if (!studentNameValue) return alert("이름을 입력해주세요.");
 
             const studentId = parseInt(studentIdValue, 10);
+            const classPrefix = Math.floor(studentId / 100);
 
             try {
-                // 1단계: 마스터 테이블(students)에서 해당 학생이 존재하는지 및 이름(name)이 맞는지 1건만 조회
+                // 1. students 테이블(name 컬럼) 교차 검증
                 const { data: studentCheck, error: checkError } = await db.from('students')
                     .select('name')
                     .eq('student_id', studentId)
@@ -387,44 +439,19 @@
 
                 if (checkError) throw checkError;
                 if (!studentCheck) return alert("등록되지 않은 학번입니다.");
-                if (studentCheck.name !== studentNameValue) {
-                    return alert(`입력하신 학번(${studentId})과 등록된 이름이 일치하지 않습니다.`);
-                }
+                if (studentCheck.name !== studentNameValue) return alert(`입력하신 학번과 등록된 이름이 일치하지 않습니다.`);
 
-                // 2단계: 해당 학생이 속한 '반'의 발표 데이터만 최적화 쿼리로 빌드 및 가져오기
-                const classPrefix = Math.floor(studentId / 100);
+                // 학생은 전체 횟수만 확인하므로 임시로 전체 조회 (추후 고도화 가능)
                 const classRecords = await fetchAllClassPresentations(classPrefix);
-
-                // 3단계: 반 데이터 기준 발표 통계 및 석차 도출
-                let classStats = {};
+                let myCount = 0;
                 classRecords.forEach(row => {
-                    classStats[row.student_id] = (classStats[row.student_id] || 0) + 1;
+                    if (row.student_id === studentId) myCount++;
                 });
 
-                const myCount = classStats[studentId] || 0;
-
-                // 해당 반의 전체 학생 명단을 기반으로 0회 발표자까지 포함하여 정확한 순위 배열 생성
-                const { data: classMates, error: mateError } = await db.from('students')
-                    .select('student_id')
-                    .gte('student_id', classPrefix * 100)
-                    .lte('student_id', classPrefix * 100 + 99);
-
-                if (mateError) throw mateError;
-
-                let classCountsArray = [];
-                classMates.forEach(mate => {
-                    classCountsArray.push(classStats[mate.student_id] || 0);
-                });
-
-                classCountsArray.sort((a, b) => b - a);
-                const classRank = classCountsArray.indexOf(myCount) + 1;
-
-                // 통계 렌더링
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight">${studentId} ${studentNameValue}</p>
                     <hr style="border: 0.5px solid #bdc3c7; margin: 10px 0;">
-                    <p>발표 횟수: <strong>${myCount}회</strong></p>
-                    <p>반 순위: <strong>${classRank}위</strong> (학급 인원 기준)</p>
+                    <p>현재까지 발표 횟수: <strong>${myCount}회</strong></p>
                 `;
 
                 currentStudentId = studentId;
@@ -438,13 +465,31 @@
             }
         });
 
-        // 기존 제출 이벤트
+        // 🌟 [핵심] 발표 제출 시 마감(Deadline) 여부 체크 로직 추가
         document.getElementById('btnSubmit').addEventListener('click', async function () {
             const content = document.getElementById('content').value.trim();
             if (!content) return alert("발표 내용을 입력해주세요.");
 
-            if (confirm(`해당 내용으로 저장하시겠습니까?`)) {
-                try {
+            // 현재 시스템 상의 월 구하기 (1~12)
+            const currentMonth = new Date().getMonth() + 1;
+            const classPrefix = Math.floor(currentStudentId / 100);
+
+            try {
+                // 현재 월이 마감되었는지 DB에서 확인
+                const { data: dlData, error: dlError } = await db.from('monthly_deadline')
+                    .select('is_closed')
+                    .eq('class_prefix', classPrefix)
+                    .eq('target_month', currentMonth)
+                    .maybeSingle();
+
+                if (dlError) throw dlError;
+
+                if (dlData && dlData.is_closed === true) {
+                    return alert(`현재 ${currentMonth}월은 관리자에 의해 마감되어 기록을 추가할 수 없습니다.\n수정이 필요하다면 담당 선생님께 문의하세요.`);
+                }
+
+                // 마감이 안 되었다면 정상 제출
+                if (confirm(`해당 내용으로 저장하시겠습니까?`)) {
                     const { error } = await db.from('presentation').insert([
                         { student_id: currentStudentId, student_name: currentStudentName, content: content }
                     ]);
@@ -453,9 +498,9 @@
                     document.getElementById('content').value = '';
                     document.getElementById('recordSection').classList.add('hidden');
                     document.getElementById('searchSection').classList.remove('hidden');
-                } catch (error) {
-                    alert('오류 발생: ' + error.message);
                 }
+            } catch (error) {
+                alert('오류 발생: ' + error.message);
             }
         });
 
@@ -465,9 +510,9 @@
         });
 
 
-        /* ==========================================
-           비밀 관리자 모달 스크립트
-        ========================================== */
+        // ==========================================
+        // 2. 관리자 모달 및 탭 컨트롤
+        // ==========================================
         const adminModal = document.getElementById('adminModal');
 
         document.getElementById('secretBtn').addEventListener('dblclick', async function (e) {
@@ -477,31 +522,31 @@
             }
         });
 
-        document.getElementById('btnCloseAdmin').addEventListener('click', () => {
-            adminModal.classList.add('hidden');
-        });
+        document.getElementById('btnCloseAdmin').addEventListener('click', () => { adminModal.classList.add('hidden'); });
 
-        // 탭 전환
-        const tabView = document.getElementById('tabView');
-        const tabInput = document.getElementById('tabInput');
-        const viewSection = document.getElementById('adminViewSection');
-        const inputSection = document.getElementById('adminInputSection');
+        const tabs = {
+            view: { btn: document.getElementById('tabView'), sec: document.getElementById('adminViewSection') },
+            deadline: { btn: document.getElementById('tabDeadline'), sec: document.getElementById('adminDeadlineSection') },
+            input: { btn: document.getElementById('tabInput'), sec: document.getElementById('adminInputSection') }
+        };
 
-        tabView.addEventListener('click', () => {
-            tabView.classList.add('active');
-            tabInput.classList.remove('active');
-            viewSection.classList.remove('hidden');
-            inputSection.classList.add('hidden');
-        });
+        function switchTab(activeTabKey) {
+            Object.keys(tabs).forEach(key => {
+                if (key === activeTabKey) {
+                    tabs[key].btn.classList.add('active');
+                    tabs[key].sec.classList.remove('hidden');
+                } else {
+                    tabs[key].btn.classList.remove('active');
+                    tabs[key].sec.classList.add('hidden');
+                }
+            });
+        }
 
-        tabInput.addEventListener('click', () => {
-            tabInput.classList.add('active');
-            tabView.classList.remove('active');
-            inputSection.classList.remove('hidden');
-            viewSection.classList.add('hidden');
-        });
+        tabs.view.btn.addEventListener('click', () => switchTab('view'));
+        tabs.deadline.btn.addEventListener('click', () => switchTab('deadline'));
+        tabs.input.btn.addEventListener('click', () => switchTab('input'));
 
-        // 반 셀렉트 박스 채우기 (전체 명단이 있는 students 마스터 테이블 기준으로 조회)
+        // 반 목록 세팅 (0학년 0반 제외 로직 포함)
         async function populateClassSelect() {
             try {
                 const { data, error } = await db.from('students').select('student_id');
@@ -519,36 +564,37 @@
                 [...classes].sort().forEach(cls => {
                     let grade = Math.floor(cls / 100);
                     let classNum = cls % 100;
-                    // 0학년이거나 0반인 경우 목록에서 제외 (건너뛰기)
-                    if (grade === 0 || classNum === 0) return;
+                    if (grade === 0 || classNum === 0) return; // 0학년 0반 필터링
                     selectHTML += `<option value="${cls}">${grade}학년 ${classNum}반</option>`;
                 });
 
-
                 document.getElementById('classSelect').innerHTML = selectHTML;
+                document.getElementById('dlClassSelect').innerHTML = selectHTML;
                 document.getElementById('inputClassSelect').innerHTML = selectHTML;
             } catch (err) { console.error(err); }
         }
 
-        // 반별 조회 기능 최적화 (students 테이블의 name 컬럼 반영)
+
+        // ==========================================
+        // 3. 반별 종합 조회 (마감 통계 + 실시간 통계 융합)
+        // ==========================================
         document.getElementById('btnFetchClass').addEventListener('click', async () => {
             const selectedClass = document.getElementById('classSelect').value;
             if (!selectedClass) return alert("반을 선택해주세요.");
 
             try {
-                const classData = await fetchAllClassPresentations(selectedClass);
-
-                // students 테이블에서 해당 반의 학생 목록(name 컬럼) 빌드
-                const { data: currentClassStudents, error: studentError } = await db.from('students')
+                // 1. 반 전체 학생 명단(name 컬럼) 가져오기 및 초기화
+                const startId = parseInt(selectedClass, 10) * 100;
+                const endId = startId + 99;
+                const { data: students, error: studentError } = await db.from('students')
                     .select('student_id, name')
-                    .gte('student_id', parseInt(selectedClass, 10) * 100)
-                    .lte('student_id', parseInt(selectedClass, 10) * 100 + 99)
+                    .gte('student_id', startId).lte('student_id', endId)
                     .order('student_id', { ascending: true });
 
                 if (studentError) throw studentError;
 
                 let studentRecords = {};
-                currentClassStudents.forEach(st => {
+                students.forEach(st => {
                     studentRecords[st.student_id] = {
                         name: st.name,
                         months: { 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 1: 0, 2: 0 },
@@ -556,15 +602,46 @@
                     };
                 });
 
-                classData.forEach(row => {
-                    if (studentRecords[row.student_id]) {
-                        let date = new Date(row.created_at);
-                        let month = date.getMonth() + 1;
-                        studentRecords[row.student_id].months[month]++;
-                        studentRecords[row.student_id].total++;
+                // 2. 해당 반의 월별 마감 상태 가져오기
+                const { data: deadlines, error: dlError } = await db.from('monthly_deadline')
+                    .select('target_month, is_closed')
+                    .eq('class_prefix', selectedClass);
+                if (dlError) throw dlError;
+
+                // 마감된 월 목록(배열) 만들기
+                const closedMonths = deadlines.filter(d => d.is_closed).map(d => d.target_month);
+
+                // 3. 마감된 월의 데이터는 monthly_stats 에서 '초고속'으로 가져오기
+                if (closedMonths.length > 0) {
+                    const { data: statsData, error: statsError } = await db.from('monthly_stats')
+                        .select('student_id, target_month, total_count')
+                        .gte('student_id', startId).lte('student_id', endId)
+                        .in('target_month', closedMonths);
+
+                    if (statsError) throw statsError;
+
+                    statsData.forEach(row => {
+                        if (studentRecords[row.student_id]) {
+                            studentRecords[row.student_id].months[row.target_month] += row.total_count;
+                            studentRecords[row.student_id].total += row.total_count;
+                        }
+                    });
+                }
+
+                // 4. 마감되지 않은 월(진행 중인 월)의 데이터는 presentation에서 계산해서 가져오기
+                const allPresentations = await fetchAllClassPresentations(selectedClass);
+                allPresentations.forEach(row => {
+                    let month = new Date(row.created_at).getMonth() + 1;
+                    // 해당 월이 마감된 상태가 아니라면(진행중이라면) 카운트 추가
+                    if (!closedMonths.includes(month)) {
+                        if (studentRecords[row.student_id]) {
+                            studentRecords[row.student_id].months[month]++;
+                            studentRecords[row.student_id].total++;
+                        }
                     }
                 });
 
+                // 5. 테이블 렌더링
                 let sortedIds = Object.keys(studentRecords).sort((a, b) => parseInt(a) - parseInt(b));
                 let tbodyHTML = '';
                 sortedIds.forEach(id => {
@@ -572,10 +649,18 @@
                     tbodyHTML += `<tr>
                         <td>${id}</td>
                         <td>${st.name}</td>
-                        <td>${st.months[3]}</td><td>${st.months[4]}</td><td>${st.months[5]}</td>
-                        <td>${st.months[6]}</td><td>${st.months[7]}</td><td>${st.months[8]}</td>
-                        <td>${st.months[9]}</td><td>${st.months[10]}</td><td>${st.months[11]}</td>
-                        <td>${st.months[12]}</td><td>${st.months[1]}</td><td>${st.months[2]}</td>
+                        <td ${closedMonths.includes(3) ? 'style="background:#f1f2f6;"' : ''}>${st.months[3]}</td>
+                        <td ${closedMonths.includes(4) ? 'style="background:#f1f2f6;"' : ''}>${st.months[4]}</td>
+                        <td ${closedMonths.includes(5) ? 'style="background:#f1f2f6;"' : ''}>${st.months[5]}</td>
+                        <td ${closedMonths.includes(6) ? 'style="background:#f1f2f6;"' : ''}>${st.months[6]}</td>
+                        <td ${closedMonths.includes(7) ? 'style="background:#f1f2f6;"' : ''}>${st.months[7]}</td>
+                        <td ${closedMonths.includes(8) ? 'style="background:#f1f2f6;"' : ''}>${st.months[8]}</td>
+                        <td ${closedMonths.includes(9) ? 'style="background:#f1f2f6;"' : ''}>${st.months[9]}</td>
+                        <td ${closedMonths.includes(10) ? 'style="background:#f1f2f6;"' : ''}>${st.months[10]}</td>
+                        <td ${closedMonths.includes(11) ? 'style="background:#f1f2f6;"' : ''}>${st.months[11]}</td>
+                        <td ${closedMonths.includes(12) ? 'style="background:#f1f2f6;"' : ''}>${st.months[12]}</td>
+                        <td ${closedMonths.includes(1) ? 'style="background:#f1f2f6;"' : ''}>${st.months[1]}</td>
+                        <td ${closedMonths.includes(2) ? 'style="background:#f1f2f6;"' : ''}>${st.months[2]}</td>
                         <td><strong>${st.total}</strong></td>
                     </tr>`;
                 });
@@ -586,15 +671,135 @@
             } catch (e) { alert("조회 실패: " + e.message); }
         });
 
-        /* ==========================================
-           반별 일괄 기초입력 로직 (students 테이블 name 컬럼 반영)
-        ========================================== */
+
+        // ==========================================
+        // 4. [신규] 월별 마감 관리 로직
+        // ==========================================
+        document.getElementById('btnCheckDeadline').addEventListener('click', async () => {
+            const classPrefix = document.getElementById('dlClassSelect').value;
+            const month = document.getElementById('dlMonthSelect').value;
+
+            if (!classPrefix || !month) return alert("반과 월을 모두 선택해주세요.");
+
+            try {
+                const { data, error } = await db.from('monthly_deadline')
+                    .select('is_closed')
+                    .eq('class_prefix', classPrefix)
+                    .eq('target_month', month)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                document.getElementById('deadlineStatusBox').classList.remove('hidden');
+                const badge = document.getElementById('dlStatusBadge');
+                const btnClose = document.getElementById('btnCloseMonth');
+                const btnOpen = document.getElementById('btnOpenMonth');
+
+                if (data && data.is_closed) {
+                    badge.textContent = "🔒 마감 완료";
+                    badge.className = "status-badge status-closed";
+                    btnClose.style.display = "none";
+                    btnOpen.style.display = "inline-block";
+                } else {
+                    badge.textContent = "🔓 진행 중 (미마감)";
+                    badge.className = "status-badge status-open";
+                    btnClose.style.display = "inline-block";
+                    btnOpen.style.display = "none";
+                }
+            } catch (e) { alert("상태 확인 실패: " + e.message); }
+        });
+
+        // 🟢 마감하기 (통계 정산 및 잠금)
+        document.getElementById('btnCloseMonth').addEventListener('click', async () => {
+            const classPrefix = document.getElementById('dlClassSelect').value;
+            const month = parseInt(document.getElementById('dlMonthSelect').value, 10);
+
+            if (!confirm(`${classPrefix}학급의 ${month}월 데이터를 최종 마감하시겠습니까?\n마감 후 학생들은 이 달의 기록을 추가할 수 없습니다.`)) return;
+
+            try {
+                // 1. 해당 반 학생 명단 가져오기
+                const startId = parseInt(classPrefix, 10) * 100;
+                const endId = startId + 99;
+                const { data: students } = await db.from('students').select('student_id, name').gte('student_id', startId).lte('student_id', endId);
+
+                // 2. 실시간 presentation 데이터 중 해당 월의 데이터 집계
+                const allPresentations = await fetchAllClassPresentations(classPrefix);
+                let monthCounts = {}; // { student_id: count }
+
+                allPresentations.forEach(row => {
+                    if (new Date(row.created_at).getMonth() + 1 === month) {
+                        monthCounts[row.student_id] = (monthCounts[row.student_id] || 0) + 1;
+                    }
+                });
+
+                // 3. monthly_stats에 넣을 정산 데이터 배열 만들기 (학번과 이름 모두 저장하여 오류 방지)
+                const statsToInsert = [];
+                const studentIds = [];
+                students.forEach(st => {
+                    studentIds.push(st.student_id);
+                    if (monthCounts[st.student_id]) {
+                        statsToInsert.push({
+                            student_id: st.student_id,
+                            student_name: st.name,
+                            target_month: month,
+                            total_count: monthCounts[st.student_id]
+                        });
+                    }
+                });
+
+                // 4. 기존 통계가 있다면 깨끗하게 삭제 (중복 방지)
+                if (studentIds.length > 0) {
+                    await db.from('monthly_stats').delete().eq('target_month', month).in('student_id', studentIds);
+                }
+
+                // 5. 새 통계 Insert
+                if (statsToInsert.length > 0) {
+                    const { error: insertError } = await db.from('monthly_stats').insert(statsToInsert);
+                    if (insertError) throw insertError;
+                }
+
+                // 6. 마감 상태 업데이트 (없으면 Insert, 있으면 Update)
+                const { data: existingDl } = await db.from('monthly_deadline').select('id').eq('class_prefix', classPrefix).eq('target_month', month).maybeSingle();
+
+                if (existingDl) {
+                    await db.from('monthly_deadline').update({ is_closed: true }).eq('id', existingDl.id);
+                } else {
+                    await db.from('monthly_deadline').insert([{ class_prefix: classPrefix, target_month: month, is_closed: true }]);
+                }
+
+                alert(`${month}월 마감이 완료되었습니다.`);
+                document.getElementById('btnCheckDeadline').click(); // 상태 재확인
+
+            } catch (e) { alert("마감 처리 중 오류: " + e.message); }
+        });
+
+        // 🔴 마감 풀기
+        document.getElementById('btnOpenMonth').addEventListener('click', async () => {
+            const classPrefix = document.getElementById('dlClassSelect').value;
+            const month = parseInt(document.getElementById('dlMonthSelect').value, 10);
+
+            if (!confirm(`마감을 해제하시겠습니까?\n해제하면 학생들이 다시 기록을 추가할 수 있습니다.`)) return;
+
+            try {
+                await db.from('monthly_deadline')
+                    .update({ is_closed: false })
+                    .eq('class_prefix', classPrefix)
+                    .eq('target_month', month);
+
+                alert("마감이 해제되었습니다.");
+                document.getElementById('btnCheckDeadline').click();
+            } catch (e) { alert("마감 해제 중 오류: " + e.message); }
+        });
+
+
+        // ==========================================
+        // 5. 기초입력 (일괄 저장) 로직 유지
+        // ==========================================
         document.getElementById('btnFetchInput').addEventListener('click', async () => {
             const selectedClass = document.getElementById('inputClassSelect').value;
             if (!selectedClass) return alert("반을 선택해주세요.");
 
             try {
-                // students 테이블에서 name 컬럼 가져오기
                 const { data, error } = await db.from('students')
                     .select('student_id, name')
                     .gte('student_id', parseInt(selectedClass, 10) * 100)
@@ -602,23 +807,16 @@
                     .order('student_id', { ascending: true });
 
                 if (error) throw error;
-
                 let tbodyHTML = '';
-
                 data.forEach(row => {
                     tbodyHTML += `
                     <tr class="existing-student-row">
                         <td>${row.student_id}</td>
                         <td>${row.name}</td>
-                        <td>
-                            <input type="number" class="table-input bulk-count" data-id="${row.student_id}" data-name="${row.name}" placeholder="0" min="0">
-                        </td>
+                        <td><input type="number" class="table-input bulk-count" data-id="${row.student_id}" data-name="${row.name}" placeholder="0" min="0"></td>
                     </tr>`;
                 });
-
-                if (data.length === 0) {
-                    tbodyHTML += `<tr><td colspan="3">해당 반의 명단을 students 테이블에서 찾을 수 없습니다.</td></tr>`;
-                }
+                if (data.length === 0) tbodyHTML += `<tr><td colspan="3">명단을 찾을 수 없습니다.</td></tr>`;
 
                 tbodyHTML += `<tr><td colspan="3" style="background:#ecf0f1; font-weight:bold;">새로운 학생 추가 (명단에 없는 경우만)</td></tr>`;
                 for (let i = 0; i < 3; i++) {
@@ -629,68 +827,44 @@
                         <td><input type="number" class="table-input new-count" placeholder="0" min="0"></td>
                     </tr>`;
                 }
-
                 document.getElementById('inputTableBody').innerHTML = tbodyHTML;
-
-            } catch (e) {
-                alert("학생 명단 조회 실패: " + e.message);
-            }
+            } catch (e) { alert("명단 조회 실패: " + e.message); }
         });
 
-        // 일괄 저장 버튼 이벤트 (입력 횟수별 다중 행 자동 인서트 보존)
         document.getElementById('btnBulkSave').addEventListener('click', async () => {
             const inserts = [];
-
-            // 1. 기존 학생들의 입력값 확인
             document.querySelectorAll('.existing-student-row').forEach(row => {
                 const input = row.querySelector('.bulk-count');
                 const count = parseInt(input.value, 10);
-
                 if (!isNaN(count) && count > 0) {
                     const id = input.getAttribute('data-id');
                     const name = input.getAttribute('data-name');
                     for (let i = 0; i < count; i++) {
-                        inserts.push({
-                            student_id: parseInt(id, 10),
-                            student_name: name,
-                            content: "[관리자 일괄 기초입력] 수동 반영"
-                        });
+                        inserts.push({ student_id: parseInt(id, 10), student_name: name, content: "[관리자 기초입력] 수동 반영" });
                     }
                 }
             });
 
-            // 2. 신규 등록 학생들의 입력값 확인
             document.querySelectorAll('.new-student-row').forEach(row => {
                 const idVal = row.querySelector('.new-id').value.trim();
                 const nameVal = row.querySelector('.new-name').value.trim();
                 const countVal = parseInt(row.querySelector('.new-count').value, 10);
-
                 if (idVal && nameVal && !isNaN(countVal) && countVal > 0) {
                     for (let i = 0; i < countVal; i++) {
-                        inserts.push({
-                            student_id: parseInt(idVal, 10),
-                            student_name: nameVal,
-                            content: "[관리자 일괄 기초입력] 수동 반영"
-                        });
+                        inserts.push({ student_id: parseInt(idVal, 10), student_name: nameVal, content: "[관리자 기초입력] 수동 반영" });
                     }
                 }
             });
 
-            if (inserts.length === 0) {
-                return alert("추가할 횟수가 입력된 학생이 없습니다. (최소 1 이상의 숫자를 입력해주세요)");
-            }
+            if (inserts.length === 0) return alert("추가할 횟수를 입력해주세요.");
 
-            if (confirm(`총 ${inserts.length}건의 발표 기록을 DB에 일괄 저장하시겠습니까?`)) {
+            if (confirm(`총 ${inserts.length}건을 일괄 저장하시겠습니까?`)) {
                 try {
                     const { error } = await db.from('presentation').insert(inserts);
                     if (error) throw error;
-
-                    alert("일괄 저장이 성공적으로 완료되었습니다.");
+                    alert("일괄 저장 완료!");
                     document.querySelectorAll('.bulk-count, .new-id, .new-name, .new-count').forEach(el => el.value = '');
-
-                } catch (e) {
-                    alert("저장 실패: " + e.message);
-                }
+                } catch (e) { alert("저장 실패: " + e.message); }
             }
         });
     </script>

@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Presentation Record</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <script src="common.js"></script>
 
     <style>
@@ -65,83 +64,228 @@
             border-radius: 8px;
             font-size: 18px;
             font-weight: bold;
-            margin-top: 25px;
+            margin-top: 15px;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
 
         button:hover {
             background-color: #3498db;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            margin-top: 10px;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        .stats-box {
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats-box p {
+            margin: 5px 0;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+
+        .stats-box .highlight {
+            font-weight: bold;
+            color: #2980b9;
+            font-size: 18px;
+        }
+
+        /* 화면 전환을 위한 클래스 */
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="form-container">
-        <h2>🎤 Presentation Record</h2>
-        <form id="presentationForm">
+    <!-- 1. 학생 조회 화면 -->
+    <div class="form-container" id="searchSection">
+        <h2>🔍 학생 조회</h2>
+        <label for="searchId">학번</label>
+        <input type="number" id="searchId" placeholder="예: 20101" required>
 
-            <label for="studentId">학번</label>
-            <input type="number" id="studentId" placeholder="예: 20101" required>
+        <label for="searchName">이름</label>
+        <input type="text" id="searchName" placeholder="이름을 입력하세요" required>
 
-            <label for="studentName">이름</label>
-            <input type="text" id="studentName" placeholder="이름을 입력하세요" required>
+        <button type="button" id="btnSearch">조회하기</button>
+    </div>
 
-            <label for="content">발표 내용</label>
-            <textarea id="content" rows="4" placeholder="발표한 내용이나 주제를 요약해서 적어주세요." required></textarea>
+    <!-- 2. 발표 기록 화면 (초기에는 숨김) -->
+    <div class="form-container hidden" id="recordSection">
+        <h2>🎤 발표 기록</h2>
 
-            <button type="submit">제출하기</button>
+        <div class="stats-box" id="statsBox">
+            <!-- 통계 정보가 JS를 통해 여기에 표시됩니다. -->
+        </div>
 
-        </form>
+        <label for="content">발표 내용</label>
+        <textarea id="content" rows="4" placeholder="발표한 내용이나 주제를 요약해서 적어주세요." required></textarea>
+
+        <button type="button" id="btnSubmit">제출하기</button>
+        <button type="button" id="btnCancel" class="btn-secondary">이전으로</button>
     </div>
 
     <script>
-        // ⭐️ 3. 방금 삭제한 부분: 여기서 URL과 KEY를 적던 3줄을 싹 지웠습니다! 
-        // 이제 common.js에서 설정한 값(supabase)을 자동으로 가져다 씁니다.
+        let currentStudentId = null;
+        let currentStudentName = '';
 
-        document.getElementById('presentationForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
+        // 조회 버튼 클릭 이벤트
+        document.getElementById('btnSearch').addEventListener('click', async function () {
+            const studentIdValue = document.getElementById('searchId').value.trim();
+            const studentNameValue = document.getElementById('searchName').value.trim();
 
-            const studentIdValue = document.getElementById('studentId').value;
-            const studentName = document.getElementById('studentName').value;
-            const content = document.getElementById('content').value;
-
-            // 1. 학번 자릿수 검증 (5자리 숫자인지 확인)
             if (studentIdValue.length !== 5) {
                 alert("학번은 5자리 숫자로 입력해주세요. (예: 20101)");
                 return;
             }
+            if (!studentNameValue) {
+                alert("이름을 입력해주세요.");
+                return;
+            }
 
-            // 2. 데이터베이스 컬럼 타입에 맞춰 학번을 숫자로 변환
             const studentId = parseInt(studentIdValue, 10);
 
-            // 3. 학번과 이름이 함께 표출되어 다른 학생의 정보를 실수로 입력하는 것을 방지합니다.
-            const confirmMessage = `[${studentId} ${studentName}]\n입력하신 정보가 맞습니까?`;
+            try {
+                // Supabase에서 전체 발표 기록을 가져와서 이름 검증 및 통계 계산
+                const { data: records, error } = await db
+                    .from('presentation')
+                    .select('student_id, student_name');
+
+                if (error) throw error;
+
+                let studentStats = {};
+                let nameMap = {};
+
+                // 데이터 집계
+                records.forEach(row => {
+                    if (!studentStats[row.student_id]) {
+                        studentStats[row.student_id] = 0;
+                        nameMap[row.student_id] = row.student_name;
+                    }
+                    studentStats[row.student_id]++;
+                });
+
+                // 이름 교차 검증 (다른 학생의 학번에 잘못된 이름을 입력하는 실수 방지)
+                if (nameMap[studentId] && nameMap[studentId] !== studentNameValue) {
+                    alert(`입력하신 학번(${studentId})과 기존에 등록된 이름이 일치하지 않습니다. 다시 확인해주세요.`);
+                    return;
+                }
+
+                // 현재 학생의 통계 계산
+                let myCount = studentStats[studentId] || 0;
+
+                // 학년 및 반 추출 (예: 20101 -> 2학년 1반)
+                let myGrade = Math.floor(studentId / 10000);
+                let myClass = Math.floor((studentId % 10000) / 100);
+
+                let gradeCounts = [];
+                let classCounts = [];
+
+                // 순위 계산을 위한 배열 생성
+                for (let sid in studentStats) {
+                    let sIdNum = parseInt(sid, 10);
+                    let g = Math.floor(sIdNum / 10000);
+                    let c = Math.floor((sIdNum % 10000) / 100);
+
+                    if (g === myGrade) gradeCounts.push(studentStats[sid]);
+                    if (g === myGrade && c === myClass) classCounts.push(studentStats[sid]);
+                }
+
+                // 본인 기록이 0회인 경우 배열에 포함시켜 순위 기준 마련
+                if (myCount === 0) {
+                    gradeCounts.push(0);
+                    classCounts.push(0);
+                }
+
+                // 내림차순 정렬
+                gradeCounts.sort((a, b) => b - a);
+                classCounts.sort((a, b) => b - a);
+
+                // 순위 산출 (중복 값이 있을 경우 높은 순위 부여)
+                let gradeRank = gradeCounts.indexOf(myCount) + 1;
+                let classRank = classCounts.indexOf(myCount) + 1;
+
+                // 통계 UI 업데이트
+                document.getElementById('statsBox').innerHTML = `
+                    <p class="highlight">${studentId} ${studentNameValue}</p>
+                    <hr style="border: 0.5px solid #bdc3c7; margin: 10px 0;">
+                    <p>발표 횟수: <strong>${myCount}회</strong></p>
+                    <p>반 순위: <strong>${classRank}위</strong> / 학년 순위: <strong>${gradeRank}위</strong></p>
+                `;
+
+                // 상태 저장 및 화면 전환
+                currentStudentId = studentId;
+                currentStudentName = studentNameValue;
+
+                document.getElementById('searchSection').classList.add('hidden');
+                document.getElementById('recordSection').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                alert('데이터 조회 중 오류가 발생했습니다: ' + error.message);
+            }
+        });
+
+        // 제출 버튼 클릭 이벤트
+        document.getElementById('btnSubmit').addEventListener('click', async function () {
+            const content = document.getElementById('content').value.trim();
+
+            if (!content) {
+                alert("발표 내용을 입력해주세요.");
+                return;
+            }
+
+            const confirmMessage = `[${currentStudentId} ${currentStudentName}]\n해당 내용으로 발표 기록을 저장하시겠습니까?`;
 
             if (confirm(confirmMessage)) {
                 try {
-                    // 수파베이스 presentation 테이블에 데이터 삽입
-                    // (common.js에 정의된 supabase 변수를 그대로 사용)
-                    const { data, error } = await db
+                    const { error } = await db
                         .from('presentation')
                         .insert([
                             {
-                                student_id: studentId,
-                                student_name: studentName,
+                                student_id: currentStudentId,
+                                student_name: currentStudentName,
                                 content: content
                             }
                         ]);
 
                     if (error) throw error;
 
-                    alert('발표 기록이 성공적으로 제출되었습니다!');
-                    this.reset(); // 폼 초기화
+                    alert('발표 기록이 성공적으로 저장되었습니다!');
+
+                    // 초기화 및 화면 복귀
+                    document.getElementById('content').value = '';
+                    document.getElementById('searchId').value = '';
+                    document.getElementById('searchName').value = '';
+
+                    document.getElementById('recordSection').classList.add('hidden');
+                    document.getElementById('searchSection').classList.remove('hidden');
 
                 } catch (error) {
-                    console.error('Error:', error);
+                    console.error('Error saving data:', error);
                     alert('저장 중 오류가 발생했습니다: ' + error.message);
                 }
             }
+        });
+
+        // 취소(이전으로) 버튼 이벤트
+        document.getElementById('btnCancel').addEventListener('click', function () {
+            document.getElementById('content').value = '';
+            document.getElementById('recordSection').classList.add('hidden');
+            document.getElementById('searchSection').classList.remove('hidden');
         });
     </script>
 

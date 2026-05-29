@@ -1171,6 +1171,7 @@
                     });
                 }
 
+
                 // 4. 테이블 그리기
                 let tbodyHTML = '';
                 data.forEach(row => {
@@ -1185,20 +1186,21 @@
                     <tr class="existing-student-row">
                         <td>${row.student_id}</td>
                         <td>${row.name} ${countBadge}</td>
-                       <td><input type="number" class="table-input bulk-count" data-id="${row.student_id}" data-name="${row.name}" placeholder="0"></td>
+                        <td><input type="number" class="table-input bulk-count" data-id="${row.student_id}" data-name="${row.name}" placeholder="0"></td>
+                    </tr>`;
                 });
 
-                if (data.length === 0) tbodyHTML += `< tr > <td colspan="3">명단을 찾을 수 없습니다.</td></tr > `;
+                if (data.length === 0) tbodyHTML += `<tr><td colspan="3">명단을 찾을 수 없습니다.</td></tr>`;
 
                 // 새로운 학생 추가 행
-                tbodyHTML += `< tr > <td colspan="3" style="background:#ecf0f1; font-weight:bold;">새로운 학생 추가 (명단에 없는 경우만)</td></tr > `;
+                tbodyHTML += `<tr><td colspan="3" style="background:#ecf0f1; font-weight:bold;">새로운 학생 추가 (명단에 없는 경우만)</td></tr>`;
                 for (let i = 0; i < 3; i++) {
                     tbodyHTML += `
-                        < tr class="new-student-row" >
+                    <tr class="new-student-row">
                         <td><input type="number" class="table-input new-id" placeholder="학번"></td>
                         <td><input type="text" class="table-input new-name" placeholder="이름"></td>
                         <td><input type="number" class="table-input new-count" placeholder="0" min="0"></td>
-                    </tr > `;
+                    </tr>`;
                 }
 
                 document.getElementById('inputTableBody').innerHTML = tbodyHTML;
@@ -1206,20 +1208,19 @@
         });
 
 
-
-document.getElementById('btnBulkSave').addEventListener('click', async () => {
+        document.getElementById('btnBulkSave').addEventListener('click', async () => {
             const inserts = [];
             const deleteTasks = []; // 삭제할 작업 모음
 
             document.querySelectorAll('.existing-student-row').forEach(row => {
                 const input = row.querySelector('.bulk-count');
                 const count = parseInt(input.value, 10);
-                
+
                 // 0이 아니고 숫자가 입력된 경우
                 if (!isNaN(count) && count !== 0) {
                     const id = input.getAttribute('data-id');
                     const name = input.getAttribute('data-name');
-                    
+
                     if (count > 0) {
                         // 양수면 추가 리스트에 넣기
                         for (let i = 0; i < count; i++) {
@@ -1248,11 +1249,11 @@ document.getElementById('btnBulkSave').addEventListener('click', async () => {
             // 상황에 맞게 안내 메시지 변경
             let confirmMsg = "";
             if (inserts.length > 0 && deleteTasks.length > 0) {
-                confirmMsg = `총 ${ inserts.length }건 추가, ${ deleteTasks.reduce((a, b) => a + b.amount, 0) }건 삭제를 진행하시겠습니까 ? `;
+                confirmMsg = `총 ${inserts.length}건 추가, ${deleteTasks.reduce((a, b) => a + b.amount, 0)}건 삭제를 진행하시겠습니까 ? `;
             } else if (inserts.length > 0) {
-                confirmMsg = `총 ${ inserts.length }건을 일괄 추가하시겠습니까 ? `;
+                confirmMsg = `총 ${inserts.length}건을 일괄 추가하시겠습니까 ? `;
             } else {
-                confirmMsg = `총 ${ deleteTasks.reduce((a, b) => a + b.amount, 0) }건을 일괄 삭제하시겠습니까 ?`;
+                confirmMsg = `총 ${deleteTasks.reduce((a, b) => a + b.amount, 0)}건을 일괄 삭제하시겠습니까 ?`;
             }
 
             if (confirm(confirmMsg)) {

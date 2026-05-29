@@ -452,7 +452,8 @@
                             <tr>
                                 <th style="width: 30%">학번</th>
                                 <th style="width: 40%">이름</th>
-                                <th style="width: 30%">추가할 횟수</th>
+                                <th style="width: 30%">추가/삭제 횟수<br><span
+                                        style="font-size:12px; font-weight:normal;">(-음수 입력 시 삭제)</span></th>
                             </tr>
                         </thead>
                         <tbody id="inputTableBody">
@@ -1184,21 +1185,20 @@
                     <tr class="existing-student-row">
                         <td>${row.student_id}</td>
                         <td>${row.name} ${countBadge}</td>
-                        <td><input type="number" class="table-input bulk-count" data-id="${row.student_id}" data-name="${row.name}" placeholder="0" min="0"></td>
-                    </tr>`;
+                       <td><input type="number" class="table-input bulk-count" data-id="${row.student_id}" data-name="${row.name}" placeholder="0"></td>
                 });
 
-                if (data.length === 0) tbodyHTML += `<tr><td colspan="3">명단을 찾을 수 없습니다.</td></tr>`;
+                if (data.length === 0) tbodyHTML += `< tr > <td colspan="3">명단을 찾을 수 없습니다.</td></tr > `;
 
                 // 새로운 학생 추가 행
-                tbodyHTML += `<tr><td colspan="3" style="background:#ecf0f1; font-weight:bold;">새로운 학생 추가 (명단에 없는 경우만)</td></tr>`;
+                tbodyHTML += `< tr > <td colspan="3" style="background:#ecf0f1; font-weight:bold;">새로운 학생 추가 (명단에 없는 경우만)</td></tr > `;
                 for (let i = 0; i < 3; i++) {
                     tbodyHTML += `
-                    <tr class="new-student-row">
+                        < tr class="new-student-row" >
                         <td><input type="number" class="table-input new-id" placeholder="학번"></td>
                         <td><input type="text" class="table-input new-name" placeholder="이름"></td>
                         <td><input type="number" class="table-input new-count" placeholder="0" min="0"></td>
-                    </tr>`;
+                    </tr > `;
                 }
 
                 document.getElementById('inputTableBody').innerHTML = tbodyHTML;
@@ -1232,7 +1232,7 @@
 
             if (inserts.length === 0) return alert("추가할 횟수를 입력해주세요.");
 
-            if (confirm(`총 ${inserts.length}건을 일괄 저장하시겠습니까?`)) {
+            if (confirm(`총 ${ inserts.length }건을 일괄 저장하시겠습니까 ?`)) {
                 try {
                     const { error } = await db.from('presentation').insert(inserts);
                     if (error) throw error;

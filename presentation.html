@@ -349,8 +349,8 @@
                     <select id="classSelect" style="width: auto; margin-top: 0;"></select>
                     <button id="btnFetchClass" style="width: auto; margin-top: 0; padding: 10px 20px;">조회</button>
                 </div>
-                <p style="font-size:13px; color:#e74c3c; margin-top:5px;">* 마감된 월은 초고속 통계(monthly_stats)에서, 진행 중인 월은 실시간
-                    기록(presentation)에서 조회합니다.</p>
+                <p style="font-size:13px; color:#e74c3c; margin-top:5px;">* 수동 기록은 실시간으로 반영되며, 마감된 월은 초고속 통계에서 불러옵니다.
+                </p>
                 <div style="overflow-x: auto;">
                     <table>
                         <thead>
@@ -487,6 +487,7 @@
                     .select('student_id, student_name, created_at, content')
                     .gte('student_id', startId)
                     .lte('student_id', endId)
+                    .order('id', { ascending: true }) // 누락 방지 정렬
                     .range(from, to);
                 if (error) throw error;
                 allData = allData.concat(data);
@@ -510,6 +511,7 @@
                     .select('student_id, created_at, content')
                     .gte('student_id', startId)
                     .lte('student_id', endId)
+                    .order('id', { ascending: true }) // 누락 방지 정렬
                     .range(from, to);
                 if (error) throw error;
                 allData = allData.concat(data);
@@ -549,7 +551,7 @@
                 if (!studentCheck) return alert("등록되지 않은 학번입니다.");
                 if (studentCheck.name !== studentNameValue) return alert(`입력하신 학번과 등록된 이름이 일치하지 않습니다.`);
 
-                // 2. 해당 학년(Grade)의 모든 학생 목록 가져오기 (0회 발표자도 석차에 포함시키기 위함)
+                // 2. 해당 학년의 모든 학생 목록 가져오기 (0회 발표자도 포함)
                 const gradeStartId = gradePrefix * 10000;
                 const gradeEndId = gradeStartId + 9999;
                 const { data: gradeStudents, error: gradeError } = await db.from('students')
@@ -563,13 +565,13 @@
                     studentTotals[st.student_id] = 0;
                 });
 
-                // 3. 학년 전체의 월별 마감(Deadline) 상태 가져오기
+                // 3. 학년 전체의 월별 마감 상태 가져오기
                 const { data: deadlines } = await db.from('monthly_deadline')
                     .select('class_prefix, target_month, is_closed')
                     .gte('class_prefix', gradePrefix * 100)
                     .lte('class_prefix', gradePrefix * 100 + 99);
 
-                let closedMap = {}; // { class_prefix: [마감된 월 배열] }
+                let closedMap = {};
                 (deadlines || []).forEach(d => {
                     if (d.is_closed) {
                         if (!closedMap[d.class_prefix]) closedMap[d.class_prefix] = [];
@@ -578,8 +580,9 @@
                 });
                 const myClosedMonths = closedMap[classPrefix] || [];
 
-                // 4. 학년 전체의 월별 통계(monthly_stats) 반영 (초고속 확정 데이터)
+                // 4. 학년 전체 통계 (마감된 월 + ✨0월 수동 기록) 반영
                 let myMonths = { 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 1: 0, 2: 0 };
+                let myManualCount = 0;
 
                 const { data: statsData } = await db.from('monthly_stats')
                     .select('student_id, target_month, total_count')
@@ -590,29 +593,28 @@
                     if (studentTotals[row.student_id] !== undefined) {
                         studentTotals[row.student_id] += row.total_count;
                     }
-                    if (row.student_id === studentId) {
-                        myMonths[row.target_month] += row.total_count;
+                    if (row.target_month === 0) { // 0월 = 수동 기초입력 데이터
+                        if (row.student_id === studentId) myManualCount = row.total_count;
+                    } else {
+                        if (row.student_id === studentId) myMonths[row.target_month] += row.total_count;
                     }
                 });
 
-                // 5. 진행 중인 월의 데이터는 presentation 에서 집계
-                let myManualCount = 0;
+                // 5. 진행 중인 실시간 데이터만 presentation 에서 집계
                 const gradePresentations = await fetchAllGradePresentations(gradePrefix);
                 gradePresentations.forEach(row => {
-                    const sid = row.student_id;
+                    const sid = parseInt(row.student_id, 10);
                     if (studentTotals[sid] !== undefined) {
-                        if (row.content === '[관리자 기초입력] 수동 반영') {
+                        // 레거시(과거) 수동 데이터 무시 로직
+                        if (row.content && row.content.includes('[관리자 기초입력]')) return;
+
+                        const sClassPrefix = Math.floor(sid / 100);
+                        const month = new Date(row.created_at).getMonth() + 1;
+                        const isClosed = closedMap[sClassPrefix] && closedMap[sClassPrefix].includes(month);
+                        if (!isClosed) {
                             studentTotals[sid]++;
-                            if (sid === studentId) myManualCount++;
-                        } else {
-                            const sClassPrefix = Math.floor(sid / 100);
-                            const month = new Date(row.created_at).getMonth() + 1;
-                            const isClosed = closedMap[sClassPrefix] && closedMap[sClassPrefix].includes(month);
-                            if (!isClosed) {
-                                studentTotals[sid]++;
-                                if (sid === studentId) {
-                                    myMonths[month]++;
-                                }
+                            if (sid === studentId) {
+                                myMonths[month]++;
                             }
                         }
                     }
@@ -638,7 +640,7 @@
                 let classRank = classScores.indexOf(myTotal) + 1;
                 let gradeRank = gradeScores.indexOf(myTotal) + 1;
 
-                // 7. 통계 박스에 월별 표와 합계, 등수 렌더링
+                // 7. 통계 박스 렌더링
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight" style="font-size:20px;">${studentId} ${studentNameValue}</p>
                     <hr style="border: 0.5px solid #bdc3c7; margin: 10px 0;">
@@ -654,7 +656,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td style="background:#dfe6e9; font-weight:bold;">${myManualCount}</td>
+                                    <td style="background:#dfe6e9; font-weight:bold; color:#2980b9;">${myManualCount}</td>
                                     <td ${myClosedMonths.includes(3) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[3]}</td>
                                     <td ${myClosedMonths.includes(4) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[4]}</td>
                                     <td ${myClosedMonths.includes(5) ? 'style="background:#f9ca24; color:#fff;"' : ''}>${myMonths[5]}</td>
@@ -827,14 +829,21 @@
                 const { data: deadlines } = await db.from('monthly_deadline').select('target_month, is_closed').eq('class_prefix', selectedClass);
                 const closedMonths = (deadlines || []).filter(d => d.is_closed).map(d => d.target_month);
 
-                if (closedMonths.length > 0) {
+                // 마감된 월 + 수동 데이터(0월)를 통계 테이블에서 한 번에 싹 가져옴
+                const queryMonths = [...closedMonths, 0];
+
+                if (queryMonths.length > 0) {
                     const { data: statsData } = await db.from('monthly_stats').select('student_id, target_month, total_count')
-                        .gte('student_id', startId).lte('student_id', endId).in('target_month', closedMonths);
+                        .gte('student_id', startId).lte('student_id', endId).in('target_month', queryMonths);
 
                     if (statsData) {
                         statsData.forEach(row => {
                             if (studentRecords[row.student_id]) {
-                                studentRecords[row.student_id].months[row.target_month] += row.total_count;
+                                if (row.target_month === 0) {
+                                    studentRecords[row.student_id].manual += row.total_count;
+                                } else {
+                                    studentRecords[row.student_id].months[row.target_month] += row.total_count;
+                                }
                                 studentRecords[row.student_id].total += row.total_count;
                             }
                         });
@@ -843,18 +852,13 @@
 
                 const allPresentations = await fetchAllClassPresentations(selectedClass);
                 allPresentations.forEach(row => {
-                    if (row.content === '[관리자 기초입력] 수동 반영') {
+                    if (row.content && row.content.includes('[관리자 기초입력]')) return; // 과거 기록 무시
+
+                    let month = new Date(row.created_at).getMonth() + 1;
+                    if (!closedMonths.includes(month)) {
                         if (studentRecords[row.student_id]) {
-                            studentRecords[row.student_id].manual++;
+                            studentRecords[row.student_id].months[month]++;
                             studentRecords[row.student_id].total++;
-                        }
-                    } else {
-                        let month = new Date(row.created_at).getMonth() + 1;
-                        if (!closedMonths.includes(month)) {
-                            if (studentRecords[row.student_id]) {
-                                studentRecords[row.student_id].months[month]++;
-                                studentRecords[row.student_id].total++;
-                            }
                         }
                     }
                 });
@@ -865,7 +869,7 @@
                     let st = studentRecords[id];
                     tbodyHTML += `<tr>
                         <td>${id}</td><td>${st.name}</td>
-                        <td style="background:#dfe6e9; font-weight:bold;">${st.manual}</td>
+                        <td style="background:#dfe6e9; font-weight:bold; color:#2980b9;">${st.manual}</td>
                         <td ${closedMonths.includes(3) ? 'style="background:#f1f2f6;"' : ''}>${st.months[3]}</td>
                         <td ${closedMonths.includes(4) ? 'style="background:#f1f2f6;"' : ''}>${st.months[4]}</td>
                         <td ${closedMonths.includes(5) ? 'style="background:#f1f2f6;"' : ''}>${st.months[5]}</td>
@@ -978,7 +982,7 @@
 
                     let monthCounts = {};
                     allPresentations.forEach(row => {
-                        if (row.content === '[관리자 기초입력] 수동 반영') return;
+                        if (row.content && row.content.includes('[관리자 기초입력]')) return; // 무시
                         if (new Date(row.created_at).getMonth() + 1 === month) {
                             monthCounts[row.student_id] = (monthCounts[row.student_id] || 0) + 1;
                         }
@@ -1084,7 +1088,7 @@
 
                     let monthCounts = {};
                     allPresentations.forEach(row => {
-                        if (row.content === '[관리자 기초입력] 수동 반영') return;
+                        if (row.content && row.content.includes('[관리자 기초입력]')) return;
                         if (new Date(row.created_at).getMonth() + 1 === month) {
                             monthCounts[row.student_id] = (monthCounts[row.student_id] || 0) + 1;
                         }
@@ -1151,7 +1155,7 @@
 
 
         // ==========================================
-        // 5. 기초입력 (일괄 저장) 
+        // 5. 기초입력 (일괄 저장) - 완전히 새롭게 개편 (0월로 통합)
         // ==========================================
         document.getElementById('btnFetchInput').addEventListener('click', async () => {
             const selectedClass = document.getElementById('inputClassSelect').value;
@@ -1170,12 +1174,12 @@
 
                 if (error) throw error;
 
-                // 2. 해당 반 학생들의 '기존 관리자 일괄입력' 데이터 횟수만 가져오기
-                const { data: adminInputs, error: adminError } = await db.from('presentation')
-                    .select('student_id')
+                // 2. ✨새로운 구조: monthly_stats 테이블에서 '0월'을 수동 데이터로 취급하여 가져오기
+                const { data: adminInputs, error: adminError } = await db.from('monthly_stats')
+                    .select('student_id, total_count')
                     .gte('student_id', startId)
                     .lte('student_id', endId)
-                    .eq('content', '[관리자 기초입력] 수동 반영'); // 수동 입력된 기록만 필터링
+                    .eq('target_month', 0);
 
                 if (adminError) throw adminError;
 
@@ -1183,10 +1187,9 @@
                 let existingCounts = {};
                 if (adminInputs) {
                     adminInputs.forEach(row => {
-                        existingCounts[row.student_id] = (existingCounts[row.student_id] || 0) + 1;
+                        existingCounts[row.student_id] = row.total_count;
                     });
                 }
-
 
                 // 4. 테이블 그리기
                 let tbodyHTML = '';
@@ -1224,90 +1227,90 @@
         });
 
 
+        // 일괄 저장 로직도 0월 데이터를 수정하는 방식으로 초고속화!
         document.getElementById('btnBulkSave').addEventListener('click', async () => {
-            const inserts = [];
-            const deleteTasks = []; // 삭제할 작업 모음
+            const selectedClass = document.getElementById('inputClassSelect').value;
+            if (!selectedClass) return alert("먼저 반 명단을 불러와주세요.");
 
-            document.querySelectorAll('.existing-student-row').forEach(row => {
-                const input = row.querySelector('.bulk-count');
-                const count = parseInt(input.value, 10);
+            const startId = parseInt(selectedClass, 10) * 100;
+            const endId = startId + 99;
 
-                // 0이 아니고 숫자가 입력된 경우
-                if (!isNaN(count) && count !== 0) {
-                    const id = input.getAttribute('data-id');
-                    const name = input.getAttribute('data-name');
+            try {
+                // 1. 현재 DB에 저장된 0월(수동) 데이터를 베이스라인으로 가져옴
+                const { data: existingData } = await db.from('monthly_stats')
+                    .select('student_id, total_count')
+                    .gte('student_id', startId).lte('student_id', endId)
+                    .eq('target_month', 0);
 
-                    if (count > 0) {
-                        // 양수면 추가 리스트에 넣기
-                        for (let i = 0; i < count; i++) {
-                            inserts.push({ student_id: parseInt(id, 10), student_name: name, content: "[관리자 기초입력] 수동 반영" });
+                let existingMap = {};
+                if (existingData) {
+                    existingData.forEach(r => existingMap[r.student_id] = r.total_count);
+                }
+
+                const upsertMap = {}; // 업데이트할 대상 목록
+
+                // 기존 명단 처리
+                document.querySelectorAll('.existing-student-row').forEach(row => {
+                    const input = row.querySelector('.bulk-count');
+                    const diff = parseInt(input.value, 10);
+
+                    if (!isNaN(diff) && diff !== 0) {
+                        const id = parseInt(input.getAttribute('data-id'), 10);
+                        const name = input.getAttribute('data-name');
+                        const currentCount = existingMap[id] || 0;
+                        const newCount = currentCount + diff;
+
+                        upsertMap[id] = { student_name: name, total_count: Math.max(0, newCount) };
+                    }
+                });
+
+                // 새로운 학생 추가 칸 처리
+                document.querySelectorAll('.new-student-row').forEach(row => {
+                    const idVal = row.querySelector('.new-id').value.trim();
+                    const nameVal = row.querySelector('.new-name').value.trim();
+                    const diff = parseInt(row.querySelector('.new-count').value, 10);
+
+                    if (idVal && nameVal && !isNaN(diff) && diff !== 0) {
+                        const id = parseInt(idVal, 10);
+                        const currentCount = existingMap[id] || 0;
+                        const newCount = currentCount + diff;
+                        upsertMap[id] = { student_name: nameVal, total_count: Math.max(0, newCount) };
+                    }
+                });
+
+                const studentIdsToUpdate = Object.keys(upsertMap).map(id => parseInt(id, 10));
+                if (studentIdsToUpdate.length === 0) return alert("추가하거나 삭제할 횟수를 입력해주세요.");
+
+                if (confirm(`총 ${studentIdsToUpdate.length}명의 수동 기록을 업데이트하시겠습니까?`)) {
+                    // 1. 업데이트 대상의 기존 0월 기록 삭제 (깔끔한 덮어쓰기)
+                    await db.from('monthly_stats')
+                        .delete()
+                        .eq('target_month', 0)
+                        .in('student_id', studentIdsToUpdate);
+
+                    // 2. 최종 계산된 숫자로 단 한 줄씩만 Insert!
+                    const finalInserts = [];
+                    studentIdsToUpdate.forEach(id => {
+                        const count = upsertMap[id].total_count;
+                        if (count > 0) {
+                            finalInserts.push({
+                                student_id: id,
+                                student_name: upsertMap[id].student_name,
+                                target_month: 0,
+                                total_count: count
+                            });
                         }
-                    } else if (count < 0) {
-                        // 음수면 삭제 리스트에 넣기 (절댓값만큼)
-                        deleteTasks.push({ student_id: parseInt(id, 10), amount: Math.abs(count) });
-                    }
-                }
-            });
+                    });
 
-            document.querySelectorAll('.new-student-row').forEach(row => {
-                const idVal = row.querySelector('.new-id').value.trim();
-                const nameVal = row.querySelector('.new-name').value.trim();
-                const countVal = parseInt(row.querySelector('.new-count').value, 10);
-                if (idVal && nameVal && !isNaN(countVal) && countVal > 0) {
-                    for (let i = 0; i < countVal; i++) {
-                        inserts.push({ student_id: parseInt(idVal, 10), student_name: nameVal, content: "[관리자 기초입력] 수동 반영" });
-                    }
-                }
-            });
-
-            if (inserts.length === 0 && deleteTasks.length === 0) return alert("추가하거나 삭제할 횟수를 입력해주세요.");
-
-            // 상황에 맞게 안내 메시지 변경
-            let confirmMsg = "";
-            if (inserts.length > 0 && deleteTasks.length > 0) {
-                confirmMsg = `총 ${inserts.length}건 추가, ${deleteTasks.reduce((a, b) => a + b.amount, 0)}건 삭제를 진행하시겠습니까?`;
-            } else if (inserts.length > 0) {
-                confirmMsg = `총 ${inserts.length}건을 일괄 추가하시겠습니까?`;
-            } else {
-                confirmMsg = `총 ${deleteTasks.reduce((a, b) => a + b.amount, 0)}건을 일괄 삭제하시겠습니까?`;
-            }
-
-            if (confirm(confirmMsg)) {
-                try {
-                    // 1. 추가(Insert) 실행
-                    if (inserts.length > 0) {
-                        const { error } = await db.from('presentation').insert(inserts);
+                    if (finalInserts.length > 0) {
+                        const { error } = await db.from('monthly_stats').insert(finalInserts);
                         if (error) throw error;
                     }
 
-                    // 2. 삭제(Delete) 실행
-                    if (deleteTasks.length > 0) {
-                        for (const task of deleteTasks) {
-                            // 해당 학생의 '수동 반영' 기록 중 삭제할 개수만큼만 고유 ID를 가져옴
-                            const { data: records, error: fetchErr } = await db.from('presentation')
-                                .select('id')
-                                .eq('student_id', task.student_id)
-                                .eq('content', '[관리자 기초입력] 수동 반영')
-                                .limit(task.amount);
-
-                            if (fetchErr) throw fetchErr;
-
-                            if (records && records.length > 0) {
-                                const idsToDelete = records.map(r => r.id);
-                                // 가져온 고유 ID들에 해당하는 기록만 골라서 삭제
-                                const { error: delErr } = await db.from('presentation')
-                                    .delete()
-                                    .in('id', idsToDelete);
-                                if (delErr) throw delErr;
-                            }
-                        }
-                    }
-
-                    alert("일괄 처리(추가/삭제)가 완료되었습니다!");
-                    document.getElementById('btnFetchInput').click(); // 자동 새로고침
-
-                } catch (e) { alert("처리 실패: " + e.message); }
-            }
+                    alert("수동 기록이 눈 깜짝할 새 초고속으로 처리되었습니다!");
+                    document.getElementById('btnFetchInput').click(); // 갱신
+                }
+            } catch (e) { alert("처리 실패: " + e.message); }
         });
     </script>
 </body>

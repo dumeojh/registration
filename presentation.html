@@ -1205,16 +1205,29 @@
             } catch (e) { alert("명단 조회 실패: " + e.message); }
         });
 
-        document.getElementById('btnBulkSave').addEventListener('click', async () => {
+
+
+document.getElementById('btnBulkSave').addEventListener('click', async () => {
             const inserts = [];
+            const deleteTasks = []; // 삭제할 작업 모음
+
             document.querySelectorAll('.existing-student-row').forEach(row => {
                 const input = row.querySelector('.bulk-count');
                 const count = parseInt(input.value, 10);
-                if (!isNaN(count) && count > 0) {
+                
+                // 0이 아니고 숫자가 입력된 경우
+                if (!isNaN(count) && count !== 0) {
                     const id = input.getAttribute('data-id');
                     const name = input.getAttribute('data-name');
-                    for (let i = 0; i < count; i++) {
-                        inserts.push({ student_id: parseInt(id, 10), student_name: name, content: "[관리자 기초입력] 수동 반영" });
+                    
+                    if (count > 0) {
+                        // 양수면 추가 리스트에 넣기
+                        for (let i = 0; i < count; i++) {
+                            inserts.push({ student_id: parseInt(id, 10), student_name: name, content: "[관리자 기초입력] 수동 반영" });
+                        }
+                    } else if (count < 0) {
+                        // 음수면 삭제 리스트에 넣기 (절댓값만큼)
+                        deleteTasks.push({ student_id: parseInt(id, 10), amount: Math.abs(count) });
                     }
                 }
             });
@@ -1230,16 +1243,53 @@
                 }
             });
 
-            if (inserts.length === 0) return alert("추가할 횟수를 입력해주세요.");
+            if (inserts.length === 0 && deleteTasks.length === 0) return alert("추가하거나 삭제할 횟수를 입력해주세요.");
 
-            if (confirm(`총 ${ inserts.length }건을 일괄 저장하시겠습니까 ?`)) {
+            // 상황에 맞게 안내 메시지 변경
+            let confirmMsg = "";
+            if (inserts.length > 0 && deleteTasks.length > 0) {
+                confirmMsg = `총 ${ inserts.length }건 추가, ${ deleteTasks.reduce((a, b) => a + b.amount, 0) }건 삭제를 진행하시겠습니까 ? `;
+            } else if (inserts.length > 0) {
+                confirmMsg = `총 ${ inserts.length }건을 일괄 추가하시겠습니까 ? `;
+            } else {
+                confirmMsg = `총 ${ deleteTasks.reduce((a, b) => a + b.amount, 0) }건을 일괄 삭제하시겠습니까 ?`;
+            }
+
+            if (confirm(confirmMsg)) {
                 try {
-                    const { error } = await db.from('presentation').insert(inserts);
-                    if (error) throw error;
-                    alert("일괄 저장 완료!");
+                    // 1. 추가(Insert) 실행
+                    if (inserts.length > 0) {
+                        const { error } = await db.from('presentation').insert(inserts);
+                        if (error) throw error;
+                    }
 
-                    document.getElementById('btnFetchInput').click();
-                } catch (e) { alert("저장 실패: " + e.message); }
+                    // 2. 삭제(Delete) 실행
+                    if (deleteTasks.length > 0) {
+                        for (const task of deleteTasks) {
+                            // 해당 학생의 '수동 반영' 기록 중 삭제할 개수만큼만 고유 ID를 가져옴
+                            const { data: records, error: fetchErr } = await db.from('presentation')
+                                .select('id')
+                                .eq('student_id', task.student_id)
+                                .eq('content', '[관리자 기초입력] 수동 반영')
+                                .limit(task.amount);
+
+                            if (fetchErr) throw fetchErr;
+
+                            if (records && records.length > 0) {
+                                const idsToDelete = records.map(r => r.id);
+                                // 가져온 고유 ID들에 해당하는 기록만 골라서 삭제
+                                const { error: delErr } = await db.from('presentation')
+                                    .delete()
+                                    .in('id', idsToDelete);
+                                if (delErr) throw delErr;
+                            }
+                        }
+                    }
+
+                    alert("일괄 처리(추가/삭제)가 완료되었습니다!");
+                    document.getElementById('btnFetchInput').click(); // 자동 새로고침
+
+                } catch (e) { alert("처리 실패: " + e.message); }
             }
         });
     </script>

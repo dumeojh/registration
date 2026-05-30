@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>이벤트 존</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="common.js"></script>
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -38,38 +40,46 @@
             margin-bottom: 25px;
         }
 
-        /* 이벤트 버튼 스타일 */
-        .event-btn {
+        /* 다중 회차 버튼 스타일 */
+        .milestone-btn {
             width: 100%;
-            padding: 18px;
-            margin-bottom: 15px;
+            padding: 15px;
+            margin-bottom: 12px;
             border: none;
             border-radius: 8px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
-            color: white;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: 0.2s;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 5px;
         }
 
-        .event-btn:active {
-            transform: scale(0.98);
+        .milestone-btn.active {
+            background-color: #f1c40f;
+            color: #2c3e50;
+            border: 2px solid #f39c12;
         }
 
-        .btn-lottery {
-            background-color: #e74c3c;
+        .milestone-btn.active:hover {
+            background-color: #f39c12;
         }
 
-        .btn-dice {
-            background-color: #3498db;
+        .milestone-btn.waiting {
+            background-color: #fcf3cf;
+            color: #e67e22;
+            border: 1px solid #f39c12;
+            cursor: default;
         }
 
-        .btn-quiz {
-            background-color: #9b59b6;
+        .milestone-btn.completed {
+            background-color: #ecf0f1;
+            color: #7f8c8d;
+            border: 1px solid #bdc3c7;
+            cursor: default;
         }
 
         .btn-back {
@@ -84,8 +94,49 @@
             cursor: pointer;
         }
 
-        .btn-back:hover {
-            background-color: #7f8c8d;
+        /* 게임 서브 모달 */
+        .game-modal {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #e8f4fd;
+            border-radius: 12px;
+            border: 1px solid #3498db;
+        }
+
+        .game-modal h3 {
+            margin-top: 0;
+            color: #2980b9;
+            font-size: 16px;
+        }
+
+        .game-btn {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .game-btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-lottery {
+            background-color: #e74c3c;
+        }
+
+        .btn-dice {
+            background-color: #3498db;
+        }
+
+        .btn-quiz {
+            background-color: #9b59b6;
         }
     </style>
 </head>
@@ -93,50 +144,114 @@
 <body>
 
     <div class="event-container">
-        <h2>🎉 쉬어가는 이벤트 존</h2>
-        <p class="desc">발표 준비하느라 고생했어요!<br>원하는 이벤트를 선택해 보세요.</p>
+        <h2 id="eventTitle">🎉 이벤트 존</h2>
+        <p class="desc" id="eventDesc">진행할 이벤트를 선택해 주세요.</p>
 
-        <button class="event-btn btn-lottery" id="btnLottery">
-            <span>🎫</span> 두근두근 제비뽑기
-        </button>
+        <div id="milestoneList"></div>
 
-        <button class="event-btn btn-dice" id="btnDice">
-            <span>🎲</span> 주사위 굴리기
-        </button>
-
-        <button class="event-btn btn-quiz" id="btnQuiz">
-            <span>🤔</span> 넌센스 아재개그
-        </button>
+        <div id="gameSelection" class="game-modal">
+            <h3 id="gameTitle"></h3>
+            <button class="game-btn btn-lottery" onclick="playGame('제비뽑기')">🎫 두근두근 제비뽑기</button>
+            <button class="game-btn btn-dice" onclick="playGame('주사위')">🎲 주사위 굴리기</button>
+            <button class="game-btn btn-quiz" onclick="playGame('퀴즈')">🤔 넌센스 아재개그</button>
+            <button
+                style="width:100%; padding:10px; margin-top:10px; background:transparent; border:none; color:#7f8c8d; text-decoration:underline; cursor:pointer;"
+                onclick="closeGameModal()">취소</button>
+        </div>
 
         <button class="btn-back" onclick="history.back();">🔙 발표 기록으로 돌아가기</button>
     </div>
 
     <script>
-        // 1. 제비뽑기 로직 (예시)
-        document.getElementById('btnLottery').addEventListener('click', () => {
-            const results = ["꽝! 다음 기회에...", "발표 1회 면제권?!", "선생님께 칭찬받기", "꽝! 아쉽네요."];
-            const randomResult = results[Math.floor(Math.random() * results.length)];
-            alert(`🎫 제비뽑기 결과:\n\n${randomResult}`);
-        });
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('student_id');
+        const studentName = decodeURIComponent(urlParams.get('name') || '');
+        const totalCount = parseInt(urlParams.get('total_count'));
 
-        // 2. 주사위 굴리기 로직 (예시)
-        document.getElementById('btnDice').addEventListener('click', () => {
-            const diceNumber = Math.floor(Math.random() * 6) + 1;
-            alert(`🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${diceNumber} ]`);
-        });
+        if (!studentId || isNaN(totalCount)) {
+            alert("잘못된 접근입니다."); history.back();
+        }
 
-        // 3. 넌센스 퀴즈 로직 (예시)
-        document.getElementById('btnQuiz').addEventListener('click', () => {
-            const userAnswer = prompt("🤔 문제: 밥은 밥인데 못 먹는 밥은?\n(정답을 입력해 주세요)");
+        document.getElementById('eventTitle').innerText = `🎉 ${studentName}님의 이벤트 존`;
 
-            if (userAnswer === null) return; // 취소 누른 경우
+        let currentActiveMilestone = 0;
+        const maxMilestone = Math.floor(totalCount / 5) * 5;
 
-            if (userAnswer.replace(/\s/g, '') === "톱밥") {
-                alert("정답입니다! 👏👏👏");
-            } else {
-                alert(`틀렸습니다! 😝\n입력하신 답: ${userAnswer}\n정답은 '톱밥' 입니다.`);
+        // 화면 렌더링
+        async function loadMilestones() {
+            document.getElementById('milestoneList').innerHTML = '<p>데이터 조회 중...</p>';
+
+            const { data: logs } = await db.from('event_logs').select('*').eq('student_id', studentId);
+            const logMap = {};
+            if (logs) logs.forEach(l => logMap[l.milestone] = l);
+
+            let html = '';
+            for (let i = 5; i <= maxMilestone; i += 5) {
+                const log = logMap[i];
+                if (log) {
+                    if (log.is_rewarded) {
+                        html += `<button class="milestone-btn completed"><div>[ ${i}회차 ] 달성 이벤트</div><div style="font-size:12px; font-weight:normal;">✅ 상품 수령 완료 (${log.result_text})</div></button>`;
+                    } else {
+                        html += `<button class="milestone-btn waiting"><div>[ ${i}회차 ] 달성 이벤트</div><div style="font-size:12px; font-weight:normal;">⏳ 선생님 확인(상품 지급) 대기중</div></button>`;
+                    }
+                } else {
+                    html += `<button class="milestone-btn active" onclick="openGameModal(${i})"><div>🎉 [ ${i}회차 ] 이벤트 진행하기!</div><div style="font-size:12px; font-weight:normal;">여기를 눌러 게임을 선택하세요</div></button>`;
+                }
             }
-        });
+            document.getElementById('milestoneList').innerHTML = html;
+        }
+
+        function openGameModal(milestone) {
+            currentActiveMilestone = milestone;
+            document.getElementById('gameSelection').style.display = 'block';
+            document.getElementById('gameTitle').innerText = `⭐ ${milestone}회차 보상 선택 ⭐`;
+            document.getElementById('gameSelection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closeGameModal() {
+            document.getElementById('gameSelection').style.display = 'none';
+        }
+
+        async function saveEventResult(eventType, resultMsg, dbLogMsg) {
+            try {
+                const { error } = await db.from('event_logs').insert([{
+                    student_id: parseInt(studentId),
+                    student_name: studentName,
+                    milestone: currentActiveMilestone,
+                    event_type: eventType,
+                    result_text: dbLogMsg,
+                    is_rewarded: false
+                }]);
+                if (error) throw error;
+
+                alert(`${resultMsg}\n\n(선생님께 상품 지급 요청이 전송되었습니다!)`);
+                closeGameModal();
+                loadMilestones();
+            } catch (err) { alert("기록 중 오류: " + err.message); }
+        }
+
+        function playGame(type) {
+            if (type === '제비뽑기') {
+                const results = ["꽝! 다음 기회에...", "발표 1회 면제권?!", "선생님께 칭찬받기", "꽝! 아쉽네요."];
+                const res = results[Math.floor(Math.random() * results.length)];
+                saveEventResult('제비뽑기', `🎫 제비뽑기 결과:\n\n[ ${res} ]`, res);
+            }
+            else if (type === '주사위') {
+                const num = Math.floor(Math.random() * 6) + 1;
+                saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]`, `주사위 ${num} 나옴`);
+            }
+            else if (type === '퀴즈') {
+                const ans = prompt("🤔 문제: 밥은 밥인데 못 먹는 밥은?\n(정답을 입력해 주세요)");
+                if (ans === null) return;
+                if (ans.replace(/\s/g, '') === "톱밥") {
+                    saveEventResult('퀴즈', "정답입니다! 👏👏👏", "정답 맞춤 (톱밥)");
+                } else {
+                    saveEventResult('퀴즈', `틀렸습니다! 😝\n입력하신 답: ${ans}\n정답은 '톱밥' 입니다.`, `오답 제출 (${ans})`);
+                }
+            }
+        }
+
+        loadMilestones();
     </script>
 </body>
 

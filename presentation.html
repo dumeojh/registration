@@ -475,7 +475,7 @@
         }
 
 
-        // ✨ 핵심 수정: 3월 앞에 '수동' 추가 및 관리자 입력값 표시 ✨
+        // ✨ 핵심 수정: 3월 앞에 '수동' 추가, 관리자 입력값 표시 및 반별/학년별 등수 추가 ✨
         async function refreshStats() {
             document.getElementById('statsBox').innerHTML = `<p class="highlight">${currentStudentId} ${currentStudentName}</p><p>통계를 계산하고 있습니다... ⏳</p>`;
 
@@ -514,18 +514,93 @@
                 const displayMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
                 const monthStrings = displayMonths.map(m => `<b>${m}월</b> ${monthlyCounts[m] || 0}회`);
 
-                // ✨ [요청 반영] 3월 칸 바로 앞에 '수동' 항목을 추가하고 관리자가 부여한 횟수를 채워 넣습니다.
+                // 3월 칸 바로 앞에 '수동' 항목 추가
                 monthStrings.unshift(`<b>수동</b> ${manualCount}회`);
 
                 const monthlyText = `<div style="font-size: 14px; color: #34495e; margin-top: 12px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #bdc3c7; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
                                        ${monthStrings.join('<span style="color:#bdc3c7;">|</span>')}
                                    </div>`;
 
+                // =========================================================
+                // ✨ [신규 추가] 반별 / 학년별 등수 산출 로직 ✨
+                // =========================================================
+
+                // 학번 파싱 (예: 20101 -> 2학년, 201반)
+                const gradePrefix = Math.floor(currentStudentId / 10000);
+                const classPrefix = Math.floor(currentStudentId / 100);
+
+                const startIdStr = String(gradePrefix * 10000);
+                const endIdStr = String(gradePrefix * 10000 + 9999);
+
+                // 해당 학년 전체 학생 조회
+                const { data: gradeStudents } = await db.from('student')
+                    .select('student_id')
+                    .gte('student_id', startIdStr)
+                    .lte('student_id', endIdStr);
+
+                // 해당 학년 전체 수동 횟수 조회
+                const { data: gradeManuals } = await db.from('manual_records')
+                    .select('student_id, manual_count')
+                    .gte('student_id', startIdStr)
+                    .lte('student_id', endIdStr);
+
+                // 해당 학년 전체 자동 횟수 조회
+                const { data: gradeAutos } = await db.from('presentation')
+                    .select('student_id')
+                    .gte('student_id', startIdStr)
+                    .lte('student_id', endIdStr);
+
+                // 학생별 합계 계산용 객체
+                const studentTotals = {};
+                if (gradeStudents) {
+                    gradeStudents.forEach(s => studentTotals[s.student_id] = 0);
+                }
+                if (gradeManuals) {
+                    gradeManuals.forEach(m => {
+                        if (studentTotals[m.student_id] !== undefined) studentTotals[m.student_id] += m.manual_count;
+                    });
+                }
+                if (gradeAutos) {
+                    gradeAutos.forEach(a => {
+                        if (studentTotals[a.student_id] !== undefined) studentTotals[a.student_id] += 1;
+                    });
+                }
+
+                // 현재 학생의 등수 산출
+                let gradeRank = 1;
+                let gradeTotalStudents = 0;
+                let classRank = 1;
+                let classTotalStudents = 0;
+
+                for (const [sIdStr, total] of Object.entries(studentTotals)) {
+                    const sId = parseInt(sIdStr, 10);
+                    const sClassPrefix = Math.floor(sId / 100);
+
+                    // 학년 통계 누적 및 비교
+                    gradeTotalStudents++;
+                    if (total > totalCount) gradeRank++;
+
+                    // 반 통계 누적 및 비교
+                    if (sClassPrefix === classPrefix) {
+                        classTotalStudents++;
+                        if (total > totalCount) classRank++;
+                    }
+                }
+
+                // 등수 출력용 HTML 생성
+                const rankText = `
+                    <div style="margin-top: 15px; font-size: 15px; background: #e8f4fd; padding: 12px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; justify-content: space-around;">
+                        <span>🏆 반 등수: <span style="color:#e74c3c; font-size: 17px;">${classRank}</span>등 <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">(총 ${classTotalStudents}명)</span></span>
+                        <span>🏅 학년 등수: <span style="color:#e74c3c; font-size: 17px;">${gradeRank}</span>등 <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">(총 ${gradeTotalStudents}명)</span></span>
+                    </div>
+                `;
+
                 // 화면에 최종 출력
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight" style="font-size: 1.2em;">${currentStudentId} ${currentStudentName}</p>
                     <p style="margin-top: 10px; font-size: 1.1em;">현재까지 총 <span style="color: #e74c3c; font-weight: bold; font-size: 1.3em;">${totalCount}</span>회 발표하셨습니다.</p>
                     <p style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">(직접 작성: ${autoTotal}회 / 관리자 부여: ${manualCount}회)</p>
+                    ${rankText}
                     ${monthlyText}
                 `;
             } catch (error) {
@@ -533,6 +608,10 @@
                 console.error(error);
             }
         }
+
+
+
+
         document.getElementById('btnCloseHistory').addEventListener('click', () => {
             document.getElementById('historyModal').classList.add('hidden');
         });

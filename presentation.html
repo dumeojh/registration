@@ -390,22 +390,24 @@
             if (studentIdValue.length !== 5) return alert("학번은 5자리 숫자로 입력해주세요.");
             if (!studentNameValue) return alert("이름을 입력해주세요.");
 
-            const studentId = parseInt(studentIdValue, 10);
+            // ✨ DB에서는 TEXT 타입이므로 조회할 때 문자열 그대로 사용
+            const studentIdStr = studentIdValue;
 
             try {
                 searchBtn.innerText = "조회 중...";
                 searchBtn.disabled = true;
 
-                const { data: studentCheck, error: checkError } = await db.from('students')
+                // ✨ students -> student 로 변경됨
+                const { data: studentCheck, error: checkError } = await db.from('student')
                     .select('name')
-                    .eq('student_id', studentId)
+                    .eq('student_id', studentIdStr)
                     .maybeSingle();
 
                 if (checkError) throw checkError;
                 if (!studentCheck) return alert("등록되지 않은 학번입니다.");
                 if (studentCheck.name !== studentNameValue) return alert(`입력하신 학번과 이름이 일치하지 않습니다.`);
 
-                currentStudentId = studentId;
+                currentStudentId = parseInt(studentIdStr, 10); // 표시 및 등록용으로 정수 유지
                 currentStudentName = studentNameValue;
 
                 await refreshStats();
@@ -530,9 +532,14 @@
 
         // 공통 반 선택 드롭다운 생성 함수
         async function populateClassSelect(elementId) {
-            const { data } = await db.from('students').select('student_id');
+            // ✨ students -> student 로 변경됨
+            const { data } = await db.from('student').select('student_id');
             let classes = new Set();
-            data.forEach(r => classes.add(Math.floor(r.student_id / 100)));
+            data.forEach(r => {
+                if (r.student_id) {
+                    classes.add(Math.floor(parseInt(r.student_id, 10) / 100));
+                }
+            });
             let html = '<option value="">반 선택</option>';
             [...classes].sort().forEach(c => html += `<option value="${c}">${Math.floor(c / 100)}학년 ${c % 100}반</option>`);
             document.getElementById(elementId).innerHTML = html;
@@ -549,23 +556,25 @@
 
             try {
                 // 1. 해당 반의 모든 학생 명단 불러오기 (예: 201반 -> 20101 ~ 20199)
-                const startId = parseInt(classPrefix) * 100;
-                const endId = startId + 99;
+                // ✨ DB가 TEXT 타입이므로 문자열로 범위 지정
+                const startIdStr = String(parseInt(classPrefix) * 100);
+                const endIdStr = String(parseInt(classPrefix) * 100 + 99);
 
-                const { data: students, error: stuError } = await db.from('students')
+                // ✨ students -> student 로 변경됨
+                const { data: studentsList, error: stuError } = await db.from('student')
                     .select('student_id, name')
-                    .gte('student_id', startId)
-                    .lte('student_id', endId)
+                    .gte('student_id', startIdStr)
+                    .lte('student_id', endIdStr)
                     .order('student_id', { ascending: true });
                 if (stuError) throw stuError;
 
-                if (students.length === 0) {
+                if (studentsList.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="3">해당 반에 등록된 학생이 없습니다.</td></tr>';
                     return;
                 }
 
                 // 2. manual_records 테이블에서 이 반 학생들의 '기존 기록' 싹 다 불러오기
-                const studentIds = students.map(s => s.student_id);
+                const studentIds = studentsList.map(s => parseInt(s.student_id, 10));
                 const { data: records, error: recError } = await db.from('manual_records')
                     .select('student_id, manual_count')
                     .in('student_id', studentIds);
@@ -577,15 +586,16 @@
 
                 // 3. 학생 목록과 기존 숫자를 매칭하여 테이블 화면 그리기
                 let html = '';
-                students.forEach(s => {
-                    const currentCount = recordMap[s.student_id] || 0; // 기록이 없으면 0으로 표시
+                studentsList.forEach(s => {
+                    const sIdInt = parseInt(s.student_id, 10);
+                    const currentCount = recordMap[sIdInt] || 0; // 기록이 없으면 0으로 표시
                     html += `
                         <tr>
                             <td>${s.student_id}</td>
                             <td>${s.name}</td>
                             <td>
                                 <input type="number" class="table-input manual-input" 
-                                       data-id="${s.student_id}" 
+                                       data-id="${sIdInt}" 
                                        data-name="${s.name}" 
                                        value="${currentCount}">
                             </td>
@@ -626,7 +636,6 @@
 
             try {
                 // upsert: 데이터가 없으면 Insert(삽입), 이미 있으면 student_id 기준으로 Update(수정) 해주는 아주 강력한 기능입니다.
-                // 지난번에 DB에서 UNIQUE (student_id) 제약조건을 거셨기 때문에 완벽하게 동작합니다.
                 const { error } = await db.from('manual_records').upsert(dataToUpsert, { onConflict: 'student_id' });
                 if (error) throw error;
 

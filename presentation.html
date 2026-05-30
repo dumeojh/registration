@@ -650,21 +650,28 @@
             document.getElementById('historyModal').classList.add('hidden');
         });
 
-        // 3. 제출하기
+
+
+
+        // 3. 제출하기 (새로고침 방지 및 대기 상태 안내 추가)
         document.getElementById('btnSubmit').addEventListener('click', async function () {
             const content = document.getElementById('content').value.trim();
             if (!content) return alert("발표 내용을 입력해주세요.");
 
             try {
                 if (confirm(`제출하시겠습니까?\n(선생님의 승인 후 통계에 반영됩니다.)`)) {
-                    // ✨ 추가됨: 기본 제출 시 is_approved를 false 로 입력합니다. ✨
+                    // 기본 제출 시 is_approved를 false 로 입력합니다.
                     const { error } = await db.from('presentation').insert([
                         { student_id: currentStudentId, student_name: currentStudentName, content: content, is_approved: false }
                     ]);
                     if (error) throw error;
-                    alert('제출 완료! 선생님의 확인을 기다려주세요.');
+
+                    // ✨ 수정됨: 제출 완료 후 대기 상태 안내 메시지 표출
+                    alert('제출이 완료되었습니다! ⏳\n현재 선생님 [승인 대기] 상태이며, 확인 후 통계에 반영됩니다.');
                     document.getElementById('content').value = '';
-                    location.reload();
+
+                    // ✨ 수정됨: location.reload()를 삭제하고 통계 함수만 다시 호출하여 화면 갱신
+                    await refreshStats();
                 }
             } catch (error) {
                 alert('저장 오류: ' + error.message);
@@ -672,8 +679,6 @@
         });
 
         document.getElementById('btnCancel').addEventListener('click', () => location.reload());
-
-
 
 
         // ==========================================
@@ -753,30 +758,46 @@
             }
         }
 
+
+        // ✨ 교사 승인 처리 함수 수정 (승인 시 즉시 화면 갱신)
         async function approveRecord(id) {
-            if (!confirm("이 기록을 승인하시겠습니까?\\n(승인된 기록만 통계에 반영됩니다.)")) return;
+            if (!confirm("이 기록을 승인하시겠습니까?\n(승인된 기록만 통계에 반영됩니다.)")) return;
             try {
                 // 승인 시 DB 업데이트
                 const { error } = await db.from('presentation').update({ is_approved: true }).eq('id', id);
                 if (error) throw error;
-                await fetchPendingApprovals(); // 리스트 갱신
+
+                alert("✅ 승인되었습니다! 학생의 화면 통계가 갱신됩니다.");
+                await fetchPendingApprovals(); // 모달 리스트 갱신
+
+                // 뒷배경에 학생 화면이 띄워져 있다면 즉시 통계 새로고침
+                if (currentStudentId) {
+                    await refreshStats();
+                }
             } catch (e) {
                 alert("승인 처리 중 오류 발생: " + e.message);
             }
         }
 
+        // ✨ 교사 삭제(반려) 처리 함수 수정 (삭제 시 즉시 화면 갱신)
         async function rejectRecord(id) {
-            if (!confirm("이 기록을 삭제(반려)하시겠습니까?\\n(학생이 실수로 잘못 제출한 경우)")) return;
+            if (!confirm("이 기록을 삭제(반려)하시겠습니까?\n(학생이 실수로 잘못 제출한 경우)")) return;
             try {
                 // 반려 시 DB 삭제
                 const { error } = await db.from('presentation').delete().eq('id', id);
                 if (error) throw error;
-                await fetchPendingApprovals(); // 리스트 갱신
+
+                alert("❌ 기록이 삭제(반려) 되었습니다.");
+                await fetchPendingApprovals(); // 모달 리스트 갱신
+
+                // 뒷배경 화면 갱신
+                if (currentStudentId) {
+                    await refreshStats();
+                }
             } catch (e) {
                 alert("삭제 처리 중 오류 발생: " + e.message);
             }
         }
-
         // ==========================================
         // 4. 관리자용 모달 및 기능
         // ==========================================

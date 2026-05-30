@@ -40,7 +40,6 @@
             margin-bottom: 25px;
         }
 
-        /* 다중 회차 버튼 스타일 */
         .milestone-btn {
             width: 100%;
             padding: 15px;
@@ -94,7 +93,6 @@
             cursor: pointer;
         }
 
-        /* 게임 서브 모달 */
         .game-modal {
             display: none;
             margin-top: 20px;
@@ -141,7 +139,6 @@
             background-color: #9b59b6;
         }
 
-        /* ✨ 리얼한 3D 주사위 애니메이션 스타일 ✨ */
         #diceContainer {
             display: none;
             margin: 40px auto 30px auto;
@@ -296,20 +293,13 @@
         let currentActiveMilestone = 0;
         const maxMilestone = Math.floor(totalCount / 5) * 5;
 
-        // ✨ 복구됨: 상품 정보를 담아둘 객체
         let diceRewardMap = {};
 
-
-
-        // ✨ 수정됨: DB에서 주사위 상품 목록 불러오기 (에러 처리 및 빈 데이터 처리 추가)
         async function loadDiceRewards() {
             try {
-                // error 객체도 함께 받아오도록 수정
                 const { data, error } = await db.from('dice_rewards').select('*').order('dice_number', { ascending: true });
 
-                if (error) {
-                    throw error; // 에러 발생 시 catch 블록으로 이동
-                }
+                if (error) throw error;
 
                 if (data && data.length > 0) {
                     let html = '<div style="font-weight:bold; color:#2980b9; margin-bottom:8px; text-align:center;">🎁 오늘의 주사위 상품</div>';
@@ -321,17 +311,14 @@
                     html += '</div>';
                     document.getElementById('diceRewardInfo').innerHTML = html;
                 } else {
-                    // 데이터가 비어있을 경우
                     document.getElementById('diceRewardInfo').innerHTML = '<span style="color:#e74c3c; font-weight:bold;">등록된 상품 목록이 없습니다.</span>';
                 }
             } catch (e) {
                 console.error(e);
-                // 에러 메시지를 화면에 출력하여 원인 파악
                 document.getElementById('diceRewardInfo').innerHTML = `<span style="color:#e74c3c;">상품 조회 에러: ${e.message}</span>`;
             }
         }
 
-        // 화면 렌더링
         async function loadMilestones() {
             document.getElementById('milestoneList').innerHTML = '<p>데이터 조회 중...</p>';
 
@@ -358,7 +345,6 @@
         function openGameModal(milestone) {
             currentActiveMilestone = milestone;
 
-            // 모달 열 때 버튼 복원
             document.querySelectorAll('.game-btn').forEach(btn => {
                 btn.style.display = 'block';
                 btn.disabled = false;
@@ -367,7 +353,6 @@
             });
             document.getElementById('btnCancelGame').style.display = 'block';
             document.getElementById('diceContainer').style.display = 'none';
-            // 상품 목록 박스는 클릭용 버튼이 아니므로 커서 수정
             document.getElementById('diceRewardInfo').style.cursor = 'default';
 
             document.getElementById('gameSelection').style.display = 'block';
@@ -380,7 +365,6 @@
         }
 
         async function saveEventResult(eventType, resultMsg, dbLogMsg) {
-            // 중복 클릭 방지
             document.querySelectorAll('.game-btn').forEach(btn => {
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
@@ -415,7 +399,8 @@
             }
         }
 
-        function playGame(type) {
+        // ✨ 수정됨: 퀴즈 로직을 위해 함수를 async로 변경 ✨
+        async function playGame(type) {
             document.querySelectorAll('.game-btn').forEach(btn => {
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
@@ -466,31 +451,67 @@
                 dice3D.style.transform = `rotateX(${finalRotateX}deg) rotateY(${finalRotateY}deg)`;
 
                 setTimeout(() => {
-                    // ✨ 복구됨: 테이블에서 가져온 상품 이름을 매칭합니다
                     const rewardText = diceRewardMap[num] || "상품 미정";
                     saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]\n당첨 상품: 🎉 ${rewardText} 🎉`, `주사위 ${num} (${rewardText})`);
                 }, 2500);
             }
             else if (type === '퀴즈') {
-                const ans = prompt("🤔 문제: 밥은 밥인데 못 먹는 밥은?\n(정답을 입력해 주세요)");
-                if (ans === null) {
+                try {
+                    // ✨ 신규: DB에서 문제은행 데이터 랜덤으로 하나 가져오기 ✨
+                    const { data, error } = await db.from('quiz_bank').select('*');
+
+                    if (error) throw error;
+
+                    if (!data || data.length === 0) {
+                        alert("등록된 퀴즈 문제가 없습니다! 선생님께 문의해주세요.");
+                        // 버튼 원상복구
+                        document.querySelectorAll('.game-btn').forEach(btn => {
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.style.cursor = 'pointer';
+                        });
+                        document.getElementById('diceRewardInfo').style.cursor = 'default';
+                        return;
+                    }
+
+                    // 문제를 무작위로 1개 선택
+                    const randomQuiz = data[Math.floor(Math.random() * data.length)];
+
+                    // 무작위로 선택된 문제로 프롬프트 창 띄우기
+                    const ans = prompt(`🤔 넌센스 퀴즈!\n\nQ. ${randomQuiz.question}\n(정답을 입력해 주세요)`);
+
+                    if (ans === null) {
+                        document.querySelectorAll('.game-btn').forEach(btn => {
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.style.cursor = 'pointer';
+                        });
+                        document.getElementById('diceRewardInfo').style.cursor = 'default';
+                        return;
+                    }
+
+                    // 띄어쓰기를 없애고 정답 확인
+                    const cleanAns = ans.replace(/\s/g, '');
+                    const cleanCorrectAns = randomQuiz.answer.replace(/\s/g, '');
+
+                    if (cleanAns === cleanCorrectAns) {
+                        saveEventResult('퀴즈', "정답입니다! 👏👏👏", `정답 맞춤 (${randomQuiz.answer})`);
+                    } else {
+                        saveEventResult('퀴즈', `틀렸습니다! 😝\n\n입력하신 답: ${ans}\n정답은 '${randomQuiz.answer}' 입니다.`, `오답 제출 (${ans})`);
+                    }
+
+                } catch (err) {
+                    alert("문제를 불러오는 중 오류가 발생했습니다: " + err.message);
                     document.querySelectorAll('.game-btn').forEach(btn => {
                         btn.disabled = false;
                         btn.style.opacity = '1';
                         btn.style.cursor = 'pointer';
                     });
                     document.getElementById('diceRewardInfo').style.cursor = 'default';
-                    return;
-                }
-                if (ans.replace(/\s/g, '') === "톱밥") {
-                    saveEventResult('퀴즈', "정답입니다! 👏👏👏", "정답 맞춤 (톱밥)");
-                } else {
-                    saveEventResult('퀴즈', `틀렸습니다! 😝\n입력하신 답: ${ans}\n정답은 '톱밥' 입니다.`, `오답 제출 (${ans})`);
                 }
             }
         }
 
-        // 페이지 진입 시 상품 목록과 이벤트 현황을 함께 로드합니다.
         loadDiceRewards();
         loadMilestones();
     </script>

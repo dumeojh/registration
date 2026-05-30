@@ -158,16 +158,17 @@
             margin: 0;
         }
 
+        /* 관리자 탭 (3개로 늘어남) */
         .admin-tabs {
             display: flex;
-            gap: 10px;
+            gap: 5px;
             margin-bottom: 20px;
         }
 
         .admin-tabs button {
             margin-top: 0;
-            padding: 10px;
-            font-size: 14px;
+            padding: 10px 5px;
+            font-size: 13px;
             flex: 1;
         }
 
@@ -297,7 +298,6 @@
             border: 1px solid #e74c3c;
         }
 
-        /* ✨ 수정됨: 완벽히 동일한 크기의 3D 격자 버튼 스타일 ✨ */
         .month-btn {
             width: 100%;
             padding: 10px 0;
@@ -322,6 +322,28 @@
         .month-btn:active {
             top: 4px;
             box-shadow: 0 0px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        /* 퀴즈 목록 리스트 스타일 */
+        .quiz-item {
+            background: #fff;
+            border: 1px solid #bdc3c7;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quiz-item div {
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .quiz-item span {
+            color: #e74c3c;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -409,9 +431,11 @@
                 <button class="close-btn" id="btnCloseAdmin">닫기</button>
             </div>
             <div class="admin-tabs">
-                <button type="button" id="btnTabClass" style="background-color: #34495e;">📊 반별 통계 조회</button>
-                <button type="button" id="btnTabManual" style="background-color: #8e44ad;">✏️ 수동 횟수 일괄입력</button>
+                <button type="button" id="btnTabClass" style="background-color: #34495e;">📊 반별 통계</button>
+                <button type="button" id="btnTabManual" style="background-color: #8e44ad;">✏️ 수동 입력</button>
+                <button type="button" id="btnTabQuiz" style="background-color: #27ae60;">📝 퀴즈 관리</button>
             </div>
+
             <div id="adminViewSection">
                 <select id="classSelect" style="width: auto; padding: 10px;"></select>
                 <button id="btnFetchClass" style="width: auto; padding: 10px;">조회</button>
@@ -428,6 +452,7 @@
                     </table>
                 </div>
             </div>
+
             <div id="adminManualSection" class="hidden">
                 <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 엑셀처럼 숫자를 수정한 뒤 일괄 저장하세요.</p>
                 <div style="display: flex; gap: 5px; margin-bottom: 15px;">
@@ -452,6 +477,25 @@
                 </div>
                 <button type="button" id="btnBatchSaveManual"
                     style="background-color: #27ae60; margin-top: 15px; display: none;">✅ 전체 일괄 저장</button>
+            </div>
+
+            <div id="adminQuizSection" class="hidden">
+                <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 이벤트 퀴즈에 출제될 넌센스 문제와 정답을 추가/삭제합니다.</p>
+                <div
+                    style="background: #fdf5fe; padding: 15px; border-radius: 8px; border: 1px solid #d7bde2; margin-bottom: 15px;">
+                    <label style="margin-top: 0; font-size: 14px;">Q. 새로운 문제</label>
+                    <input type="text" id="newQuizQuestion" placeholder="예: 밥은 밥인데 못 먹는 밥은?">
+                    <label style="font-size: 14px;">A. 정답</label>
+                    <input type="text" id="newQuizAnswer" placeholder="예: 톱밥">
+                    <button type="button" id="btnAddQuiz"
+                        style="padding: 10px; font-size: 15px; background-color: #8e44ad;">+ 문제 추가하기</button>
+                </div>
+
+                <h4 style="margin-bottom: 10px; color: #2c3e50;">📌 등록된 문제 목록</h4>
+                <div id="quizListContainer"
+                    style="max-height: 300px; overflow-y: auto; background: #ecf0f1; padding: 10px; border-radius: 8px;">
+                    <p style="text-align: center; color: #7f8c8d; font-size: 13px;">불러오는 중...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -571,13 +615,9 @@
                     if (sClassPrefix === classPrefix) { classTotalStudents++; if (total > totalCount) classRank++; }
                 }
 
-                // ✨ 수정됨: Grid(격자)를 사용하여 4x3 배열로 깔끔하게 떨어지게 12개 버튼 생성 ✨
                 let buttonsHtml = `<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 15px; padding-bottom: 4px;">`;
-
-                // 1. 수동 버튼
                 buttonsHtml += `<button class="month-btn" style="background-color: #fdebd0; color: #d35400; border-color: #f39c12;" onclick="alert('수동 부여 횟수는 상세 기록이 없습니다.\\n(교사 일괄 입력)')"><span style="font-size:12px; font-weight:normal;">수동</span><br><b style="font-size:15px;">${manualCount}</b><span style="font-size:12px;">회</span></button>`;
 
-                // 2. 3월 ~ 12월 버튼 (10개)
                 const displayMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
                 displayMonths.forEach(m => {
                     const count = monthlyCounts[m] || 0;
@@ -588,9 +628,7 @@
                     buttonsHtml += `<button class="month-btn" style="${btnStyle}" onclick="openHistoryModal(${m})"><span style="font-size:12px; font-weight:normal;">${m}월</span><br><b style="font-size:15px;">${count}</b><span style="font-size:12px;">회</span></button>`;
                 });
 
-                // 3. 합계 버튼 (마지막 12번째 조각)
                 buttonsHtml += `<button class="month-btn" style="background-color: #e8f4fd; color: #2980b9; border-color: #3498db;" onclick="alert('총 누적 발표 횟수입니다.\\n(수동 횟수 + 자동 승인 횟수)')"><span style="font-size:12px; font-weight:bold;">합계</span><br><b style="font-size:15px;">${totalCount}</b><span style="font-size:12px;">회</span></button>`;
-
                 buttonsHtml += `</div>`;
 
                 document.getElementById('statsBox').innerHTML = `
@@ -797,21 +835,92 @@
             if (e.ctrlKey) {
                 document.getElementById('adminModal').classList.remove('hidden');
                 populateClassSelect('classSelect');
+                fetchQuizList(); // 모달 열 때 퀴즈 리스트도 불러옴
             }
         });
         document.getElementById('btnCloseAdmin').addEventListener('click', () => document.getElementById('adminModal').classList.add('hidden'));
 
+        // ✨ 탭 변경 이벤트 추가 ✨
         document.getElementById('btnTabClass').addEventListener('click', () => {
             document.getElementById('adminViewSection').classList.remove('hidden');
             document.getElementById('adminManualSection').classList.add('hidden');
+            document.getElementById('adminQuizSection').classList.add('hidden');
             populateClassSelect('classSelect');
         });
 
         document.getElementById('btnTabManual').addEventListener('click', () => {
             document.getElementById('adminViewSection').classList.add('hidden');
             document.getElementById('adminManualSection').classList.remove('hidden');
+            document.getElementById('adminQuizSection').classList.add('hidden');
             populateClassSelect('manualClassSelect');
         });
+
+        document.getElementById('btnTabQuiz').addEventListener('click', () => {
+            document.getElementById('adminViewSection').classList.add('hidden');
+            document.getElementById('adminManualSection').classList.add('hidden');
+            document.getElementById('adminQuizSection').classList.remove('hidden');
+            fetchQuizList();
+        });
+
+        // ==========================================
+        // ✨ 신규: 퀴즈 관리 기능 ✨
+        // ==========================================
+        async function fetchQuizList() {
+            const container = document.getElementById('quizListContainer');
+            container.innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">불러오는 중...</p>';
+            try {
+                const { data, error } = await db.from('quiz_bank').select('*').order('created_at', { ascending: false });
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">등록된 문제가 없습니다.</p>';
+                    return;
+                }
+
+                let html = '';
+                data.forEach(q => {
+                    html += `
+                        <div class="quiz-item">
+                            <div>
+                                <span style="color:#8e44ad;">Q.</span> ${q.question}<br>
+                                <span style="color:#27ae60;">A.</span> ${q.answer}
+                            </div>
+                            <button class="btn-del-quiz" data-id="${q.id}" style="width:auto; padding:5px 10px; margin:0; background:#e74c3c; font-size:12px;">삭제</button>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+
+                document.querySelectorAll('.btn-del-quiz').forEach(btn => btn.addEventListener('click', async (e) => {
+                    if (!confirm("이 문제를 삭제하시겠습니까?")) return;
+                    await db.from('quiz_bank').delete().eq('id', e.target.dataset.id);
+                    fetchQuizList();
+                }));
+
+            } catch (err) {
+                container.innerHTML = `<p style="color:red;">오류: ${err.message}</p>`;
+            }
+        }
+
+        document.getElementById('btnAddQuiz').addEventListener('click', async () => {
+            const q = document.getElementById('newQuizQuestion').value.trim();
+            const a = document.getElementById('newQuizAnswer').value.trim();
+            if (!q || !a) return alert("문제와 정답을 모두 입력해주세요!");
+
+            try {
+                const { error } = await db.from('quiz_bank').insert([{ question: q, answer: a }]);
+                if (error) throw error;
+
+                alert("문제가 추가되었습니다!");
+                document.getElementById('newQuizQuestion').value = '';
+                document.getElementById('newQuizAnswer').value = '';
+                fetchQuizList();
+            } catch (err) {
+                alert("문제 추가 실패: " + err.message);
+            }
+        });
+
+        // -----------------------------------------------------
 
         async function populateClassSelect(elementId) {
             const { data } = await db.from('student').select('student_id');

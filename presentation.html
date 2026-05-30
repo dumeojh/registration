@@ -475,12 +475,21 @@
         }
 
 
-        // ✨ 핵심 수정: 월별 통계 추가 ✨
+        // ✨ 핵심 수정: 3월 앞에 '수동' 추가 및 관리자 입력값 표시 ✨
         async function refreshStats() {
             document.getElementById('statsBox').innerHTML = `<p class="highlight">${currentStudentId} ${currentStudentName}</p><p>통계를 계산하고 있습니다... ⏳</p>`;
 
             try {
-                // 시스템 기록(presentation) 날짜 데이터 전부 조회 (월별 계산을 위해)
+                // 1. 수동 입력(manual_records) 횟수 데이터를 먼저 조회합니다.
+                const { data: manualData, error: err2 } = await db.from('manual_records')
+                    .select('manual_count')
+                    .eq('student_id', currentStudentId)
+                    .maybeSingle();
+                if (err2) throw err2;
+
+                const manualCount = manualData ? manualData.manual_count : 0;
+
+                // 2. 시스템 기록(presentation) 날짜 데이터 전부 조회 (월별 계산을 위해)
                 const { data: autoRecords, error: err1 } = await db.from('presentation')
                     .select('created_at')
                     .eq('student_id', currentStudentId);
@@ -499,26 +508,20 @@
                     });
                 }
 
-                // 월별 텍스트 예쁘게 포맷팅 (3월~12월 고정 출력)
+                const totalCount = autoTotal + manualCount;
+
+                // 월별 텍스트 포맷팅 (3월~12월 고정 출력)
                 const displayMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-                // 기록이 없으면 0회로 표시되도록 || 0 처리
                 const monthStrings = displayMonths.map(m => `<b>${m}월</b> ${monthlyCounts[m] || 0}회`);
+
+                // ✨ [요청 반영] 3월 칸 바로 앞에 '수동' 항목을 추가하고 관리자가 부여한 횟수를 채워 넣습니다.
+                monthStrings.unshift(`<b>수동</b> ${manualCount}회`);
 
                 const monthlyText = `<div style="font-size: 14px; color: #34495e; margin-top: 12px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #bdc3c7; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
                                        ${monthStrings.join('<span style="color:#bdc3c7;">|</span>')}
                                    </div>`;
 
-                // 수동 입력(manual_records) 횟수 조회
-                const { data: manualData, error: err2 } = await db.from('manual_records')
-                    .select('manual_count')
-                    .eq('student_id', currentStudentId)
-                    .maybeSingle();
-                if (err2) throw err2;
-
-                const manualCount = manualData ? manualData.manual_count : 0;
-                const totalCount = autoTotal + manualCount;
-
-                // 화면에 출력
+                // 화면에 최종 출력
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight" style="font-size: 1.2em;">${currentStudentId} ${currentStudentName}</p>
                     <p style="margin-top: 10px; font-size: 1.1em;">현재까지 총 <span style="color: #e74c3c; font-weight: bold; font-size: 1.3em;">${totalCount}</span>회 발표하셨습니다.</p>
@@ -530,7 +533,6 @@
                 console.error(error);
             }
         }
-
         document.getElementById('btnCloseHistory').addEventListener('click', () => {
             document.getElementById('historyModal').classList.add('hidden');
         });

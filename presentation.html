@@ -501,14 +501,22 @@
                 }
                 const totalCount = autoTotal + manualCount;
 
+
                 // ✨ 누적된 다중 이벤트 계산 로직 ✨
                 const maxMilestone = Math.floor(totalCount / 5) * 5;
                 const btnGoEvent = document.getElementById('btnGoEvent');
 
                 if (maxMilestone >= 5) {
-                    // 학생이 여태까지 참여한 이벤트 수 확인
-                    const { data: eventLogs } = await db.from('event_logs').select('id').eq('student_id', currentStudentId);
-                    const completedCount = eventLogs ? eventLogs.length : 0;
+                    // 학생이 여태까지 참여한 고유 이벤트 회차만 확인 (다중클릭 버그 방지)
+                    const { data: eventLogs } = await db.from('event_logs').select('milestone').eq('student_id', currentStudentId);
+
+                    // 단순 갯수(length)가 아닌 고유한 milestone 종류만 추려냅니다.
+                    const uniqueMilestones = new Set();
+                    if (eventLogs) {
+                        eventLogs.forEach(log => uniqueMilestones.add(log.milestone));
+                    }
+
+                    const completedCount = uniqueMilestones.size;
                     const availableCount = (maxMilestone / 5) - completedCount; // 남은 이벤트 티켓 개수
 
                     if (availableCount > 0) {

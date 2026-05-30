@@ -203,6 +203,14 @@
 
         function openGameModal(milestone) {
             currentActiveMilestone = milestone;
+
+            // ✨ 추가: 모달이 열릴 때 잠겼던 게임 버튼들을 다시 활성화
+            document.querySelectorAll('.game-btn').forEach(btn => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            });
+
             document.getElementById('gameSelection').style.display = 'block';
             document.getElementById('gameTitle').innerText = `⭐ ${milestone}회차 보상 선택 ⭐`;
             document.getElementById('gameSelection').scrollIntoView({ behavior: 'smooth' });
@@ -213,6 +221,13 @@
         }
 
         async function saveEventResult(eventType, resultMsg, dbLogMsg) {
+            // ✨ 핵심 추가: 중복 클릭을 막기 위해 누르자마자 모든 게임 버튼 즉시 잠금
+            document.querySelectorAll('.game-btn').forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            });
+
             try {
                 const { error } = await db.from('event_logs').insert([{
                     student_id: parseInt(studentId),
@@ -227,9 +242,16 @@
                 alert(`${resultMsg}\n\n(선생님께 상품 지급 요청이 전송되었습니다!)`);
                 closeGameModal();
                 loadMilestones();
-            } catch (err) { alert("기록 중 오류: " + err.message); }
+            } catch (err) {
+                alert("기록 중 오류: " + err.message);
+                // 에러 발생 시 다시 누를 수 있도록 원상복구
+                document.querySelectorAll('.game-btn').forEach(btn => {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                });
+            }
         }
-
         function playGame(type) {
             if (type === '제비뽑기') {
                 const results = ["꽝! 다음 기회에...", "발표 1회 면제권?!", "선생님께 칭찬받기", "꽝! 아쉽네요."];

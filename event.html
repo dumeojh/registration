@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>이벤트 존</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .event-container {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        p.desc {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+
+        /* 이벤트 버튼 스타일 */
+        .event-btn {
+            width: 100%;
+            padding: 18px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .event-btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-lottery {
+            background-color: #e74c3c;
+        }
+
+        .btn-dice {
+            background-color: #3498db;
+        }
+
+        .btn-quiz {
+            background-color: #9b59b6;
+        }
+
+        .btn-back {
+            width: 100%;
+            padding: 14px;
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        .btn-back:hover {
+            background-color: #7f8c8d;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="event-container">
+        <h2>🎉 쉬어가는 이벤트 존</h2>
+        <p class="desc">발표 준비하느라 고생했어요!<br>원하는 이벤트를 선택해 보세요.</p>
+
+        <button class="event-btn btn-lottery" id="btnLottery">
+            <span>🎫</span> 두근두근 제비뽑기
+        </button>
+
+        <button class="event-btn btn-dice" id="btnDice">
+            <span>🎲</span> 주사위 굴리기
+        </button>
+
+        <button class="event-btn btn-quiz" id="btnQuiz">
+            <span>🤔</span> 넌센스 아재개그
+        </button>
+
+        <button class="btn-back" onclick="history.back();">🔙 발표 기록으로 돌아가기</button>
+    </div>
+
+    <script>
+        // 1. 제비뽑기 로직 (예시)
+        document.getElementById('btnLottery').addEventListener('click', () => {
+            const results = ["꽝! 다음 기회에...", "발표 1회 면제권?!", "선생님께 칭찬받기", "꽝! 아쉽네요."];
+            const randomResult = results[Math.floor(Math.random() * results.length)];
+            alert(`🎫 제비뽑기 결과:\n\n${randomResult}`);
+        });
+
+        // 2. 주사위 굴리기 로직 (예시)
+        document.getElementById('btnDice').addEventListener('click', () => {
+            const diceNumber = Math.floor(Math.random() * 6) + 1;
+            alert(`🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${diceNumber} ]`);
+        });
+
+        // 3. 넌센스 퀴즈 로직 (예시)
+        document.getElementById('btnQuiz').addEventListener('click', () => {
+            const userAnswer = prompt("🤔 문제: 밥은 밥인데 못 먹는 밥은?\n(정답을 입력해 주세요)");
+
+            if (userAnswer === null) return; // 취소 누른 경우
+
+            if (userAnswer.replace(/\s/g, '') === "톱밥") {
+                alert("정답입니다! 👏👏👏");
+            } else {
+                alert(`틀렸습니다! 😝\n입력하신 답: ${userAnswer}\n정답은 '톱밥' 입니다.`);
+            }
+        });
+    </script>
+</body>
+
+</html>

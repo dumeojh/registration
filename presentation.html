@@ -334,8 +334,14 @@
         <button type="button" id="btnSearch">조회하기</button>
     </div>
 
+
     <div class="form-container hidden" id="recordSection">
-        <h2>🎤 발표 기록</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <h2 style="margin: 0;">🎤 발표 기록</h2>
+            <button type="button" id="btnGoEvent"
+                style="width: auto; padding: 8px 15px; margin-top: 0; background-color: #f1c40f; color: #2c3e50; font-size: 15px;">🎉
+                이벤트</button>
+        </div>
 
         <div class="stats-box" id="statsBox"></div>
 
@@ -351,6 +357,9 @@
 
         <button type="button" id="btnCancel" class="btn-secondary">이전으로</button>
     </div>
+
+
+
 
     <div id="historyModal" class="modal-overlay hidden">
         <div class="modal-content">
@@ -1150,6 +1159,14 @@
                 alert('저장 중 에러 발생: ' + error.message);
             }
         });
+
+        // ==========================================
+        // ✨ 신규: 이벤트 페이지로 이동
+        // ==========================================
+        document.getElementById('btnGoEvent').addEventListener('click', () => {
+            window.location.href = 'event.html';
+        });
+
     </script>
 </body>
 

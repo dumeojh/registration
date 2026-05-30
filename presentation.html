@@ -754,16 +754,20 @@
                     await fetchPendingApprovals();
                 }));
 
-                // ✨ 이벤트 취소(재진행) 버튼 이벤트 리스너 추가 ✨
+
+
+
+                // ✨ 이벤트 취소(재진행) 버튼 이벤트 리스너 추가 (팝업 메시지 모두 제거) ✨
                 document.querySelectorAll('.btn-event-cancel').forEach(b => b.addEventListener('click', async (e) => {
-                    if (!confirm("해당 이벤트를 취소하시겠습니까?\\n(기록이 삭제되며 학생이 다시 이벤트에 참여할 수 있습니다.)")) return;
                     try {
+                        // 묻지 않고 즉시 DB에서 삭제 처리
                         await db.from('event_logs').delete().eq('id', e.target.dataset.id);
-                        alert("이벤트가 취소되었습니다. 학생이 다시 참여할 수 있습니다.");
+
+                        // 알림창 없이 목록과 통계만 즉시 새로고침
                         await fetchPendingApprovals();
                         if (currentStudentId) await refreshStats();
                     } catch (error) {
-                        alert("취소 처리 중 오류 발생: " + error.message);
+                        console.error("취소 처리 중 오류 발생: " + error.message);
                     }
                 }));
 

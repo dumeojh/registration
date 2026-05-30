@@ -475,7 +475,9 @@
         }
 
 
-        // ✨ 핵심 수정: 3월 앞에 '수동' 추가, 관리자 입력값 표시 및 반별/학년별 등수 추가 ✨
+
+
+        // ✨ 핵심 수정: 3월 앞에 '수동' 추가, 관리자 입력값 표시 및 반별/학년별 등수 추가 (2줄 디자인 적용) ✨
         async function refreshStats() {
             document.getElementById('statsBox').innerHTML = `<p class="highlight">${currentStudentId} ${currentStudentName}</p><p>통계를 계산하고 있습니다... ⏳</p>`;
 
@@ -522,7 +524,7 @@
                                    </div>`;
 
                 // =========================================================
-                // ✨ [신규 추가] 반별 / 학년별 등수 산출 로직 ✨
+                // ✨ 반별 / 학년별 등수 산출 로직 ✨
                 // =========================================================
 
                 // 학번 파싱 (예: 20101 -> 2학년, 201반)
@@ -587,11 +589,11 @@
                     }
                 }
 
-                // 등수 출력용 HTML 생성
+                // ✨ [요청 반영] 등수 출력용 HTML (2줄로 표시되도록 flex-direction: column 적용)
                 const rankText = `
-                    <div style="margin-top: 15px; font-size: 15px; background: #e8f4fd; padding: 12px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; justify-content: space-around;">
-                        <span>🏆 반 등수: <span style="color:#e74c3c; font-size: 17px;">${classRank}</span>등 <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">(총 ${classTotalStudents}명)</span></span>
-                        <span>🏅 학년 등수: <span style="color:#e74c3c; font-size: 17px;">${gradeRank}</span>등 <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">(총 ${gradeTotalStudents}명)</span></span>
+                    <div style="margin-top: 15px; font-size: 15px; background: #e8f4fd; padding: 12px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <div>🏆 반 등수: <span style="color:#e74c3c; font-size: 17px;">${classRank}</span>등 <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">(총 ${classTotalStudents}명)</span></div>
+                        <div>🏅 학년 등수: <span style="color:#e74c3c; font-size: 17px;">${gradeRank}</span>등 <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">(총 ${gradeTotalStudents}명)</span></div>
                     </div>
                 `;
 
@@ -608,8 +610,6 @@
                 console.error(error);
             }
         }
-
-
 
 
         document.getElementById('btnCloseHistory').addEventListener('click', () => {

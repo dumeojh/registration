@@ -297,12 +297,10 @@
             border: 1px solid #e74c3c;
         }
 
-        /* ✨ 신규: 크기를 줄이고 입체감을 준 3D 블록 버튼 스타일 ✨ */
+        /* ✨ 수정됨: 완벽히 동일한 크기의 3D 격자 버튼 스타일 ✨ */
         .month-btn {
-            flex: 1 1 calc(22% - 8px);
-            /* 가로 4~5개 배열용 너비 */
-            min-width: 55px;
-            padding: 8px 4px;
+            width: 100%;
+            padding: 10px 0;
             border-radius: 8px;
             font-size: 14px;
             cursor: pointer;
@@ -311,12 +309,10 @@
             border-width: 1px;
             position: relative;
             top: 0;
-            /* 기본 위치 */
             box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
-            /* 버튼 아래 두꺼운 그림자(입체감) */
             transition: all 0.1s cubic-bezier(0.4, 0.0, 0.2, 1);
-            /* 부드러운 눌림 효과 */
             line-height: 1.2;
+            box-sizing: border-box;
         }
 
         .month-btn:hover {
@@ -325,9 +321,7 @@
 
         .month-btn:active {
             top: 4px;
-            /* 눌렀을 때 버튼이 4px 아래로 푹 꺼짐 */
             box-shadow: 0 0px 0 rgba(0, 0, 0, 0.15);
-            /* 그림자가 사라지면서 완벽한 3D 눌림 효과 */
         }
     </style>
 </head>
@@ -520,7 +514,6 @@
                 }
                 const totalCount = autoTotal + manualCount;
 
-                // 누적된 다중 이벤트 계산
                 const maxMilestone = Math.floor(totalCount / 5) * 5;
                 const btnGoEvent = document.getElementById('btnGoEvent');
 
@@ -578,11 +571,13 @@
                     if (sClassPrefix === classPrefix) { classTotalStudents++; if (total > totalCount) classRank++; }
                 }
 
-                // ✨ 수정됨: 위아래 간격을 좁힌 11개의 3D 버튼 렌더링 ✨
-                let buttonsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 8px 6px; margin-top: 15px; justify-content: center; padding-bottom: 4px;">`;
+                // ✨ 수정됨: Grid(격자)를 사용하여 4x3 배열로 깔끔하게 떨어지게 12개 버튼 생성 ✨
+                let buttonsHtml = `<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 15px; padding-bottom: 4px;">`;
 
+                // 1. 수동 버튼
                 buttonsHtml += `<button class="month-btn" style="background-color: #fdebd0; color: #d35400; border-color: #f39c12;" onclick="alert('수동 부여 횟수는 상세 기록이 없습니다.\\n(교사 일괄 입력)')"><span style="font-size:12px; font-weight:normal;">수동</span><br><b style="font-size:15px;">${manualCount}</b><span style="font-size:12px;">회</span></button>`;
 
+                // 2. 3월 ~ 12월 버튼 (10개)
                 const displayMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
                 displayMonths.forEach(m => {
                     const count = monthlyCounts[m] || 0;
@@ -592,13 +587,15 @@
 
                     buttonsHtml += `<button class="month-btn" style="${btnStyle}" onclick="openHistoryModal(${m})"><span style="font-size:12px; font-weight:normal;">${m}월</span><br><b style="font-size:15px;">${count}</b><span style="font-size:12px;">회</span></button>`;
                 });
+
+                // 3. 합계 버튼 (마지막 12번째 조각)
+                buttonsHtml += `<button class="month-btn" style="background-color: #e8f4fd; color: #2980b9; border-color: #3498db;" onclick="alert('총 누적 발표 횟수입니다.\\n(수동 횟수 + 자동 승인 횟수)')"><span style="font-size:12px; font-weight:bold;">합계</span><br><b style="font-size:15px;">${totalCount}</b><span style="font-size:12px;">회</span></button>`;
+
                 buttonsHtml += `</div>`;
 
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight" style="font-size: 1.2em;">${currentStudentId} ${currentStudentName}</p>
-                    <p style="margin-top: 10px; font-size: 1.1em;">현재까지 총 <span style="color: #e74c3c; font-weight: bold; font-size: 1.3em;">${totalCount}</span>회 발표하셨습니다.</p>
-                    <p style="font-size: 13px; color: #7f8c8d; margin-top: 5px; margin-bottom: 15px;">(직접 작성: ${autoTotal}회 / 관리자 부여: ${manualCount}회)</p>
-                    <div style="font-size: 14px; background: #e8f4fd; padding: 10px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; justify-content: space-around;">
+                    <div style="font-size: 14px; background: #e8f4fd; padding: 10px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; justify-content: space-around; margin-top: 10px;">
                         <span>🏆 반: <span style="color:#e74c3c; font-size: 16px;">${classRank}</span>등</span>
                         <span>🏅 학년: <span style="color:#e74c3c; font-size: 16px;">${gradeRank}</span>등</span>
                     </div>

@@ -297,26 +297,37 @@
             border: 1px solid #e74c3c;
         }
 
-        /* ✨ 신규: 월별 상세 기록 버튼 (11개) 템플릿 스타일 ✨ */
+        /* ✨ 신규: 크기를 줄이고 입체감을 준 3D 블록 버튼 스타일 ✨ */
         .month-btn {
-            flex: 1 1 calc(25% - 10px);
-            min-width: 65px;
-            padding: 10px 5px;
+            flex: 1 1 calc(22% - 8px);
+            /* 가로 4~5개 배열용 너비 */
+            min-width: 55px;
+            padding: 8px 4px;
             border-radius: 8px;
             font-size: 14px;
             cursor: pointer;
-            transition: 0.2s;
             text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-style: solid;
+            border-width: 1px;
+            position: relative;
+            top: 0;
+            /* 기본 위치 */
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
+            /* 버튼 아래 두꺼운 그림자(입체감) */
+            transition: all 0.1s cubic-bezier(0.4, 0.0, 0.2, 1);
+            /* 부드러운 눌림 효과 */
+            line-height: 1.2;
         }
 
         .month-btn:hover {
             filter: brightness(0.95);
-            transform: translateY(-1px);
         }
 
         .month-btn:active {
-            transform: translateY(1px);
+            top: 4px;
+            /* 눌렀을 때 버튼이 4px 아래로 푹 꺼짐 */
+            box-shadow: 0 0px 0 rgba(0, 0, 0, 0.15);
+            /* 그림자가 사라지면서 완벽한 3D 눌림 효과 */
         }
     </style>
 </head>
@@ -509,17 +520,14 @@
                 }
                 const totalCount = autoTotal + manualCount;
 
-                // 누적된 다중 이벤트 계산 로직
+                // 누적된 다중 이벤트 계산
                 const maxMilestone = Math.floor(totalCount / 5) * 5;
                 const btnGoEvent = document.getElementById('btnGoEvent');
 
                 if (maxMilestone >= 5) {
                     const { data: eventLogs } = await db.from('event_logs').select('milestone').eq('student_id', currentStudentId);
-
                     const uniqueMilestones = new Set();
-                    if (eventLogs) {
-                        eventLogs.forEach(log => uniqueMilestones.add(log.milestone));
-                    }
+                    if (eventLogs) eventLogs.forEach(log => uniqueMilestones.add(log.milestone));
 
                     const completedCount = uniqueMilestones.size;
                     const availableCount = (maxMilestone / 5) - completedCount;
@@ -530,7 +538,6 @@
                         btnGoEvent.style.color = '#2c3e50';
                         btnGoEvent.style.cursor = 'pointer';
                         btnGoEvent.innerText = `🎉 이벤트 입장 (${availableCount}개 가능)`;
-
                         btnGoEvent.onclick = () => {
                             window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
                         };
@@ -539,7 +546,7 @@
                         btnGoEvent.style.backgroundColor = '#bdc3c7';
                         btnGoEvent.style.color = 'white';
                         btnGoEvent.style.cursor = 'not-allowed';
-                        btnGoEvent.innerText = `✅ 모든 이벤트 완료 (다음: ${maxMilestone + 5}회)`;
+                        btnGoEvent.innerText = `✅ 이벤트 완료 (다음: ${maxMilestone + 5}회)`;
                     }
                 } else {
                     btnGoEvent.disabled = true;
@@ -571,33 +578,29 @@
                     if (sClassPrefix === classPrefix) { classTotalStudents++; if (total > totalCount) classRank++; }
                 }
 
-                // ✨ 신규: 11개의 다중 버튼으로 월별 통계 HTML 구성 ✨
-                let buttonsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; justify-content: center;">`;
+                // ✨ 수정됨: 위아래 간격을 좁힌 11개의 3D 버튼 렌더링 ✨
+                let buttonsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 8px 6px; margin-top: 15px; justify-content: center; padding-bottom: 4px;">`;
 
-                // 수동 버튼
-                buttonsHtml += `<button class="month-btn" style="background-color: #fdebd0; color: #d35400; border: 1px solid #f1c40f;" onclick="alert('수동 부여 횟수는 상세 기록이 없습니다.\\n(교사 일괄 입력)')"><b>수동</b><br>${manualCount}회</button>`;
+                buttonsHtml += `<button class="month-btn" style="background-color: #fdebd0; color: #d35400; border-color: #f39c12;" onclick="alert('수동 부여 횟수는 상세 기록이 없습니다.\\n(교사 일괄 입력)')"><span style="font-size:12px; font-weight:normal;">수동</span><br><b style="font-size:15px;">${manualCount}</b><span style="font-size:12px;">회</span></button>`;
 
-                // 3월 ~ 12월 버튼
                 const displayMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
                 displayMonths.forEach(m => {
                     const count = monthlyCounts[m] || 0;
-                    // 발표 기록이 있는 달은 초록색으로 강조
                     const btnStyle = count > 0
-                        ? "background-color: #d4efdf; color: #27ae60; border: 1px solid #2ecc71;"
-                        : "background-color: #ecf0f1; color: #7f8c8d; border: 1px solid #bdc3c7;";
+                        ? "background-color: #d4efdf; color: #27ae60; border-color: #2ecc71;"
+                        : "background-color: #ecf0f1; color: #7f8c8d; border-color: #bdc3c7;";
 
-                    buttonsHtml += `<button class="month-btn" style="${btnStyle}" onclick="openHistoryModal(${m})"><b>${m}월</b><br>${count}회</button>`;
+                    buttonsHtml += `<button class="month-btn" style="${btnStyle}" onclick="openHistoryModal(${m})"><span style="font-size:12px; font-weight:normal;">${m}월</span><br><b style="font-size:15px;">${count}</b><span style="font-size:12px;">회</span></button>`;
                 });
                 buttonsHtml += `</div>`;
 
-                // 메인 화면 반영
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight" style="font-size: 1.2em;">${currentStudentId} ${currentStudentName}</p>
                     <p style="margin-top: 10px; font-size: 1.1em;">현재까지 총 <span style="color: #e74c3c; font-weight: bold; font-size: 1.3em;">${totalCount}</span>회 발표하셨습니다.</p>
-                    <p style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">(직접 작성: ${autoTotal}회 / 관리자 부여: ${manualCount}회)</p>
-                    <div style="margin-top: 15px; font-size: 15px; background: #e8f4fd; padding: 12px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                        <div>🏆 반 등수: <span style="color:#e74c3c; font-size: 17px;">${classRank}</span>등 <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">(총 ${classTotalStudents}명)</span></div>
-                        <div>🏅 학년 등수: <span style="color:#e74c3c; font-size: 17px;">${gradeRank}</span>등 <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">(총 ${gradeTotalStudents}명)</span></div>
+                    <p style="font-size: 13px; color: #7f8c8d; margin-top: 5px; margin-bottom: 15px;">(직접 작성: ${autoTotal}회 / 관리자 부여: ${manualCount}회)</p>
+                    <div style="font-size: 14px; background: #e8f4fd; padding: 10px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; justify-content: space-around;">
+                        <span>🏆 반: <span style="color:#e74c3c; font-size: 16px;">${classRank}</span>등</span>
+                        <span>🏅 학년: <span style="color:#e74c3c; font-size: 16px;">${gradeRank}</span>등</span>
                     </div>
                     ${buttonsHtml}
                 `;
@@ -607,33 +610,23 @@
             }
         }
 
-        // ✨ 수정됨: 11개 버튼 중 하나를 클릭하면 해당 달의 정보로 모달을 오픈 ✨
         window.openHistoryModal = async function (selectedMonth) {
             if (!currentStudentId) return;
             document.getElementById('historyModal').classList.remove('hidden');
             document.getElementById('historyTitle').innerText = `📜 ${currentStudentName}님의 기록`;
 
-            // 클릭한 달로 모달안의 셀렉트박스를 자동으로 맞춤
             document.getElementById('historyMonth').value = selectedMonth;
             document.getElementById('historyContainer').innerHTML = '<p style="text-align: center; color: #7f8c8d;">불러오는 중...</p>';
 
             try {
-                // 해당 학생의 승인된 발표 리스트 전부 로드
-                const { data } = await db.from('presentation')
-                    .select('content, created_at, is_approved')
-                    .eq('student_id', currentStudentId)
-                    .order('created_at', { ascending: false });
-
+                const { data } = await db.from('presentation').select('content, created_at, is_approved').eq('student_id', currentStudentId).order('created_at', { ascending: false });
                 studentPresentations = data || [];
-
-                // 넘어온 파라미터 달을 기준으로 렌더링
                 renderHistoryByMonth(selectedMonth);
             } catch (e) {
                 alert("기록을 불러오지 못했습니다: " + e.message);
             }
         };
 
-        // 모달 내부에서 드롭다운(셀렉트박스)을 바꿀 때 작동
         document.getElementById('historyMonth').addEventListener('change', function () { renderHistoryByMonth(parseInt(this.value)); });
         document.getElementById('btnCloseHistory').addEventListener('click', () => document.getElementById('historyModal').classList.add('hidden'));
 
@@ -702,9 +695,6 @@
         }
         document.getElementById('btnCancel').addEventListener('click', () => location.reload());
 
-        // ==========================================
-        // 교사 모달 (발표 승인 + 이벤트 상품)
-        // ==========================================
         document.getElementById('btnApproveWait').addEventListener('dblclick', async (e) => {
             if (e.ctrlKey) {
                 if (prompt("교사 비밀번호를 입력하세요. (1234)") !== "1234") return;
@@ -806,9 +796,6 @@
             }
         }
 
-        // ==========================================
-        // 관리자 탭
-        // ==========================================
         document.getElementById('secretBtn').addEventListener('dblclick', function (e) {
             if (e.ctrlKey) {
                 document.getElementById('adminModal').classList.remove('hidden');

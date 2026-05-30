@@ -245,7 +245,6 @@
             background-color: #ecf0f1;
         }
 
-        /* 테이블 내부 인풋 스타일 */
         .table-input {
             width: 80px;
             padding: 8px;
@@ -254,10 +253,39 @@
             font-size: 15px;
             border: 1px solid #7f8c8d;
         }
+
+        /* ✨ 교사 확인용 고정 버튼 ✨ */
+        .approve-btn-fixed {
+            position: fixed;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 45px;
+            height: 45px;
+            background-color: #e67e22;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 9999;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .approve-btn-fixed:hover {
+            transform: translateY(-50%) scale(1.1);
+            background-color: #d35400;
+        }
     </style>
 </head>
 
 <body>
+
+    <!-- ✨ 교사 승인 확인용 왼쪽 아이콘 ✨ -->
+    <div id="btnApproveWait" class="approve-btn-fixed" title="미승인 기록 확인 (교사용)">📋</div>
 
     <div class="form-container" id="searchSection">
         <h2>🔍 대수 발표 입력</h2>
@@ -309,6 +337,22 @@
             </select>
 
             <div id="historyContainer" style="margin-top: 20px;">
+                <p style="text-align: center; color: #7f8c8d;">불러오는 중...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✨ 교사 승인 확인용 모달 ✨ -->
+    <div id="approvalModal" class="modal-overlay hidden">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3>📋 미승인 발표 기록 확인</h3>
+                <button class="close-btn" id="btnCloseApproval">닫기</button>
+            </div>
+            <p style="font-size: 13px; color: #7f8c8d; margin-top: 0; margin-bottom: 15px;">
+                ※ 학생들이 제출하여 선생님의 확인을 기다리고 있는 목록입니다. 승인된 항목만 통계에 반영됩니다.
+            </p>
+            <div id="approvalListContainer" style="max-height: 500px; overflow-y: auto;">
                 <p style="text-align: center; color: #7f8c8d;">불러오는 중...</p>
             </div>
         </div>
@@ -432,8 +476,9 @@
             document.getElementById('historyMonth').value = nowMonth;
 
             try {
+                // ✨ 수정됨: 승인 여부(is_approved) 컬럼 추가 조회 ✨
                 const { data, error } = await db.from('presentation')
-                    .select('content, created_at')
+                    .select('content, created_at, is_approved')
                     .eq('student_id', currentStudentId)
                     .order('created_at', { ascending: false });
 
@@ -464,9 +509,16 @@
             let html = '';
             filtered.forEach(p => {
                 const dateStr = new Date(p.created_at).toLocaleString();
+
+                // ✨ 추가됨: 학생이 확인할 수 있도록 승인 상태 꼬리표 추가 ✨
+                const isApproved = p.is_approved === true;
+                const statusTag = isApproved
+                    ? '<span style="color:#27ae60; font-size:12px; font-weight:bold; margin-left:5px;">[승인됨]</span>'
+                    : '<span style="color:#e67e22; font-size:12px; font-weight:bold; margin-left:5px;">[승인 대기중]</span>';
+
                 html += `
                     <div class="history-item">
-                        <div class="history-date">📅 ${dateStr}</div>
+                        <div class="history-date">📅 ${dateStr} ${statusTag}</div>
                         <div class="history-content">${p.content}</div>
                     </div>
                 `;
@@ -474,15 +526,11 @@
             container.innerHTML = html;
         }
 
-
-
-
-        // ✨ 핵심 수정: 3월 앞에 '수동' 추가, 관리자 입력값 표시 및 반별/학년별 등수 추가 (2줄 디자인 적용) ✨
+        // ✨ 수정됨: 통계 산출 시 is_approved = true 인 것만 계산하도록 반영 ✨
         async function refreshStats() {
             document.getElementById('statsBox').innerHTML = `<p class="highlight">${currentStudentId} ${currentStudentName}</p><p>통계를 계산하고 있습니다... ⏳</p>`;
 
             try {
-                // 1. 수동 입력(manual_records) 횟수 데이터를 먼저 조회합니다.
                 const { data: manualData, error: err2 } = await db.from('manual_records')
                     .select('manual_count')
                     .eq('student_id', currentStudentId)
@@ -491,13 +539,13 @@
 
                 const manualCount = manualData ? manualData.manual_count : 0;
 
-                // 2. 시스템 기록(presentation) 날짜 데이터 전부 조회 (월별 계산을 위해)
+                // 🌟 중요: 승인(is_approved = true)된 시스템 기록만 불러옵니다.
                 const { data: autoRecords, error: err1 } = await db.from('presentation')
                     .select('created_at')
-                    .eq('student_id', currentStudentId);
+                    .eq('student_id', currentStudentId)
+                    .eq('is_approved', true);
                 if (err1) throw err1;
 
-                // 월별 횟수 계산
                 const monthlyCounts = {};
                 let autoTotal = 0;
 
@@ -505,54 +553,43 @@
                     autoTotal = autoRecords.length;
                     autoRecords.forEach(record => {
                         const date = new Date(record.created_at);
-                        const month = date.getMonth() + 1; // 1~12월
+                        const month = date.getMonth() + 1;
                         monthlyCounts[month] = (monthlyCounts[month] || 0) + 1;
                     });
                 }
 
                 const totalCount = autoTotal + manualCount;
-
-                // 월별 텍스트 포맷팅 (3월~12월 고정 출력)
                 const displayMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
                 const monthStrings = displayMonths.map(m => `<b>${m}월</b> ${monthlyCounts[m] || 0}회`);
 
-                // 3월 칸 바로 앞에 '수동' 항목 추가
                 monthStrings.unshift(`<b>수동</b> ${manualCount}회`);
 
                 const monthlyText = `<div style="font-size: 14px; color: #34495e; margin-top: 12px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #bdc3c7; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
                                        ${monthStrings.join('<span style="color:#bdc3c7;">|</span>')}
                                    </div>`;
 
-                // =========================================================
-                // ✨ 반별 / 학년별 등수 산출 로직 ✨
-                // =========================================================
-
-                // 학번 파싱 (예: 20101 -> 2학년, 201반)
                 const gradePrefix = Math.floor(currentStudentId / 10000);
                 const classPrefix = Math.floor(currentStudentId / 100);
-
                 const startIdStr = String(gradePrefix * 10000);
                 const endIdStr = String(gradePrefix * 10000 + 9999);
 
-                // 해당 학년 전체 학생 조회
                 const { data: gradeStudents } = await db.from('student')
                     .select('student_id')
                     .gte('student_id', startIdStr)
                     .lte('student_id', endIdStr);
 
-                // 해당 학년 전체 수동 횟수 조회
                 const { data: gradeManuals } = await db.from('manual_records')
                     .select('student_id, manual_count')
                     .gte('student_id', startIdStr)
                     .lte('student_id', endIdStr);
 
-                // 해당 학년 전체 자동 횟수 조회
+                // 🌟 중요: 전체 학생의 랭킹을 구할 때도 승인된 것만 조회합니다.
                 const { data: gradeAutos } = await db.from('presentation')
                     .select('student_id')
                     .gte('student_id', startIdStr)
-                    .lte('student_id', endIdStr);
+                    .lte('student_id', endIdStr)
+                    .eq('is_approved', true);
 
-                // 학생별 합계 계산용 객체
                 const studentTotals = {};
                 if (gradeStudents) {
                     gradeStudents.forEach(s => studentTotals[s.student_id] = 0);
@@ -568,7 +605,6 @@
                     });
                 }
 
-                // 현재 학생의 등수 산출
                 let gradeRank = 1;
                 let gradeTotalStudents = 0;
                 let classRank = 1;
@@ -578,18 +614,15 @@
                     const sId = parseInt(sIdStr, 10);
                     const sClassPrefix = Math.floor(sId / 100);
 
-                    // 학년 통계 누적 및 비교
                     gradeTotalStudents++;
                     if (total > totalCount) gradeRank++;
 
-                    // 반 통계 누적 및 비교
                     if (sClassPrefix === classPrefix) {
                         classTotalStudents++;
                         if (total > totalCount) classRank++;
                     }
                 }
 
-                // ✨ [요청 반영] 등수 출력용 HTML (2줄로 표시되도록 flex-direction: column 적용)
                 const rankText = `
                     <div style="margin-top: 15px; font-size: 15px; background: #e8f4fd; padding: 12px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; flex-direction: column; align-items: center; gap: 8px;">
                         <div>🏆 반 등수: <span style="color:#e74c3c; font-size: 17px;">${classRank}</span>등 <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">(총 ${classTotalStudents}명)</span></div>
@@ -597,7 +630,6 @@
                     </div>
                 `;
 
-                // 화면에 최종 출력
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight" style="font-size: 1.2em;">${currentStudentId} ${currentStudentName}</p>
                     <p style="margin-top: 10px; font-size: 1.1em;">현재까지 총 <span style="color: #e74c3c; font-weight: bold; font-size: 1.3em;">${totalCount}</span>회 발표하셨습니다.</p>
@@ -611,7 +643,6 @@
             }
         }
 
-
         document.getElementById('btnCloseHistory').addEventListener('click', () => {
             document.getElementById('historyModal').classList.add('hidden');
         });
@@ -622,12 +653,13 @@
             if (!content) return alert("발표 내용을 입력해주세요.");
 
             try {
-                if (confirm(`저장하시겠습니까?`)) {
+                if (confirm(`제출하시겠습니까?\n(선생님의 승인 후 통계에 반영됩니다.)`)) {
+                    // ✨ 추가됨: 기본 제출 시 is_approved를 false 로 입력합니다. ✨
                     const { error } = await db.from('presentation').insert([
-                        { student_id: currentStudentId, student_name: currentStudentName, content: content }
+                        { student_id: currentStudentId, student_name: currentStudentName, content: content, is_approved: false }
                     ]);
                     if (error) throw error;
-                    alert('저장 완료!');
+                    alert('제출 완료! 선생님의 확인을 기다려주세요.');
                     document.getElementById('content').value = '';
                     location.reload();
                 }
@@ -637,6 +669,104 @@
         });
 
         document.getElementById('btnCancel').addEventListener('click', () => location.reload());
+
+        // ==========================================
+        // ✨ [신규 추가] 교사 미승인 기록 확인 기능 ✨
+        // ==========================================
+        document.getElementById('btnApproveWait').addEventListener('click', async () => {
+            const pwd = prompt("교사 확인용 비밀번호를 입력하세요. (기본값: 1234)");
+            if (pwd !== "1234") {
+                if (pwd !== null) alert("비밀번호가 일치하지 않습니다.");
+                return;
+            }
+
+            document.getElementById('approvalModal').classList.remove('hidden');
+            await fetchPendingApprovals();
+        });
+
+        document.getElementById('btnCloseApproval').addEventListener('click', () => {
+            document.getElementById('approvalModal').classList.add('hidden');
+        });
+
+        async function fetchPendingApprovals() {
+            const container = document.getElementById('approvalListContainer');
+            container.innerHTML = '<p style="text-align:center;">데이터를 불러오는 중...</p>';
+            try {
+                // 승인 대기(false) 상태인 기록만 조회
+                const { data, error } = await db.from('presentation')
+                    .select('id, student_id, student_name, content, created_at')
+                    .eq('is_approved', false)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 20px;">대기 중인 기록이 없습니다.</p>';
+                    return;
+                }
+
+                let html = '';
+                data.forEach(item => {
+                    const dateStr = new Date(item.created_at).toLocaleString();
+                    html += `
+                        <div class="history-item" style="border-left: 4px solid #e67e22; margin-bottom: 15px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <strong style="font-size:16px;">${item.student_id} ${item.student_name}</strong>
+                                <span style="font-size:12px; color:#7f8c8d;">${dateStr}</span>
+                            </div>
+                            <div class="history-content" style="background:#fff; padding:12px; border-radius:6px; border:1px solid #bdc3c7; margin-bottom:10px;">
+                                ${item.content}
+                            </div>
+                            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                                <button class="btn-approve" data-id="${item.id}" style="width:auto; padding:6px 12px; margin:0; font-size:13px; background-color:#27ae60;">✅ 승인 (통계 반영)</button>
+                                <button class="btn-reject" data-id="${item.id}" style="width:auto; padding:6px 12px; margin:0; font-size:13px; background-color:#e74c3c;">❌ 삭제 (반려)</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+
+                document.querySelectorAll('.btn-approve').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const id = e.target.getAttribute('data-id');
+                        await approveRecord(id);
+                    });
+                });
+                document.querySelectorAll('.btn-reject').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const id = e.target.getAttribute('data-id');
+                        await rejectRecord(id);
+                    });
+                });
+
+            } catch (e) {
+                container.innerHTML = `<p style="color:red; text-align:center;">오류 발생: ${e.message}</p>`;
+            }
+        }
+
+        async function approveRecord(id) {
+            if (!confirm("이 기록을 승인하시겠습니까?\\n(승인된 기록만 통계에 반영됩니다.)")) return;
+            try {
+                // 승인 시 DB 업데이트
+                const { error } = await db.from('presentation').update({ is_approved: true }).eq('id', id);
+                if (error) throw error;
+                await fetchPendingApprovals(); // 리스트 갱신
+            } catch (e) {
+                alert("승인 처리 중 오류 발생: " + e.message);
+            }
+        }
+
+        async function rejectRecord(id) {
+            if (!confirm("이 기록을 삭제(반려)하시겠습니까?\\n(학생이 실수로 잘못 제출한 경우)")) return;
+            try {
+                // 반려 시 DB 삭제
+                const { error } = await db.from('presentation').delete().eq('id', id);
+                if (error) throw error;
+                await fetchPendingApprovals(); // 리스트 갱신
+            } catch (e) {
+                alert("삭제 처리 중 오류 발생: " + e.message);
+            }
+        }
 
         // ==========================================
         // 4. 관리자용 모달 및 기능
@@ -690,7 +820,6 @@
                 const startIdStr = String(parseInt(classPrefix) * 100);
                 const endIdStr = String(parseInt(classPrefix) * 100 + 99);
 
-                // 1. 해당 반 학생 명단 불러오기
                 const { data: studentsList, error: stuError } = await db.from('student')
                     .select('student_id, name')
                     .gte('student_id', startIdStr)
@@ -705,13 +834,12 @@
 
                 const studentIds = studentsList.map(s => parseInt(s.student_id, 10));
 
-                // 2. 수동 횟수 불러오기
                 const { data: manualRecords } = await db.from('manual_records').select('student_id, manual_count').in('student_id', studentIds);
                 const manualMap = {};
                 if (manualRecords) manualRecords.forEach(r => manualMap[r.student_id] = r.manual_count);
 
-                // 3. 시스템 발표 횟수 불러오기
-                const { data: presRecords } = await db.from('presentation').select('student_id').in('student_id', studentIds);
+                // 🌟 중요: 관리자가 통계를 볼 때도 승인된 것만 불러옵니다.
+                const { data: presRecords } = await db.from('presentation').select('student_id').in('student_id', studentIds).eq('is_approved', true);
                 const presMap = {};
                 if (presRecords) {
                     presRecords.forEach(r => {
@@ -719,7 +847,6 @@
                     });
                 }
 
-                // 4. 화면에 그리기
                 let html = '';
                 studentsList.forEach(s => {
                     const sIdInt = parseInt(s.student_id, 10);

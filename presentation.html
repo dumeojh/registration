@@ -474,6 +474,7 @@
             container.innerHTML = html;
         }
 
+
         // ✨ 핵심 수정: 월별 통계 추가 ✨
         async function refreshStats() {
             document.getElementById('statsBox').innerHTML = `<p class="highlight">${currentStudentId} ${currentStudentName}</p><p>통계를 계산하고 있습니다... ⏳</p>`;
@@ -498,18 +499,14 @@
                     });
                 }
 
-                // 월별 텍스트 예쁘게 포맷팅
-                let monthlyText = '';
-                const sortedMonths = Object.keys(monthlyCounts).map(Number).sort((a, b) => a - b);
+                // 월별 텍스트 예쁘게 포맷팅 (3월~12월 고정 출력)
+                const displayMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+                // 기록이 없으면 0회로 표시되도록 || 0 처리
+                const monthStrings = displayMonths.map(m => `<b>${m}월</b> ${monthlyCounts[m] || 0}회`);
 
-                if (sortedMonths.length > 0) {
-                    const monthStrings = sortedMonths.map(m => `<b>${m}월</b> ${monthlyCounts[m]}회`);
-                    monthlyText = `<div style="font-size: 14px; color: #34495e; margin-top: 12px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #bdc3c7; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+                const monthlyText = `<div style="font-size: 14px; color: #34495e; margin-top: 12px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #bdc3c7; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
                                        ${monthStrings.join('<span style="color:#bdc3c7;">|</span>')}
                                    </div>`;
-                } else {
-                    monthlyText = `<p style="font-size: 13px; color: #7f8c8d; margin-top: 10px;">등록된 월별 기록이 없습니다.</p>`;
-                }
 
                 // 수동 입력(manual_records) 횟수 조회
                 const { data: manualData, error: err2 } = await db.from('manual_records')

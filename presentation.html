@@ -254,12 +254,11 @@
             border: 1px solid #7f8c8d;
         }
 
-        /* ✨ 교사 확인용 고정 버튼 (위치 수정: 왼쪽 아래) ✨ */
+        /* ✨ 교사 확인용 고정 버튼 ✨ */
         .approve-btn-fixed {
             position: fixed;
             left: 15px;
             bottom: 15px;
-            /* top, transform 제거하고 bottom 속성 적용 */
             width: 45px;
             height: 45px;
             background-color: #e67e22;
@@ -277,15 +276,43 @@
 
         .approve-btn-fixed:hover {
             transform: scale(1.1);
-            /* translateY 제거 */
             background-color: #d35400;
+        }
+
+        /* ✨ 신규: 학생 제출 상태 알림 박스 스타일 ✨ */
+        .submit-status-box {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            display: none;
+            /* 기본 숨김 */
+        }
+
+        .status-waiting {
+            background-color: #fcf3cf;
+            color: #d35400;
+            border: 1px solid #f1c40f;
+        }
+
+        .status-approved {
+            background-color: #d4efdf;
+            color: #27ae60;
+            border: 1px solid #2ecc71;
+        }
+
+        .status-rejected {
+            background-color: #fadbd8;
+            color: #c0392b;
+            border: 1px solid #e74c3c;
         }
     </style>
 </head>
 
 <body>
 
-    <!-- ✨ 교사 승인 확인용 왼쪽 아이콘 ✨ -->
     <div id="btnApproveWait" class="approve-btn-fixed" title="미승인 기록 확인 (교사용)">📋</div>
 
     <div class="form-container" id="searchSection">
@@ -311,6 +338,10 @@
         <textarea id="content" rows="4" placeholder="발표한 내용이나 주제를 요약해서 적어주세요." required></textarea>
 
         <button type="button" id="btnSubmit">제출하기</button>
+
+        <!-- ✨ 신규: 제출 상태를 보여주는 알림 박스 ✨ -->
+        <div id="submitStatusBox" class="submit-status-box"></div>
+
         <button type="button" id="btnCancel" class="btn-secondary">이전으로</button>
     </div>
 
@@ -343,7 +374,7 @@
         </div>
     </div>
 
-    <!-- ✨ 교사 승인 확인용 모달 ✨ -->
+    <!-- 교사 승인 확인용 모달 -->
     <div id="approvalModal" class="modal-overlay hidden">
         <div class="modal-content" style="max-width: 650px;">
             <div class="modal-header">
@@ -426,9 +457,11 @@
         let currentStudentName = '';
         let studentPresentations = [];
 
+        // ✨ 추가: 방금 제출한 기록의 고유 ID를 담아둘 변수
+        let currentSubmissionId = null;
+        let statusCheckInterval = null; // 상태 체크용 타이머
 
 
-        // 1. 조회하기 버튼
         document.getElementById('btnSearch').addEventListener('click', async function () {
             const studentIdValue = document.getElementById('searchId').value.trim();
             const studentNameValue = document.getElementById('searchName').value.trim();
@@ -455,7 +488,9 @@
                 currentStudentId = parseInt(studentIdStr, 10);
                 currentStudentName = studentNameValue;
 
-                // 통계 불러오기 함수 호출
+                // 상태 초기화
+                resetSubmissionStatus();
+
                 await refreshStats();
 
                 document.getElementById('searchSection').classList.add('hidden');
@@ -469,7 +504,6 @@
             }
         });
 
-        // 2. 상세히 보기 모달
         document.getElementById('btnShowHistory').addEventListener('click', async function () {
             if (!currentStudentId) return;
             document.getElementById('historyModal').classList.remove('hidden');
@@ -479,7 +513,6 @@
             document.getElementById('historyMonth').value = nowMonth;
 
             try {
-                // ✨ 수정됨: 승인 여부(is_approved) 컬럼 추가 조회 ✨
                 const { data, error } = await db.from('presentation')
                     .select('content, created_at, is_approved')
                     .eq('student_id', currentStudentId)
@@ -512,8 +545,6 @@
             let html = '';
             filtered.forEach(p => {
                 const dateStr = new Date(p.created_at).toLocaleString();
-
-                // ✨ 추가됨: 학생이 확인할 수 있도록 승인 상태 꼬리표 추가 ✨
                 const isApproved = p.is_approved === true;
                 const statusTag = isApproved
                     ? '<span style="color:#27ae60; font-size:12px; font-weight:bold; margin-left:5px;">[승인됨]</span>'
@@ -529,7 +560,6 @@
             container.innerHTML = html;
         }
 
-        // ✨ 수정됨: 통계 산출 시 is_approved = true 인 것만 계산하도록 반영 ✨
         async function refreshStats() {
             document.getElementById('statsBox').innerHTML = `<p class="highlight">${currentStudentId} ${currentStudentName}</p><p>통계를 계산하고 있습니다... ⏳</p>`;
 
@@ -542,7 +572,6 @@
 
                 const manualCount = manualData ? manualData.manual_count : 0;
 
-                // 🌟 중요: 승인(is_approved = true)된 시스템 기록만 불러옵니다.
                 const { data: autoRecords, error: err1 } = await db.from('presentation')
                     .select('created_at')
                     .eq('student_id', currentStudentId)
@@ -586,7 +615,6 @@
                     .gte('student_id', startIdStr)
                     .lte('student_id', endIdStr);
 
-                // 🌟 중요: 전체 학생의 랭킹을 구할 때도 승인된 것만 조회합니다.
                 const { data: gradeAutos } = await db.from('presentation')
                     .select('student_id')
                     .gte('student_id', startIdStr)
@@ -650,42 +678,110 @@
             document.getElementById('historyModal').classList.add('hidden');
         });
 
+        // ✨ 핵심 기능: 알림 박스 초기화
+        function resetSubmissionStatus() {
+            if (statusCheckInterval) clearInterval(statusCheckInterval);
+            currentSubmissionId = null;
+            const statusBox = document.getElementById('submitStatusBox');
+            statusBox.style.display = 'none';
+            statusBox.className = 'submit-status-box';
+            statusBox.innerHTML = '';
+        }
 
 
-
-        // 3. 제출하기 (새로고침 방지 및 대기 상태 안내 추가)
+        // 3. ✨ 제출하기 및 상태 모니터링 로직 개선 ✨
         document.getElementById('btnSubmit').addEventListener('click', async function () {
             const content = document.getElementById('content').value.trim();
             if (!content) return alert("발표 내용을 입력해주세요.");
 
             try {
                 if (confirm(`제출하시겠습니까?\n(선생님의 승인 후 통계에 반영됩니다.)`)) {
-                    // 기본 제출 시 is_approved를 false 로 입력합니다.
-                    const { error } = await db.from('presentation').insert([
+                    // 데이터 삽입 후 방금 넣은 데이터의 정보(.select())를 반환받음
+                    const { data, error } = await db.from('presentation').insert([
                         { student_id: currentStudentId, student_name: currentStudentName, content: content, is_approved: false }
-                    ]);
+                    ]).select();
+
                     if (error) throw error;
 
-                    // ✨ 수정됨: 제출 완료 후 대기 상태 안내 메시지 표출
-                    alert('제출이 완료되었습니다! ⏳\n현재 선생님 [승인 대기] 상태이며, 확인 후 통계에 반영됩니다.');
+                    const newRecord = data[0];
+                    currentSubmissionId = newRecord.id; // 추적을 위해 ID 저장
+
+                    const submitTime = new Date(newRecord.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
                     document.getElementById('content').value = '';
 
-                    // ✨ 수정됨: location.reload()를 삭제하고 통계 함수만 다시 호출하여 화면 갱신
-                    await refreshStats();
+                    // UI 업데이트 (대기 상태 표출)
+                    const statusBox = document.getElementById('submitStatusBox');
+                    statusBox.style.display = 'block';
+                    statusBox.className = 'submit-status-box status-waiting';
+                    statusBox.innerHTML = `
+                        <div>⏳ 승인 대기 중입니다.</div>
+                        <div style="font-weight:normal; font-size:12px; margin-top:5px; color:#7f8c8d;">(제출 시간: ${submitTime})</div>
+                    `;
+
+                    // 실시간 상태 감지를 위한 폴링(3초마다 확인) 시작
+                    startStatusMonitoring(currentSubmissionId);
                 }
             } catch (error) {
                 alert('저장 오류: ' + error.message);
             }
         });
 
-        document.getElementById('btnCancel').addEventListener('click', () => location.reload());
+        // 5. ✨ 지속적인 승인 상태 모니터링 기능 (타이머) ✨
+        function startStatusMonitoring(idToCheck) {
+            if (statusCheckInterval) clearInterval(statusCheckInterval);
+
+            statusCheckInterval = setInterval(async () => {
+                try {
+                    // 해당 ID의 최신 상태 조회
+                    const { data, error } = await db.from('presentation')
+                        .select('is_approved')
+                        .eq('id', idToCheck)
+                        .maybeSingle();
+
+                    const statusBox = document.getElementById('submitStatusBox');
+
+                    // 데이터가 없다면 (선생님이 반려하여 삭제된 경우)
+                    if (!data) {
+                        clearInterval(statusCheckInterval);
+                        statusBox.className = 'submit-status-box status-rejected';
+                        statusBox.innerHTML = `
+                            <div>❌ 선생님이 제출을 반려(삭제)하셨습니다.</div>
+                            <div style="font-weight:normal; font-size:12px; margin-top:5px;">내용을 다시 확인하고 다시 제출해 주세요.</div>
+                        `;
+                        return;
+                    }
+
+                    // 선생님이 승인한 경우 (is_approved === true)
+                    if (data.is_approved === true) {
+                        clearInterval(statusCheckInterval); // 승인 확인 시 타이머 종료
+                        statusBox.className = 'submit-status-box status-approved';
+                        const nowTime = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        statusBox.innerHTML = `
+                            <div>✅ 선생님이 방금 제출 기록을 승인하셨습니다!</div>
+                            <div style="font-weight:normal; font-size:12px; margin-top:5px; color:#7f8c8d;">(확인 시간: ${nowTime})</div>
+                        `;
+                        // 승인되었으므로 통계를 갱신
+                        await refreshStats();
+                    }
+                    // 여전히 false라면 계속 대기 (아무 액션 안함)
+                } catch (err) {
+                    console.error("상태 확인 중 오류", err);
+                }
+            }, 3000); // 3초 간격
+        }
+
+        document.getElementById('btnCancel').addEventListener('click', () => {
+            // 뒤로가기 시 상태 초기화 후 새로고침
+            resetSubmissionStatus();
+            location.reload();
+        });
 
 
         // ==========================================
-        // ✨ [수정됨] 교사 미승인 기록 확인 기능 (Ctrl + 더블클릭) ✨
+        // 교사 미승인 기록 확인 기능 (Ctrl + 더블클릭)
         // ==========================================
         document.getElementById('btnApproveWait').addEventListener('dblclick', async (e) => {
-            // Ctrl 키를 누른 상태에서만 작동하도록 조건 추가
             if (e.ctrlKey) {
                 const pwd = prompt("교사 확인용 비밀번호를 입력하세요. (기본값: 1234)");
                 if (pwd !== "1234") {
@@ -706,7 +802,6 @@
             const container = document.getElementById('approvalListContainer');
             container.innerHTML = '<p style="text-align:center;">데이터를 불러오는 중...</p>';
             try {
-                // 승인 대기(false) 상태인 기록만 조회
                 const { data, error } = await db.from('presentation')
                     .select('id, student_id, student_name, content, created_at')
                     .eq('is_approved', false)
@@ -759,47 +854,36 @@
         }
 
 
-        // ✨ 교사 승인 처리 함수 수정 (승인 시 즉시 화면 갱신)
         async function approveRecord(id) {
-            if (!confirm("이 기록을 승인하시겠습니까?\n(승인된 기록만 통계에 반영됩니다.)")) return;
+            if (!confirm("이 기록을 승인하시겠습니까?\\n(승인된 기록만 통계에 반영됩니다.)")) return;
             try {
-                // 승인 시 DB 업데이트
                 const { error } = await db.from('presentation').update({ is_approved: true }).eq('id', id);
                 if (error) throw error;
 
                 alert("✅ 승인되었습니다! 학생의 화면 통계가 갱신됩니다.");
                 await fetchPendingApprovals(); // 모달 리스트 갱신
 
-                // 뒷배경에 학생 화면이 띄워져 있다면 즉시 통계 새로고침
-                if (currentStudentId) {
-                    await refreshStats();
-                }
             } catch (e) {
                 alert("승인 처리 중 오류 발생: " + e.message);
             }
         }
 
-        // ✨ 교사 삭제(반려) 처리 함수 수정 (삭제 시 즉시 화면 갱신)
         async function rejectRecord(id) {
-            if (!confirm("이 기록을 삭제(반려)하시겠습니까?\n(학생이 실수로 잘못 제출한 경우)")) return;
+            if (!confirm("이 기록을 삭제(반려)하시겠습니까?\\n(학생이 실수로 잘못 제출한 경우)")) return;
             try {
-                // 반려 시 DB 삭제
                 const { error } = await db.from('presentation').delete().eq('id', id);
                 if (error) throw error;
 
                 alert("❌ 기록이 삭제(반려) 되었습니다.");
                 await fetchPendingApprovals(); // 모달 리스트 갱신
 
-                // 뒷배경 화면 갱신
-                if (currentStudentId) {
-                    await refreshStats();
-                }
             } catch (e) {
                 alert("삭제 처리 중 오류 발생: " + e.message);
             }
         }
+
         // ==========================================
-        // 4. 관리자용 모달 및 기능
+        // 관리자용 모달 및 기능
         // ==========================================
         document.getElementById('secretBtn').addEventListener('dblclick', function (e) {
             if (e.ctrlKey) {
@@ -811,7 +895,6 @@
             document.getElementById('adminModal').classList.add('hidden');
         });
 
-        // 탭 전환
         document.getElementById('btnTabClass').addEventListener('click', () => {
             document.getElementById('adminViewSection').classList.remove('hidden');
             document.getElementById('adminManualSection').classList.add('hidden');
@@ -824,7 +907,6 @@
             populateClassSelect('manualClassSelect');
         });
 
-        // 공통 반 선택 드롭다운 생성 함수
         async function populateClassSelect(elementId) {
             const { data } = await db.from('student').select('student_id');
             let classes = new Set();
@@ -838,7 +920,6 @@
             document.getElementById(elementId).innerHTML = html;
         }
 
-        // 반별 통계 조회 로직
         document.getElementById('btnFetchClass').addEventListener('click', async () => {
             const classPrefix = document.getElementById('classSelect').value;
             if (!classPrefix) return alert('조회할 반을 선택해주세요.');
@@ -868,7 +949,6 @@
                 const manualMap = {};
                 if (manualRecords) manualRecords.forEach(r => manualMap[r.student_id] = r.manual_count);
 
-                // 🌟 중요: 관리자가 통계를 볼 때도 승인된 것만 불러옵니다.
                 const { data: presRecords } = await db.from('presentation').select('student_id').in('student_id', studentIds).eq('is_approved', true);
                 const presMap = {};
                 if (presRecords) {
@@ -896,7 +976,6 @@
             }
         });
 
-        // 수동 횟수: 반별 학생 조회 및 기존 숫자 렌더링
         document.getElementById('btnFetchManualClass').addEventListener('click', async () => {
             const classPrefix = document.getElementById('manualClassSelect').value;
             if (!classPrefix) return alert('조회할 반을 선택해주세요.');
@@ -957,7 +1036,6 @@
             }
         });
 
-        // 수동 횟수: 수정된 횟수 한 번에 일괄 저장 (Upsert)
         document.getElementById('btnBatchSaveManual').addEventListener('click', async () => {
             const inputs = document.querySelectorAll('.manual-input');
             const dataToUpsert = [];

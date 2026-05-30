@@ -501,23 +501,20 @@
                 }
                 const totalCount = autoTotal + manualCount;
 
-
-                // ✨ 누적된 다중 이벤트 계산 로직 ✨
+                // ✨ 누적된 다중 이벤트 계산 로직 (Set 사용으로 중복 방지) ✨
                 const maxMilestone = Math.floor(totalCount / 5) * 5;
                 const btnGoEvent = document.getElementById('btnGoEvent');
 
                 if (maxMilestone >= 5) {
-                    // 학생이 여태까지 참여한 고유 이벤트 회차만 확인 (다중클릭 버그 방지)
                     const { data: eventLogs } = await db.from('event_logs').select('milestone').eq('student_id', currentStudentId);
 
-                    // 단순 갯수(length)가 아닌 고유한 milestone 종류만 추려냅니다.
                     const uniqueMilestones = new Set();
                     if (eventLogs) {
                         eventLogs.forEach(log => uniqueMilestones.add(log.milestone));
                     }
 
                     const completedCount = uniqueMilestones.size;
-                    const availableCount = (maxMilestone / 5) - completedCount; // 남은 이벤트 티켓 개수
+                    const availableCount = (maxMilestone / 5) - completedCount;
 
                     if (availableCount > 0) {
                         btnGoEvent.disabled = false;
@@ -588,9 +585,6 @@
             }
         }
 
-        // ==========================================
-        // 상세히 보기 및 다중 제출 로직
-        // ==========================================
         document.getElementById('btnShowHistory').addEventListener('click', async function () {
             document.getElementById('historyModal').classList.remove('hidden');
             document.getElementById('historyTitle').innerText = `📜 ${currentStudentName}님의 기록`;
@@ -625,6 +619,7 @@
                 renderSubmissionsStatus(); startStatusMonitoring();
             }
         }
+
         function renderSubmissionsStatus() {
             const container = document.getElementById('submitStatusBox');
             if (monitoredSubmissions.length === 0) return container.style.display = 'none';
@@ -669,7 +664,7 @@
         document.getElementById('btnCancel').addEventListener('click', () => location.reload());
 
         // ==========================================
-        // ✨ 교사 모달: 발표 대기 + 이벤트 상품 통합 조회 ✨
+        // 교사 모달 (발표 승인 + 이벤트 상품)
         // ==========================================
         document.getElementById('btnApproveWait').addEventListener('dblclick', async (e) => {
             if (e.ctrlKey) {
@@ -685,10 +680,7 @@
             container.innerHTML = '<p style="text-align:center;">데이터를 불러오는 중...</p>';
 
             try {
-                // 1. 발표 미승인 기록 가져오기
                 const { data: presData } = await db.from('presentation').select('*').eq('is_approved', false).order('created_at', { ascending: false });
-
-                // 2. 이벤트 상품 미지급 기록 가져오기
                 const { data: eventData } = await db.from('event_logs').select('*').eq('is_rewarded', false).order('created_at', { ascending: false });
 
                 if ((!presData || presData.length === 0) && (!eventData || eventData.length === 0)) {
@@ -713,7 +705,8 @@
                                     - 결과: <span style="color:#e74c3c; font-weight:bold;">${item.result_text}</span>
                                 </div>
                                 <div style="display:flex; justify-content:flex-end; gap:8px;">
-                                    <button class="btn-event-reward" data-id="${item.id}" style="width:auto; padding:6px 12px; margin:0; font-size:13px; background-color:#8e44ad;">🎁 상품 지급 및 확인</button>
+                                    <button class="btn-event-reward" data-id="${item.id}" style="width:auto; padding:6px 12px; margin:0; font-size:13px; background-color:#8e44ad;">🎁 상품 지급 완료</button>
+                                    <button class="btn-event-cancel" data-id="${item.id}" style="width:auto; padding:6px 12px; margin:0; font-size:13px; background-color:#e74c3c;">❌ 취소 (재진행)</button>
                                 </div>
                             </div>
                         `;
@@ -743,25 +736,35 @@
 
                 container.innerHTML = html;
 
-                // 발표 승인 리스너
                 document.querySelectorAll('.btn-approve').forEach(b => b.addEventListener('click', async (e) => {
                     if (!confirm("발표를 승인하시겠습니까? (통계에 반영됩니다)")) return;
                     await db.from('presentation').update({ is_approved: true }).eq('id', e.target.dataset.id);
                     await fetchPendingApprovals();
                     if (currentStudentId) await refreshStats();
                 }));
-                // 발표 반려 리스너
                 document.querySelectorAll('.btn-reject').forEach(b => b.addEventListener('click', async (e) => {
                     if (!confirm("삭제(반려)하시겠습니까?")) return;
                     await db.from('presentation').delete().eq('id', e.target.dataset.id);
                     await fetchPendingApprovals();
                 }));
-                // 이벤트 상품 지급 리스너
                 document.querySelectorAll('.btn-event-reward').forEach(b => b.addEventListener('click', async (e) => {
                     if (!confirm("해당 학생에게 상품을 지급 완료하셨습니까?")) return;
                     await db.from('event_logs').update({ is_rewarded: true }).eq('id', e.target.dataset.id);
                     alert("지급 완료 처리되었습니다.");
                     await fetchPendingApprovals();
+                }));
+
+                // ✨ 이벤트 취소(재진행) 버튼 이벤트 리스너 추가 ✨
+                document.querySelectorAll('.btn-event-cancel').forEach(b => b.addEventListener('click', async (e) => {
+                    if (!confirm("해당 이벤트를 취소하시겠습니까?\\n(기록이 삭제되며 학생이 다시 이벤트에 참여할 수 있습니다.)")) return;
+                    try {
+                        await db.from('event_logs').delete().eq('id', e.target.dataset.id);
+                        alert("이벤트가 취소되었습니다. 학생이 다시 참여할 수 있습니다.");
+                        await fetchPendingApprovals();
+                        if (currentStudentId) await refreshStats();
+                    } catch (error) {
+                        alert("취소 처리 중 오류 발생: " + error.message);
+                    }
                 }));
 
             } catch (e) {

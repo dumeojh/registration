@@ -299,10 +299,18 @@
         // ✨ 복구됨: 상품 정보를 담아둘 객체
         let diceRewardMap = {};
 
-        // ✨ 복구됨: DB에서 주사위 상품 목록 불러오기
+
+
+        // ✨ 수정됨: DB에서 주사위 상품 목록 불러오기 (에러 처리 및 빈 데이터 처리 추가)
         async function loadDiceRewards() {
             try {
-                const { data } = await db.from('dice_rewards').select('*').order('dice_number', { ascending: true });
+                // error 객체도 함께 받아오도록 수정
+                const { data, error } = await db.from('dice_rewards').select('*').order('dice_number', { ascending: true });
+
+                if (error) {
+                    throw error; // 에러 발생 시 catch 블록으로 이동
+                }
+
                 if (data && data.length > 0) {
                     let html = '<div style="font-weight:bold; color:#2980b9; margin-bottom:8px; text-align:center;">🎁 오늘의 주사위 상품</div>';
                     html += '<div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">';
@@ -312,10 +320,14 @@
                     });
                     html += '</div>';
                     document.getElementById('diceRewardInfo').innerHTML = html;
+                } else {
+                    // 데이터가 비어있을 경우
+                    document.getElementById('diceRewardInfo').innerHTML = '<span style="color:#e74c3c; font-weight:bold;">등록된 상품 목록이 없습니다.</span>';
                 }
             } catch (e) {
                 console.error(e);
-                document.getElementById('diceRewardInfo').innerText = "상품 정보를 불러오지 못했습니다.";
+                // 에러 메시지를 화면에 출력하여 원인 파악
+                document.getElementById('diceRewardInfo').innerHTML = `<span style="color:#e74c3c;">상품 조회 에러: ${e.message}</span>`;
             }
         }
 

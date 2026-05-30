@@ -88,21 +88,6 @@
             background-color: #7f8c8d;
         }
 
-        .label-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
-        }
-
-        .btn-view-detail {
-            width: auto;
-            padding: 5px 12px;
-            font-size: 13px;
-            margin-top: 0;
-            background-color: #27ae60;
-        }
-
         .stats-box {
             background-color: #ecf0f1;
             padding: 15px;
@@ -311,6 +296,25 @@
             color: #c0392b;
             border: 1px solid #e74c3c;
         }
+
+        /* 신규: 메인 화면 상세보기 버튼 스타일 */
+        .btn-open-history {
+            margin-top: 15px;
+            background-color: #34495e;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            width: 100%;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: 0.2s;
+        }
+
+        .btn-open-history:hover {
+            background-color: #2c3e50;
+        }
     </style>
 </head>
 
@@ -337,11 +341,10 @@
         </div>
 
         <div class="stats-box" id="statsBox"></div>
-        <div class="label-row">
-            <label style="margin-top:0;">발표 내용</label>
-            <button class="btn-view-detail" id="btnShowHistory">📜 상세히 보기</button>
-        </div>
+
+        <label style="margin-top:15px;">발표 내용</label>
         <textarea id="content" rows="4" placeholder="발표한 내용이나 주제를 요약해서 적어주세요." required></textarea>
+
         <button type="button" id="btnSubmit">제출하기</button>
         <div id="submitStatusBox" class="submit-status-box"></div>
         <button type="button" id="btnCancel" class="btn-secondary">이전으로</button>
@@ -353,7 +356,12 @@
                 <h3 id="historyTitle">📜 나의 발표 기록</h3>
                 <button class="close-btn" id="btnCloseHistory">닫기</button>
             </div>
-            <label for="historyMonth">월 선택</label>
+
+            <div id="modalMonthlySummary"
+                style="font-size: 13px; color: #34495e; margin-bottom: 15px; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #bdc3c7; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
+            </div>
+
+            <label for="historyMonth" style="margin-top: 0;">월 선택</label>
             <select id="historyMonth">
                 <option value="3">3월</option>
                 <option value="4">4월</option>
@@ -491,17 +499,13 @@
 
                 const { data: autoRecords } = await db.from('presentation').select('created_at').eq('student_id', currentStudentId).eq('is_approved', true);
 
-                const monthlyCounts = {}; let autoTotal = 0;
+                let autoTotal = 0;
                 if (autoRecords) {
                     autoTotal = autoRecords.length;
-                    autoRecords.forEach(record => {
-                        const month = new Date(record.created_at).getMonth() + 1;
-                        monthlyCounts[month] = (monthlyCounts[month] || 0) + 1;
-                    });
                 }
                 const totalCount = autoTotal + manualCount;
 
-                // ✨ 누적된 다중 이벤트 계산 로직 (Set 사용으로 중복 방지) ✨
+                // 누적된 다중 이벤트 계산 로직
                 const maxMilestone = Math.floor(totalCount / 5) * 5;
                 const btnGoEvent = document.getElementById('btnGoEvent');
 
@@ -541,10 +545,6 @@
                     btnGoEvent.innerText = `🔒 이벤트 대기 (다음: 5회)`;
                 }
 
-                const displayMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-                const monthStrings = displayMonths.map(m => `<b>${m}월</b> ${monthlyCounts[m] || 0}회`);
-                monthStrings.unshift(`<b>수동</b> ${manualCount}회`);
-
                 const gradePrefix = Math.floor(currentStudentId / 10000);
                 const classPrefix = Math.floor(currentStudentId / 100);
                 const startIdStr = String(gradePrefix * 10000);
@@ -567,6 +567,7 @@
                     if (sClassPrefix === classPrefix) { classTotalStudents++; if (total > totalCount) classRank++; }
                 }
 
+                // ✨ 수정됨: 월별 가로 텍스트 부분 삭제 및 버튼 추가 ✨
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight" style="font-size: 1.2em;">${currentStudentId} ${currentStudentName}</p>
                     <p style="margin-top: 10px; font-size: 1.1em;">현재까지 총 <span style="color: #e74c3c; font-weight: bold; font-size: 1.3em;">${totalCount}</span>회 발표하셨습니다.</p>
@@ -575,9 +576,7 @@
                         <div>🏆 반 등수: <span style="color:#e74c3c; font-size: 17px;">${classRank}</span>등 <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">(총 ${classTotalStudents}명)</span></div>
                         <div>🏅 학년 등수: <span style="color:#e74c3c; font-size: 17px;">${gradeRank}</span>등 <span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">(총 ${gradeTotalStudents}명)</span></div>
                     </div>
-                    <div style="font-size: 14px; color: #34495e; margin-top: 12px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #bdc3c7; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
-                        ${monthStrings.join('<span style="color:#bdc3c7;">|</span>')}
-                    </div>
+                    <button class="btn-open-history" onclick="openHistoryModal()">📊 월별 상세 기록 보기</button>
                 `;
             } catch (error) {
                 console.error(error);
@@ -585,15 +584,46 @@
             }
         }
 
-        document.getElementById('btnShowHistory').addEventListener('click', async function () {
+        // ✨ 수정됨: 버튼 클릭 시 모달 열고 월별 통계 계산 기능 추가 ✨
+        window.openHistoryModal = async function () {
+            if (!currentStudentId) return;
             document.getElementById('historyModal').classList.remove('hidden');
             document.getElementById('historyTitle').innerText = `📜 ${currentStudentName}님의 기록`;
+
             const nowMonth = new Date().getMonth() + 1;
             document.getElementById('historyMonth').value = nowMonth;
-            const { data } = await db.from('presentation').select('content, created_at, is_approved').eq('student_id', currentStudentId).order('created_at', { ascending: false });
-            studentPresentations = data || [];
-            renderHistoryByMonth(nowMonth);
-        });
+            document.getElementById('historyContainer').innerHTML = '<p style="text-align: center; color: #7f8c8d;">불러오는 중...</p>';
+
+            try {
+                // 수동 횟수 조회
+                const { data: manualData } = await db.from('manual_records').select('manual_count').eq('student_id', currentStudentId).maybeSingle();
+                const manualCount = manualData ? manualData.manual_count : 0;
+
+                // 자동 기록 조회
+                const { data } = await db.from('presentation').select('content, created_at, is_approved').eq('student_id', currentStudentId).order('created_at', { ascending: false });
+                studentPresentations = data || [];
+
+                // 모달 상단에 월별 통계 가로줄 렌더링
+                const monthlyCounts = {};
+                studentPresentations.forEach(p => {
+                    if (p.is_approved) {
+                        const month = new Date(p.created_at).getMonth() + 1;
+                        monthlyCounts[month] = (monthlyCounts[month] || 0) + 1;
+                    }
+                });
+
+                const displayMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+                const monthStrings = displayMonths.map(m => `<b>${m}월</b> ${monthlyCounts[m] || 0}회`);
+                monthStrings.unshift(`<b>수동</b> ${manualCount}회`);
+
+                document.getElementById('modalMonthlySummary').innerHTML = monthStrings.join('<span style="color:#bdc3c7; margin:0 2px;">|</span>');
+
+                // 기록 리스트 렌더링
+                renderHistoryByMonth(nowMonth);
+            } catch (e) {
+                alert("기록을 불러오지 못했습니다: " + e.message);
+            }
+        };
 
         document.getElementById('historyMonth').addEventListener('change', function () { renderHistoryByMonth(parseInt(this.value)); });
         document.getElementById('btnCloseHistory').addEventListener('click', () => document.getElementById('historyModal').classList.add('hidden'));
@@ -690,7 +720,6 @@
 
                 let html = '';
 
-                // 이벤트 렌더링 (보라색 강조)
                 if (eventData) {
                     eventData.forEach(item => {
                         html += `
@@ -713,7 +742,6 @@
                     });
                 }
 
-                // 발표 렌더링 (주황색 강조)
                 if (presData) {
                     presData.forEach(item => {
                         html += `
@@ -754,16 +782,9 @@
                     await fetchPendingApprovals();
                 }));
 
-
-
-
-                // ✨ 이벤트 취소(재진행) 버튼 이벤트 리스너 추가 (팝업 메시지 모두 제거) ✨
                 document.querySelectorAll('.btn-event-cancel').forEach(b => b.addEventListener('click', async (e) => {
                     try {
-                        // 묻지 않고 즉시 DB에서 삭제 처리
                         await db.from('event_logs').delete().eq('id', e.target.dataset.id);
-
-                        // 알림창 없이 목록과 통계만 즉시 새로고침
                         await fetchPendingApprovals();
                         if (currentStudentId) await refreshStats();
                     } catch (error) {

@@ -134,13 +134,14 @@
 
         .btn-dice {
             background-color: #3498db;
+            margin-bottom: 5px;
         }
 
         .btn-quiz {
             background-color: #9b59b6;
         }
 
-        /* ✨ 신규: 리얼한 3D 주사위 애니메이션 스타일 ✨ */
+        /* ✨ 리얼한 3D 주사위 애니메이션 스타일 ✨ */
         #diceContainer {
             display: none;
             margin: 40px auto 30px auto;
@@ -160,7 +161,6 @@
             position: relative;
             transform-style: preserve-3d;
             transform: rotateX(-15deg) rotateY(15deg);
-            /* 처음엔 살짝 비스듬히 배치 */
         }
 
         .face {
@@ -176,17 +176,14 @@
             text-align: center;
             color: #2c3e50;
             backface-visibility: hidden;
-            /* 뒷면 숨김 처리로 진짜 큐브처럼 */
             box-sizing: border-box;
         }
 
-        /* 정육면체의 6개 면을 3D 공간에 배치 */
         .face.front {
             transform: rotateY(0deg) translateZ(40px);
             color: #e74c3c;
         }
 
-        /* 1은 빨간색! */
         .face.top {
             transform: rotateX(90deg) translateZ(40px);
         }
@@ -207,7 +204,6 @@
             transform: rotateY(180deg) translateZ(40px);
         }
 
-        /* 바닥에 통통 튀기는 물리 애니메이션 */
         .jump-anim {
             animation: diceJump 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
@@ -255,7 +251,6 @@
         <div id="gameSelection" class="game-modal">
             <h3 id="gameTitle"></h3>
 
-            <!-- 리얼한 3D 주사위 박스 -->
             <div id="diceContainer">
                 <div id="diceWrapper">
                     <div id="dice3D" class="dice-3d">
@@ -271,6 +266,12 @@
 
             <button class="game-btn btn-lottery" id="btnLotteryGame" onclick="playGame('제비뽑기')">🎫 두근두근 제비뽑기</button>
             <button class="game-btn btn-dice" id="btnDiceGame" onclick="playGame('주사위')">🎲 주사위 굴리기</button>
+
+            <div id="diceRewardInfo" class="game-btn"
+                style="background:#fff; border:2px dashed #3498db; cursor:default; margin-bottom:15px; text-align:left; color:#2c3e50; font-weight:normal;">
+                상품 정보를 불러오는 중입니다...
+            </div>
+
             <button class="game-btn btn-quiz" id="btnQuizGame" onclick="playGame('퀴즈')">🤔 넌센스 아재개그</button>
             <button id="btnCancelGame"
                 style="width:100%; padding:10px; margin-top:10px; background:transparent; border:none; color:#7f8c8d; text-decoration:underline; cursor:pointer;"
@@ -294,6 +295,29 @@
 
         let currentActiveMilestone = 0;
         const maxMilestone = Math.floor(totalCount / 5) * 5;
+
+        // ✨ 복구됨: 상품 정보를 담아둘 객체
+        let diceRewardMap = {};
+
+        // ✨ 복구됨: DB에서 주사위 상품 목록 불러오기
+        async function loadDiceRewards() {
+            try {
+                const { data } = await db.from('dice_rewards').select('*').order('dice_number', { ascending: true });
+                if (data && data.length > 0) {
+                    let html = '<div style="font-weight:bold; color:#2980b9; margin-bottom:8px; text-align:center;">🎁 오늘의 주사위 상품</div>';
+                    html += '<div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">';
+                    data.forEach(r => {
+                        diceRewardMap[r.dice_number] = r.reward_name;
+                        html += `<span style="background:#ecf0f1; padding:4px 8px; border-radius:4px; font-size:12px;"><b>[${r.dice_number}]</b> ${r.reward_name}</span>`;
+                    });
+                    html += '</div>';
+                    document.getElementById('diceRewardInfo').innerHTML = html;
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('diceRewardInfo').innerText = "상품 정보를 불러오지 못했습니다.";
+            }
+        }
 
         // 화면 렌더링
         async function loadMilestones() {
@@ -322,7 +346,7 @@
         function openGameModal(milestone) {
             currentActiveMilestone = milestone;
 
-            // 모달이 열릴 때 버튼 활성화 및 주사위 숨김
+            // 모달 열 때 버튼 복원
             document.querySelectorAll('.game-btn').forEach(btn => {
                 btn.style.display = 'block';
                 btn.disabled = false;
@@ -331,6 +355,8 @@
             });
             document.getElementById('btnCancelGame').style.display = 'block';
             document.getElementById('diceContainer').style.display = 'none';
+            // 상품 목록 박스는 클릭용 버튼이 아니므로 커서 수정
+            document.getElementById('diceRewardInfo').style.cursor = 'default';
 
             document.getElementById('gameSelection').style.display = 'block';
             document.getElementById('gameTitle').innerText = `⭐ ${milestone}회차 보상 선택 ⭐`;
@@ -371,13 +397,13 @@
                     btn.style.opacity = '1';
                     btn.style.cursor = 'pointer';
                 });
+                document.getElementById('diceRewardInfo').style.cursor = 'default';
                 document.getElementById('btnCancelGame').style.display = 'block';
                 document.getElementById('diceContainer').style.display = 'none';
             }
         }
 
         function playGame(type) {
-            // 클릭 즉시 중복 클릭 방지
             document.querySelectorAll('.game-btn').forEach(btn => {
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
@@ -390,7 +416,6 @@
                 saveEventResult('제비뽑기', `🎫 제비뽑기 결과:\n\n[ ${res} ]`, res);
             }
             else if (type === '주사위') {
-                // 게임 버튼 숨기고 3D 주사위 등장
                 document.querySelectorAll('.game-btn').forEach(btn => btn.style.display = 'none');
                 document.getElementById('btnCancelGame').style.display = 'none';
 
@@ -400,14 +425,12 @@
 
                 diceContainer.style.display = 'block';
 
-                // 초기화 작업
                 diceWrapper.classList.remove('jump-anim');
                 dice3D.style.transition = 'none';
                 dice3D.style.transform = 'rotateX(-15deg) rotateY(15deg)';
 
-                void dice3D.offsetWidth; // 강제 리플로우 (초기화 즉시 적용)
+                void dice3D.offsetWidth;
 
-                // 굴리기 목표 숫자 설정 (1~6)
                 const num = Math.floor(Math.random() * 6) + 1;
 
                 let endX = 0, endY = 0;
@@ -420,22 +443,20 @@
                     case 6: endX = 180; endY = 0; break;
                 }
 
-                // 무작위로 여러 바퀴 회전 추가 (4~6바퀴)
                 const spinsX = Math.floor(Math.random() * 3) + 4;
                 const spinsY = Math.floor(Math.random() * 3) + 4;
 
-                // 최종 각도
                 const finalRotateX = endX + (spinsX * 360);
                 const finalRotateY = endY + (spinsY * 360);
 
-                // 애니메이션 시작 (위로 튕기면서 회전)
                 diceWrapper.classList.add('jump-anim');
                 dice3D.style.transition = 'transform 2s cubic-bezier(0.1, 0.8, 0.2, 1)';
                 dice3D.style.transform = `rotateX(${finalRotateX}deg) rotateY(${finalRotateY}deg)`;
 
-                // 애니메이션이 끝난 후(2초) 결과 저장
                 setTimeout(() => {
-                    saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]`, `주사위 ${num} 나옴`);
+                    // ✨ 복구됨: 테이블에서 가져온 상품 이름을 매칭합니다
+                    const rewardText = diceRewardMap[num] || "상품 미정";
+                    saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]\n당첨 상품: 🎉 ${rewardText} 🎉`, `주사위 ${num} (${rewardText})`);
                 }, 2500);
             }
             else if (type === '퀴즈') {
@@ -446,6 +467,7 @@
                         btn.style.opacity = '1';
                         btn.style.cursor = 'pointer';
                     });
+                    document.getElementById('diceRewardInfo').style.cursor = 'default';
                     return;
                 }
                 if (ans.replace(/\s/g, '') === "톱밥") {
@@ -456,6 +478,8 @@
             }
         }
 
+        // 페이지 진입 시 상품 목록과 이벤트 현황을 함께 로드합니다.
+        loadDiceRewards();
         loadMilestones();
     </script>
 </body>

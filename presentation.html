@@ -426,6 +426,8 @@
         let currentStudentName = '';
         let studentPresentations = [];
 
+
+
         // 1. 조회하기 버튼
         document.getElementById('btnSearch').addEventListener('click', async function () {
             const studentIdValue = document.getElementById('searchId').value.trim();
@@ -671,18 +673,24 @@
 
         document.getElementById('btnCancel').addEventListener('click', () => location.reload());
 
-        // ==========================================
-        // ✨ [신규 추가] 교사 미승인 기록 확인 기능 ✨
-        // ==========================================
-        document.getElementById('btnApproveWait').addEventListener('click', async () => {
-            const pwd = prompt("교사 확인용 비밀번호를 입력하세요. (기본값: 1234)");
-            if (pwd !== "1234") {
-                if (pwd !== null) alert("비밀번호가 일치하지 않습니다.");
-                return;
-            }
 
-            document.getElementById('approvalModal').classList.remove('hidden');
-            await fetchPendingApprovals();
+
+
+        // ==========================================
+        // ✨ [수정됨] 교사 미승인 기록 확인 기능 (Ctrl + 더블클릭) ✨
+        // ==========================================
+        document.getElementById('btnApproveWait').addEventListener('dblclick', async (e) => {
+            // Ctrl 키를 누른 상태에서만 작동하도록 조건 추가
+            if (e.ctrlKey) {
+                const pwd = prompt("교사 확인용 비밀번호를 입력하세요. (기본값: 1234)");
+                if (pwd !== "1234") {
+                    if (pwd !== null) alert("비밀번호가 일치하지 않습니다.");
+                    return;
+                }
+
+                document.getElementById('approvalModal').classList.remove('hidden');
+                await fetchPendingApprovals();
+            }
         });
 
         document.getElementById('btnCloseApproval').addEventListener('click', () => {

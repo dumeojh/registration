@@ -154,6 +154,7 @@
             background-color: #34495e;
         }
 
+        /* 주사위 애니메이션 스타일 */
         #diceContainer {
             display: none;
             margin: 40px auto 30px auto;
@@ -388,15 +389,12 @@
 
         let currentActiveMilestone = 0;
         const maxMilestone = Math.floor(totalCount / 5) * 5;
-
         let diceRewardMap = {};
 
         async function loadDiceRewards() {
             try {
                 const { data, error } = await db.from('dice_rewards').select('*').order('dice_number', { ascending: true });
-
                 if (error) throw error;
-
                 if (data && data.length > 0) {
                     let html = '<div style="font-weight:bold; color:#2980b9; margin-bottom:8px; text-align:center;">🎁 오늘의 주사위 상품</div>';
                     html += '<div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">';
@@ -417,7 +415,6 @@
 
         async function loadMilestones() {
             document.getElementById('milestoneList').innerHTML = '<p>데이터 조회 중...</p>';
-
             const { data: logs } = await db.from('event_logs').select('*').eq('student_id', studentId);
             const logMap = {};
             if (logs) logs.forEach(l => logMap[l.milestone] = l);
@@ -440,7 +437,6 @@
 
         function openGameModal(milestone) {
             currentActiveMilestone = milestone;
-
             document.querySelectorAll('.game-btn').forEach(btn => {
                 btn.style.display = 'block';
                 btn.disabled = false;
@@ -450,7 +446,6 @@
             document.getElementById('btnCancelGame').style.display = 'block';
             document.getElementById('diceContainer').style.display = 'none';
             document.getElementById('diceRewardInfo').style.cursor = 'default';
-
             document.getElementById('gameSelection').style.display = 'block';
             document.getElementById('gameTitle').innerText = `⭐ ${milestone}회차 보상 선택 ⭐`;
             document.getElementById('gameSelection').scrollIntoView({ behavior: 'smooth' });
@@ -466,7 +461,6 @@
                 btn.style.opacity = '0.5';
                 btn.style.cursor = 'not-allowed';
             });
-
             try {
                 const { error } = await db.from('event_logs').insert([{
                     student_id: parseInt(studentId),
@@ -477,7 +471,6 @@
                     is_rewarded: false
                 }]);
                 if (error) throw error;
-
                 alert(`${resultMsg}\n\n(선생님께 상품 지급 요청이 전송되었습니다!)`);
                 closeGameModal();
                 loadMilestones();
@@ -489,9 +482,6 @@
                     btn.style.opacity = '1';
                     btn.style.cursor = 'pointer';
                 });
-                document.getElementById('diceRewardInfo').style.cursor = 'default';
-                document.getElementById('btnCancelGame').style.display = 'block';
-                document.getElementById('diceContainer').style.display = 'none';
             }
         }
 
@@ -516,15 +506,12 @@
                 const dice3D = document.getElementById('dice3D');
 
                 diceContainer.style.display = 'block';
-
                 diceWrapper.classList.remove('jump-anim');
                 dice3D.style.transition = 'none';
                 dice3D.style.transform = 'rotateX(-15deg) rotateY(15deg)';
-
                 void dice3D.offsetWidth;
 
                 const num = Math.floor(Math.random() * 6) + 1;
-
                 let endX = 0, endY = 0;
                 switch (num) {
                     case 1: endX = 0; endY = 0; break;
@@ -537,7 +524,6 @@
 
                 const spinsX = Math.floor(Math.random() * 3) + 4;
                 const spinsY = Math.floor(Math.random() * 3) + 4;
-
                 const finalRotateX = endX + (spinsX * 360);
                 const finalRotateY = endY + (spinsY * 360);
 
@@ -550,25 +536,27 @@
                     saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]\n당첨 상품: 🎉 ${rewardText} 🎉`, `주사위 ${num} (${rewardText})`);
                 }, 2500);
             }
-            else if (type === '퀴즈') {
+            else if (type === '수학') {
+                openMathGrid();
+            }
+            // ✨ 퀴즈, 상식, 사자성어 통합 DB 조회 로직 ✨
+            else if (type === '퀴즈' || type === '상식' || type === '사자성어') {
                 try {
-                    const { data, error } = await db.from('quiz_bank').select('*');
-
+                    const { data, error } = await db.from('quiz_bank').select('*').eq('category', type);
                     if (error) throw error;
 
                     if (!data || data.length === 0) {
-                        alert("등록된 퀴즈 문제가 없습니다! 선생님께 문의해주세요.");
+                        alert(`등록된 ${type} 문제가 없습니다! 선생님께 문의해주세요.`);
                         document.querySelectorAll('.game-btn').forEach(btn => {
                             btn.disabled = false;
                             btn.style.opacity = '1';
                             btn.style.cursor = 'pointer';
                         });
-                        document.getElementById('diceRewardInfo').style.cursor = 'default';
                         return;
                     }
 
                     const randomQuiz = data[Math.floor(Math.random() * data.length)];
-                    const ans = prompt(`🤔 넌센스 퀴즈!\n\nQ. ${randomQuiz.question}\n(정답을 입력해 주세요)`);
+                    const ans = prompt(`🤔 ${type} 퀴즈!\n\nQ. ${randomQuiz.question}\n(정답을 입력해 주세요)`);
 
                     if (ans === null) {
                         document.querySelectorAll('.game-btn').forEach(btn => {
@@ -576,7 +564,6 @@
                             btn.style.opacity = '1';
                             btn.style.cursor = 'pointer';
                         });
-                        document.getElementById('diceRewardInfo').style.cursor = 'default';
                         return;
                     }
 
@@ -584,11 +571,10 @@
                     const cleanCorrectAns = randomQuiz.answer.replace(/\s/g, '');
 
                     if (cleanAns === cleanCorrectAns) {
-                        saveEventResult('퀴즈', "정답입니다! 👏👏👏", `정답 맞춤 (${randomQuiz.answer})`);
+                        saveEventResult(type, "정답입니다! 👏👏👏", `정답 맞춤 (${randomQuiz.answer})`);
                     } else {
-                        saveEventResult('퀴즈', `틀렸습니다! 😝\n\n입력하신 답: ${ans}\n정답은 '${randomQuiz.answer}' 입니다.`, `오답 제출 (${ans})`);
+                        saveEventResult(type, `틀렸습니다! 😝\n\n입력하신 답: ${ans}\n정답은 '${randomQuiz.answer}' 입니다.`, `오답 제출 (${ans})`);
                     }
-
                 } catch (err) {
                     alert("문제를 불러오는 중 오류가 발생했습니다: " + err.message);
                     document.querySelectorAll('.game-btn').forEach(btn => {
@@ -596,117 +582,76 @@
                         btn.style.opacity = '1';
                         btn.style.cursor = 'pointer';
                     });
-                    document.getElementById('diceRewardInfo').style.cursor = 'default';
-                }
-            }
-            // ✨ 수학 로직 분리 ✨
-            else if (type === '수학') {
-                openMathGrid();
-            }
-            else if (type === '상식' || type === '사자성어') {
-                let qList = [];
-
-                if (type === '상식') {
-                    qList = [
-                        { question: "대한민국의 최남단에 있는 섬은?", answer: "마라도" },
-                        { question: "빛은 1초에 지구를 대략 몇 바퀴 돌까요? (숫자만)", answer: "7.5" },
-                        { question: "조선시대 세종대왕이 훈민정음을 창제한 연도는? (숫자 4자리)", answer: "1443" },
-                        { question: "우리나라의 가장 높은 산은?", answer: "백두산" }
-                    ];
-                } else if (type === '사자성어') {
-                    qList = [
-                        { question: "겉과 속이 다르다는 뜻의 사자성어는? (ㅍㄹㅂㄷ)", answer: "표리부동" },
-                        { question: "사람이 수없이 많이 모인 상태 (ㅇㅅㅇㅎ)", answer: "인산인해" },
-                        { question: "몹시 바쁘게 이리저리 돌아다님 (ㄷㅂㅅㅈ)", answer: "동분서주" },
-                        { question: "입술이 없으면 이가 시리다, 서로 떨어질 수 없는 밀접한 관계 (ㅅㅁㅊㅎ)", answer: "순망치한" }
-                    ];
-                }
-
-                const randomQuiz = qList[Math.floor(Math.random() * qList.length)];
-                const ans = prompt(`🤔 ${type} 퀴즈!\n\nQ. ${randomQuiz.question}\n(정답을 입력해 주세요)`);
-
-                if (ans === null) {
-                    document.querySelectorAll('.game-btn').forEach(btn => {
-                        btn.disabled = false;
-                        btn.style.opacity = '1';
-                        btn.style.cursor = 'pointer';
-                    });
-                    return;
-                }
-
-                const cleanAns = ans.replace(/\s/g, '');
-                const cleanCorrectAns = randomQuiz.answer.replace(/\s/g, '');
-
-                if (cleanAns === cleanCorrectAns) {
-                    saveEventResult(type, "정답입니다! 👏👏👏", `정답 맞춤 (${randomQuiz.answer})`);
-                } else {
-                    saveEventResult(type, `틀렸습니다! 😝\n\n입력하신 답: ${ans}\n정답은 '${randomQuiz.answer}' 입니다.`, `오답 제출 (${ans})`);
                 }
             }
         }
 
         // ==========================================
-        // ✨ 수학 바둑판 및 문제 출제 로직 ✨
+        // ✨ 수학 바둑판 DB 연동 로직 ✨
         // ==========================================
         let currentMathQuiz = null;
 
-        function openMathGrid() {
-            // 메인 게임 버튼들 숨기기
+        async function openMathGrid() {
             document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => btn.style.display = 'none');
             document.getElementById('btnCancelGame').style.display = 'none';
 
-            // 수학 단원별 문제 데이터 (type이 short면 단답형, multiple이면 4지선다형)
-            const mathQuizData = {
-                "다항식": [
-                    { type: "short", q: "다항식 x² + 4x + 4 를 인수분해 하시오. (띄어쓰기 없이 입력)", a: "(x+2)^2" },
-                    { type: "multiple", q: "(x+1)(x-1) 의 전개식은?", options: ["x²+1", "x²-1", "x²+x", "x²-x"], a: "x²-1" }
-                ],
-                "방정식과 부등식": [
-                    { type: "short", q: "이차방정식 x² - 5x + 6 = 0 의 두 근의 합은?", a: "5" },
-                    { type: "multiple", q: "2x - 4 > 0 을 만족하는 x의 범위는?", options: ["x > 1", "x < 2", "x > 2", "x < 4"], a: "x > 2" }
-                ],
-                "미분과 적분": [
-                    { type: "short", q: "f(x) = x³ - 3x 의 극솟값을 구하시오.", a: "-2" },
-                    { type: "multiple", q: "함수 y = x² 그래프 위의 점 (1, 1)에서의 접선의 기울기는?", options: ["1", "2", "3", "4"], a: "2" }
-                ],
-                "삼각함수": [
-                    { type: "short", q: "sin 30° 의 값을 기약분수(예: 1/2) 형태로 입력하시오.", a: "1/2" },
-                    { type: "multiple", q: "cos²θ + sin²θ 의 값은?", options: ["-1", "0", "1", "2"], a: "1" }
-                ]
-            };
-
             const grid = document.getElementById('mathTopics');
-            grid.innerHTML = '';
-
-            // 바둑판 버튼 생성
-            Object.keys(mathQuizData).forEach(topic => {
-                const btn = document.createElement('button');
-                btn.className = 'math-topic-btn';
-                btn.innerText = topic;
-                btn.onclick = () => showMathProblem(topic, mathQuizData[topic]);
-                grid.appendChild(btn);
-            });
-
+            grid.innerHTML = '<p style="grid-column: span 2; text-align: center; color: #7f8c8d;">단원을 불러오는 중...</p>';
             document.getElementById('mathGridSection').style.display = 'block';
+
+            try {
+                // DB에서 카테고리가 '수학'인 문제만 가져오기
+                const { data, error } = await db.from('quiz_bank').select('*').eq('category', '수학');
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    grid.innerHTML = '<p style="grid-column: span 2; text-align: center; color: #e74c3c;">등록된 수학 문제가 없습니다.</p>';
+                    return;
+                }
+
+                // 단원(topic)별로 그룹화
+                const mathQuizData = {};
+                data.forEach(q => {
+                    const topic = q.topic || '기타';
+                    if (!mathQuizData[topic]) mathQuizData[topic] = [];
+                    mathQuizData[topic].push({
+                        type: q.question_type,
+                        q: q.question,
+                        a: q.answer,
+                        options: q.options
+                    });
+                });
+
+                grid.innerHTML = '';
+
+                Object.keys(mathQuizData).forEach(topic => {
+                    const btn = document.createElement('button');
+                    btn.className = 'math-topic-btn';
+                    btn.innerText = topic;
+                    btn.onclick = () => showMathProblem(topic, mathQuizData[topic]);
+                    grid.appendChild(btn);
+                });
+
+            } catch (err) {
+                grid.innerHTML = `<p style="grid-column: span 2; text-align: center; color: red;">오류: ${err.message}</p>`;
+            }
         }
 
         function showMathProblem(topic, questions) {
             document.getElementById('mathGridSection').style.display = 'none';
             document.getElementById('mathProblemSection').style.display = 'block';
 
-            // 선택한 단원 내에서 랜덤으로 1문제 추출
             currentMathQuiz = questions[Math.floor(Math.random() * questions.length)];
-
             document.getElementById('mathQuestionText').innerText = `[${topic}]\nQ. ${currentMathQuiz.q}`;
 
             const answerArea = document.getElementById('mathAnswerArea');
             answerArea.innerHTML = '';
 
-            // 문제 유형에 따라 입력란 렌더링
-            if (currentMathQuiz.type === 'short') {
-                answerArea.innerHTML = `<input type="text" id="mathShortAnswer" class="math-input" placeholder="정답을 입력하세요">`;
+            if (currentMathQuiz.type === 'short' || !currentMathQuiz.options || currentMathQuiz.options.length === 0) {
+                answerArea.innerHTML = `<input type="text" id="mathShortAnswer" class="math-input" placeholder="정답을 입력하세요 (숫자 또는 식)">`;
             } else if (currentMathQuiz.type === 'multiple') {
                 let optionsHtml = '<div class="math-options">';
+                // Supabase에서 JSONB로 불러온 options 배열 렌더링
                 currentMathQuiz.options.forEach((opt, idx) => {
                     optionsHtml += `
                         <label class="math-option-label">
@@ -723,8 +668,7 @@
         function submitMathAnswer() {
             let userAnswer = "";
 
-            // 사용자가 입력/선택한 답안 가져오기
-            if (currentMathQuiz.type === 'short') {
+            if (currentMathQuiz.type === 'short' || !currentMathQuiz.options || currentMathQuiz.options.length === 0) {
                 userAnswer = document.getElementById('mathShortAnswer').value.trim();
                 if (!userAnswer) return alert("정답을 입력해주세요.");
             } else {
@@ -733,11 +677,9 @@
                 userAnswer = selected.value;
             }
 
-            // 띄어쓰기 무시 후 정답 비교
-            const cleanUserAns = userAnswer.replace(/\s/g, '');
-            const cleanCorrectAns = currentMathQuiz.a.replace(/\s/g, '');
+            const cleanUserAns = String(userAnswer).replace(/\s/g, '');
+            const cleanCorrectAns = String(currentMathQuiz.a).replace(/\s/g, '');
 
-            // 화면 초기화
             document.getElementById('mathProblemSection').style.display = 'none';
 
             if (cleanUserAns === cleanCorrectAns) {
@@ -751,7 +693,6 @@
             document.getElementById('mathGridSection').style.display = 'none';
             document.getElementById('mathProblemSection').style.display = 'none';
 
-            // 메인 화면 버튼 원상복구
             document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => {
                 btn.style.display = 'block';
                 btn.disabled = false;

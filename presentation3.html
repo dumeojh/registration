@@ -158,11 +158,13 @@
             margin: 0;
         }
 
+        /* 관리자 탭 (5개로 늘어남) */
         .admin-tabs {
             display: flex;
             gap: 5px;
             margin-bottom: 20px;
             flex-wrap: wrap;
+            /* 모바일 대응 줄바꿈 */
         }
 
         .admin-tabs button {
@@ -171,6 +173,7 @@
             font-size: 13px;
             flex: 1;
             min-width: 80px;
+            /* 탭이 너무 좁아지지 않게 */
         }
 
         .history-item {
@@ -193,21 +196,6 @@
             white-space: pre-wrap;
         }
 
-        /* 왼쪽 선생님 버튼 (투명화 처리) */
-        .approve-btn-fixed {
-            position: fixed;
-            left: 10px;
-            bottom: 10px;
-            width: 30px;
-            height: 30px;
-            background-color: #000;
-            opacity: 0.1;
-            cursor: pointer;
-            z-index: 9999;
-            border-radius: 5px;
-        }
-
-        /* 오른쪽 관리자 버튼 */
         #secretBtn {
             position: fixed;
             bottom: 10px;
@@ -251,6 +239,30 @@
             text-align: center;
             font-size: 15px;
             border: 1px solid #7f8c8d;
+        }
+
+        .approve-btn-fixed {
+            position: fixed;
+            left: 15px;
+            bottom: 15px;
+            width: 45px;
+            height: 45px;
+            background-color: #e67e22;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 9999;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .approve-btn-fixed:hover {
+            transform: scale(1.1);
+            background-color: #d35400;
         }
 
         .submit-status-box {
@@ -356,6 +368,7 @@
             border-radius: 4px;
         }
 
+        /* 토글 스위치 스타일 (이벤트 온오프용) */
         .switch {
             position: relative;
             display: inline-block;
@@ -405,7 +418,7 @@
 
 <body>
 
-    <div id="btnApproveWait" class="approve-btn-fixed" title="미승인 기록 확인 (교사용)"></div>
+    <div id="btnApproveWait" class="approve-btn-fixed" title="미승인 기록 확인 (교사용)">📋</div>
 
     <div class="form-container" id="searchSection">
         <h2>🔍 대수 발표 입력</h2>
@@ -479,7 +492,6 @@
     </div>
 
     <div id="secretBtn" title="관리자"></div>
-
     <div id="adminModal" class="modal-overlay hidden">
         <div class="modal-content" style="max-width: 650px;">
             <div class="modal-header">
@@ -491,6 +503,7 @@
                 <button type="button" id="btnTabManual" style="background-color: #8e44ad;">✏️ 수동 입력</button>
                 <button type="button" id="btnTabQuiz" style="background-color: #27ae60;">📝 퀴즈 관리</button>
                 <button type="button" id="btnTabDice" style="background-color: #3498db;">🎲 주사위 상품</button>
+                <!-- ✨ 새롭게 추가된 설정 탭 ✨ -->
                 <button type="button" id="btnTabSettings" style="background-color: #e67e22;">⚙️ 이벤트 설정</button>
             </div>
 
@@ -642,6 +655,7 @@
                 </div>
             </div>
 
+            <!-- ✨ 새롭게 추가된 설정 섹션 ✨ -->
             <div id="adminSettingsSection" class="hidden">
                 <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 시스템 전체의 기능 작동 여부를 설정합니다.</p>
 
@@ -669,21 +683,31 @@
         let monitoredSubmissions = [];
         let statusCheckInterval = null;
 
+        // 시스템 설정값을 저장하는 전역 변수 (기본값 true)
         let isEventEnabled = true;
 
+        // DB에서 현재 설정 상태를 불러오는 함수
         async function fetchSystemSettings() {
             try {
                 const { data, error } = await db.from('system_settings').select('*').eq('key', 'event_enabled').maybeSingle();
                 if (error && error.code !== 'PGRST116') throw error;
-                if (data) isEventEnabled = data.value === 'true';
 
+                // DB에 값이 있으면 해당 값으로, 없으면 기본값 true 유지
+                if (data) {
+                    isEventEnabled = data.value === 'true';
+                }
+
+                // 관리자 탭 스위치 UI 동기화
                 const toggleBtn = document.getElementById('toggleEventStatus');
-                if (toggleBtn) toggleBtn.checked = isEventEnabled;
+                if (toggleBtn) {
+                    toggleBtn.checked = isEventEnabled;
+                }
             } catch (err) {
                 console.error('설정 불러오기 실패:', err);
             }
         }
 
+        // 페이지 로드 시 설정값을 가져옴
         window.addEventListener('DOMContentLoaded', fetchSystemSettings);
 
         document.getElementById('btnSearch').addEventListener('click', async function () {
@@ -705,6 +729,7 @@
                 currentStudentName = studentNameValue;
 
                 resetSubmissionStatus();
+                // 조회 시 항상 최신 이벤트 활성화 설정을 다시 가져옴
                 await fetchSystemSettings();
                 await refreshStats();
                 await loadPendingSubmissions();
@@ -750,6 +775,7 @@
                     const availableCount = (maxMilestone / 5) - completedCount;
 
                     if (availableCount > 0) {
+                        // ✨ 이벤트 활성 상태에 따른 조건 분기 추가 ✨
                         if (isEventEnabled) {
                             btnGoEvent.disabled = false;
                             btnGoEvent.style.backgroundColor = '#f1c40f';
@@ -760,6 +786,7 @@
                                 window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
                             };
                         } else {
+                            // 비활성화 상태일 때
                             btnGoEvent.disabled = true;
                             btnGoEvent.style.backgroundColor = '#95a5a6';
                             btnGoEvent.style.color = 'white';
@@ -972,41 +999,12 @@
 
         document.getElementById('btnCancel').addEventListener('click', () => location.reload());
 
-        // =====================================
-        // ✨ 왼쪽 미승인 기록 확인 버튼 (투명화 & 3번 터치 로직 추가)
-        // =====================================
-        let tapCountWait = 0;
-        let tapTimerWait;
-        const btnWait = document.getElementById('btnApproveWait');
-
-        // PC 전용 로직
-        btnWait.addEventListener('dblclick', async (e) => {
+        document.getElementById('btnApproveWait').addEventListener('dblclick', async (e) => {
             if (e.ctrlKey) {
                 document.getElementById('approvalModal').classList.remove('hidden');
                 await fetchPendingApprovals();
             }
         });
-
-        // 스마트폰 전용 로직 (빠르게 3번 터치)
-        btnWait.addEventListener('click', async (e) => {
-            tapCountWait++;
-            if (tapCountWait === 1) {
-                tapTimerWait = setTimeout(() => { tapCountWait = 0; }, 1500);
-            }
-            if (tapCountWait >= 3) {
-                clearTimeout(tapTimerWait);
-                tapCountWait = 0;
-
-                const pwd = prompt("선생님 확인용 비밀번호를 입력하세요:");
-                if (pwd === "1") {
-                    document.getElementById('approvalModal').classList.remove('hidden');
-                    await fetchPendingApprovals();
-                } else if (pwd !== null) {
-                    alert("비밀번호가 틀렸습니다.");
-                }
-            }
-        });
-
         document.getElementById('btnCloseApproval').addEventListener('click', () => document.getElementById('approvalModal').classList.add('hidden'));
 
         async function fetchPendingApprovals() {
@@ -1086,6 +1084,7 @@
                     await db.from('event_logs').update({ is_rewarded: true }).eq('id', e.target.dataset.id);
                     await fetchPendingApprovals();
                 }));
+
                 document.querySelectorAll('.btn-event-cancel').forEach(b => b.addEventListener('click', async (e) => {
                     if (!confirm("해당 학생의 이벤트 기록을 삭제하고 다시 진행하게 하시겠습니까?")) return;
                     try {
@@ -1102,45 +1101,16 @@
             }
         }
 
-        // =====================================
-        // ✨ 오른쪽 관리자 메뉴 투명 버튼 (3번 터치 로직 추가)
-        // =====================================
-        let tapCountAdmin = 0;
-        let tapTimerAdmin;
-        const btnAdmin = document.getElementById('secretBtn');
-
-        // PC 전용 로직
-        btnAdmin.addEventListener('dblclick', function (e) {
+        document.getElementById('secretBtn').addEventListener('dblclick', function (e) {
             if (e.ctrlKey) {
                 document.getElementById('adminModal').classList.remove('hidden');
                 populateClassSelect('classSelect');
                 fetchQuizList();
             }
         });
-
-        // 스마트폰 전용 로직 (빠르게 3번 터치)
-        btnAdmin.addEventListener('click', async (e) => {
-            tapCountAdmin++;
-            if (tapCountAdmin === 1) {
-                tapTimerAdmin = setTimeout(() => { tapCountAdmin = 0; }, 1500);
-            }
-            if (tapCountAdmin >= 3) {
-                clearTimeout(tapTimerAdmin);
-                tapCountAdmin = 0;
-
-                const pwd = prompt("관리자용 비밀번호를 입력하세요:");
-                if (pwd === "1") {
-                    document.getElementById('adminModal').classList.remove('hidden');
-                    populateClassSelect('classSelect');
-                    fetchQuizList();
-                } else if (pwd !== null) {
-                    alert("비밀번호가 틀렸습니다.");
-                }
-            }
-        });
-
         document.getElementById('btnCloseAdmin').addEventListener('click', () => document.getElementById('adminModal').classList.add('hidden'));
 
+        // 탭 메뉴 핸들링 함수
         function switchAdminTab(showSectionId) {
             const sections = ['adminViewSection', 'adminManualSection', 'adminQuizSection', 'adminDiceSection', 'adminSettingsSection'];
             sections.forEach(id => {
@@ -1172,14 +1142,17 @@
             fetchDiceRewards();
         });
 
+        // ✨ 설정 탭 클릭 이벤트 ✨
         document.getElementById('btnTabSettings').addEventListener('click', () => {
             switchAdminTab('adminSettingsSection');
-            fetchSystemSettings();
+            fetchSystemSettings(); // 최신 설정 불러오기
         });
 
+        // ✨ 이벤트 토글 스위치 이벤트 리스너 ✨
         document.getElementById('toggleEventStatus').addEventListener('change', async (e) => {
             const isChecked = e.target.checked;
             try {
+                // DB에 설정값 저장 (Upsert: 없으면 만들고 있으면 업데이트)
                 const { error } = await db.from('system_settings').upsert({
                     key: 'event_enabled',
                     value: isChecked ? 'true' : 'false'
@@ -1190,9 +1163,13 @@
                 isEventEnabled = isChecked;
                 alert(`이벤트가 성공적으로 ${isChecked ? '활성화' : '비활성화'} 되었습니다.`);
 
-                if (currentStudentId) refreshStats();
+                // 만약 현재 학생 통계가 띄워져 있다면 화면 즉시 갱신
+                if (currentStudentId) {
+                    refreshStats();
+                }
             } catch (err) {
                 alert("설정 저장 실패: " + err.message);
+                // 실패 시 스위치를 원래 상태로 되돌림
                 e.target.checked = !isChecked;
             }
         });
@@ -1262,6 +1239,7 @@
                 btn.innerText = '💾 주사위 상품 일괄 저장';
             }
         });
+
 
         let editingQuizId = null;
 

@@ -600,6 +600,8 @@
 
                 const { data: gradeStudents } = await db.from('student').select('student_id').gte('student_id', startIdStr).lte('student_id', endIdStr);
                 const { data: gradeManuals } = await db.from('manual_records').select('student_id, manual_count').gte('student_id', startIdStr).lte('student_id', endIdStr);
+
+                // (기존 코드 유지)
                 const { data: gradeAutos } = await db.from('presentation').select('student_id').gte('student_id', startIdStr).lte('student_id', endIdStr).eq('is_approved', true);
 
                 const studentTotals = {};
@@ -607,13 +609,28 @@
                 if (gradeManuals) gradeManuals.forEach(m => { if (studentTotals[m.student_id] !== undefined) studentTotals[m.student_id] += m.manual_count; });
                 if (gradeAutos) gradeAutos.forEach(a => { if (studentTotals[a.student_id] !== undefined) studentTotals[a.student_id] += 1; });
 
+                // ✨ 수정된 부분: 공동 등수 카운트 변수 추가 및 로직 적용
                 let gradeRank = 1, gradeTotalStudents = 0, classRank = 1, classTotalStudents = 0;
+                let gradeTieCount = 0, classTieCount = 0;
+
                 for (const [sIdStr, total] of Object.entries(studentTotals)) {
                     const sId = parseInt(sIdStr, 10);
                     const sClassPrefix = Math.floor(sId / 100);
-                    gradeTotalStudents++; if (total > totalCount) gradeRank++;
-                    if (sClassPrefix === classPrefix) { classTotalStudents++; if (total > totalCount) classRank++; }
+
+                    gradeTotalStudents++;
+                    if (total > totalCount) gradeRank++;
+                    else if (total === totalCount) gradeTieCount++; // 학년 공동 인원 카운트
+
+                    if (sClassPrefix === classPrefix) {
+                        classTotalStudents++;
+                        if (total > totalCount) classRank++;
+                        else if (total === totalCount) classTieCount++; // 반 공동 인원 카운트
+                    }
                 }
+
+                // 공동 인원이 2명 이상일 때만 표시할 텍스트 생성
+                const classTieText = classTieCount > 1 ? `<span style="font-size:13px; color:#7f8c8d; font-weight:normal;"> (공동 ${classTieCount}명)</span>` : '';
+                const gradeTieText = gradeTieCount > 1 ? `<span style="font-size:13px; color:#7f8c8d; font-weight:normal;"> (공동 ${gradeTieCount}명)</span>` : '';
 
                 let buttonsHtml = `<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 15px; padding-bottom: 4px;">`;
                 buttonsHtml += `<button class="month-btn" style="background-color: #fdebd0; color: #d35400; border-color: #f39c12;" onclick="alert('수동 부여 횟수는 상세 기록이 없습니다.\\n(교사 일괄 입력)')"><span style="font-size:12px; font-weight:normal;">수동</span><br><b style="font-size:15px;">${manualCount}</b><span style="font-size:12px;">회</span></button>`;
@@ -631,15 +648,17 @@
                 buttonsHtml += `<button class="month-btn" style="background-color: #e8f4fd; color: #2980b9; border-color: #3498db;" onclick="alert('총 누적 발표 횟수입니다.\\n(수동 횟수 + 자동 승인 횟수)')"><span style="font-size:12px; font-weight:bold;">합계</span><br><b style="font-size:15px;">${totalCount}</b><span style="font-size:12px;">회</span></button>`;
                 buttonsHtml += `</div>`;
 
+                // ✨ 수정된 부분: 등수 렌더링 부분에 공동 인원 텍스트(${classTieText}, ${gradeTieText}) 추가
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight" style="font-size: 1.2em;">${currentStudentId} ${currentStudentName}</p>
                     <div style="font-size: 14px; background: #e8f4fd; padding: 10px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; justify-content: space-around; margin-top: 10px;">
-                        <span>🏆 반: <span style="color:#e74c3c; font-size: 16px;">${classRank}</span>등</span>
-                        <span>🏅 학년: <span style="color:#e74c3c; font-size: 16px;">${gradeRank}</span>등</span>
+                        <span>🏆 반: <span style="color:#e74c3c; font-size: 16px;">${classRank}</span>등${classTieText}</span>
+                        <span>🏅 학년: <span style="color:#e74c3c; font-size: 16px;">${gradeRank}</span>등${gradeTieText}</span>
                     </div>
                     ${buttonsHtml}
                 `;
             } catch (error) {
+                // (기존 코드 유지)
                 console.error(error);
                 document.getElementById('statsBox').innerHTML = `<p style="color:red;">통계를 불러오지 못했습니다.</p>`;
             }

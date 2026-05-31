@@ -137,6 +137,23 @@
 
         .btn-quiz {
             background-color: #9b59b6;
+            margin-bottom: 5px;
+            /* 추가 항목들을 위해 간격 조정 */
+        }
+
+        /* ✨ 여기서부터 새로 추가하는 스타일 ✨ */
+        .btn-math {
+            background-color: #1abc9c;
+            margin-bottom: 5px;
+        }
+
+        .btn-common {
+            background-color: #e67e22;
+            margin-bottom: 5px;
+        }
+
+        .btn-idiom {
+            background-color: #34495e;
         }
 
         #diceContainer {
@@ -270,6 +287,10 @@
             </div>
 
             <button class="game-btn btn-quiz" id="btnQuizGame" onclick="playGame('퀴즈')">🤔 넌센스 아재개그</button>
+            <!-- ✨ 새로 추가하는 버튼 3개 ✨ -->
+            <button class="game-btn btn-math" id="btnMathGame" onclick="playGame('수학')">📐 수학문제 도전</button>
+            <button class="game-btn btn-common" id="btnCommonGame" onclick="playGame('상식')">🌍 상식에 도전</button>
+            <button class="game-btn btn-idiom" id="btnIdiomGame" onclick="playGame('사자성어')">📜 사자성어 도전</button>
             <button id="btnCancelGame"
                 style="width:100%; padding:10px; margin-top:10px; background:transparent; border:none; color:#7f8c8d; text-decoration:underline; cursor:pointer;"
                 onclick="closeGameModal()">취소</button>
@@ -508,6 +529,61 @@
                         btn.style.cursor = 'pointer';
                     });
                     document.getElementById('diceRewardInfo').style.cursor = 'default';
+                }
+                // 기존 퀴즈 블록 끝나는 부분...
+            }
+            // ✨ 여기서부터 새로 추가되는 3가지 게임 로직 ✨
+            else if (type === '수학' || type === '상식' || type === '사자성어') {
+                let qList = [];
+
+                // 분야별 문제 목록 (원하시는 문제로 자유롭게 추가/수정하세요!)
+                if (type === '수학') {
+                    qList = [
+                        { question: "12 + 15 × 2 = ?", answer: "42" },
+                        { question: "삼각형의 세 내각의 합은 몇 도인가요? (숫자만)", answer: "180" },
+                        { question: "2의 10승(2^10)은 얼마일까요?", answer: "1024" },
+                        { question: "8 × 7 = ?", answer: "56" }
+                    ];
+                } else if (type === '상식') {
+                    qList = [
+                        { question: "대한민국의 최남단에 있는 섬은?", answer: "마라도" },
+                        { question: "빛은 1초에 지구를 대략 몇 바퀴 돌까요? (숫자만)", answer: "7.5" },
+                        { question: "조선시대 세종대왕이 훈민정음을 창제한 연도는? (숫자 4자리)", answer: "1443" },
+                        { question: "우리나라의 가장 높은 산은?", answer: "백두산" }
+                    ];
+                } else if (type === '사자성어') {
+                    qList = [
+                        { question: "겉과 속이 다르다는 뜻의 사자성어는? (ㅍㄹㅂㄷ)", answer: "표리부동" },
+                        { question: "사람이 수없이 많이 모인 상태 (ㅇㅅㅇㅎ)", answer: "인산인해" },
+                        { question: "몹시 바쁘게 이리저리 돌아다님 (ㄷㅂㅅㅈ)", answer: "동분서주" },
+                        { question: "입술이 없으면 이가 시리다, 서로 떨어질 수 없는 밀접한 관계 (ㅅㅁㅊㅎ)", answer: "순망치한" }
+                    ];
+                }
+
+                // 문제를 무작위로 1개 선택
+                const randomQuiz = qList[Math.floor(Math.random() * qList.length)];
+
+                // 프롬프트 창 띄우기
+                const ans = prompt(`🤔 ${type} 퀴즈!\n\nQ. ${randomQuiz.question}\n(정답을 입력해 주세요)`);
+
+                if (ans === null) {
+                    // 취소 시 버튼 원상복구
+                    document.querySelectorAll('.game-btn').forEach(btn => {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    });
+                    return;
+                }
+
+                // 띄어쓰기를 없애고 정답 확인
+                const cleanAns = ans.replace(/\s/g, '');
+                const cleanCorrectAns = randomQuiz.answer.replace(/\s/g, '');
+
+                if (cleanAns === cleanCorrectAns) {
+                    saveEventResult(type, "정답입니다! 👏👏👏", `정답 맞춤 (${randomQuiz.answer})`);
+                } else {
+                    saveEventResult(type, `틀렸습니다! 😝\n\n입력하신 답: ${ans}\n정답은 '${randomQuiz.answer}' 입니다.`, `오답 제출 (${ans})`);
                 }
             }
         }

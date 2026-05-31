@@ -696,13 +696,17 @@
             container.innerHTML = html;
         }
 
-        function resetSubmissionStatus() { if (statusCheckInterval) clearInterval(statusCheckInterval); monitoredSubmissions = []; document.getElementById('submitStatusBox').style.display = 'none'; }
+
+        function resetSubmissionStatus() {
+            monitoredSubmissions = [];
+            document.getElementById('submitStatusBox').style.display = 'none';
+        }
 
         async function loadPendingSubmissions() {
             const { data } = await db.from('presentation').select('id, created_at, content').eq('student_id', currentStudentId).eq('is_approved', false).order('created_at', { ascending: true });
             if (data && data.length > 0) {
                 monitoredSubmissions = data.map(item => ({ id: item.id, time: new Date(item.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }), status: 'waiting', content: item.content }));
-                renderSubmissionsStatus(); startStatusMonitoring();
+                renderSubmissionsStatus();
             }
         }
 
@@ -716,8 +720,80 @@
                 const icon = sub.status === 'waiting' ? '⏳ 승인 대기 중' : (sub.status === 'approved' ? '✅ 승인됨' : '❌ 반려됨');
                 html += `<div class="status-item ${cssClass}"><div style="display:flex; justify-content:space-between;"><span>${icon}</span><span style="font-size:12px;">(${sub.time})</span></div><div style="font-size:12px; margin-top:5px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sub.content}</div></div>`;
             });
-            container.innerHTML = html + '</div>';
+            html += '</div>';
+
+            // ✨ 승인 대기 중인 항목이 있을 때만 '새로고침' 버튼 추가
+            const hasWaiting = monitoredSubmissions.some(s => s.status === 'waiting');
+            if (hasWaiting) {
+                html += `<button id="btnManualRefresh" onclick="manualRefreshStatus()" style="width: 100%; padding: 12px; margin-top: 10px; background-color: #f39c12; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.2s;">🔄 승인 여부 확인하기</button>`;
+            }
+
+            container.innerHTML = html;
         }
+
+        document.getElementById('btnSubmit').addEventListener('click', async function () {
+            const content = document.getElementById('content').value.trim();
+            if (!content) return alert("발표 내용을 입력해주세요.");
+            if (!confirm(`제출하시겠습니까?`)) return;
+            const { data } = await db.from('presentation').insert([{ student_id: currentStudentId, student_name: currentStudentName, content: content, is_approved: false }]).select();
+            monitoredSubmissions.push({ id: data[0].id, time: new Date(data[0].created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }), status: 'waiting', content: data[0].content });
+            document.getElementById('content').value = '';
+            renderSubmissionsStatus();
+            // 💡 기존에 있던 자동 모니터링 실행(startStatusMonitoring) 삭제 완료
+        });
+
+        // ✨ 새로 추가된 10초 쿨다운 수동 새로고침 함수
+        async function manualRefreshStatus() {
+            const btn = document.getElementById('btnManualRefresh');
+            if (!btn || btn.disabled) return;
+
+            // 1. 버튼 클릭 즉시 비활성화 및 10초 카운트다운 시작
+            btn.disabled = true;
+            btn.style.backgroundColor = '#bdc3c7';
+            btn.style.cursor = 'not-allowed';
+            let timeLeft = 10;
+            btn.innerText = `⏳ 확인 중... (${timeLeft}초 후 다시 클릭 가능)`;
+
+            const timer = setInterval(() => {
+                timeLeft--;
+                const currentBtn = document.getElementById('btnManualRefresh');
+                if (timeLeft > 0 && currentBtn) {
+                    currentBtn.innerText = `⏳ 확인 중... (${timeLeft}초 후 다시 클릭 가능)`;
+                } else {
+                    clearInterval(timer);
+                    if (currentBtn) {
+                        currentBtn.disabled = false;
+                        currentBtn.style.backgroundColor = '#f39c12';
+                        currentBtn.style.cursor = 'pointer';
+                        currentBtn.innerText = `🔄 승인 여부 확인하기`;
+                    }
+                }
+            }, 1000);
+
+            // 2. 수파베이스 DB에 승인 여부 조회
+            const waitingIds = monitoredSubmissions.filter(s => s.status === 'waiting').map(s => s.id);
+            if (waitingIds.length === 0) return;
+
+            try {
+                const { data } = await db.from('presentation').select('id, is_approved').in('id', waitingIds);
+                let changed = false, refresh = false;
+                const dbMap = {};
+                if (data) data.forEach(r => dbMap[r.id] = r.is_approved);
+
+                monitoredSubmissions.forEach(sub => {
+                    if (sub.status === 'waiting') {
+                        if (dbMap[sub.id] === undefined) { sub.status = 'rejected'; changed = true; }
+                        else if (dbMap[sub.id] === true) { sub.status = 'approved'; changed = true; refresh = true; }
+                    }
+                });
+
+                if (changed) renderSubmissionsStatus();
+                if (refresh) await refreshStats();
+            } catch (error) {
+                console.error("새로고침 중 오류 발생:", error);
+            }
+        }
+
 
         document.getElementById('btnSubmit').addEventListener('click', async function () {
             const content = document.getElementById('content').value.trim();

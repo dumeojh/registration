@@ -158,11 +158,13 @@
             margin: 0;
         }
 
-        /* 관리자 탭 */
+        /* 관리자 탭 (5개로 늘어남) */
         .admin-tabs {
             display: flex;
             gap: 5px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            /* 모바일 대응 줄바꿈 */
         }
 
         .admin-tabs button {
@@ -170,6 +172,8 @@
             padding: 10px 5px;
             font-size: 13px;
             flex: 1;
+            min-width: 80px;
+            /* 탭이 너무 좁아지지 않게 */
         }
 
         .history-item {
@@ -335,6 +339,16 @@
             align-items: center;
         }
 
+        .quiz-item div {
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .quiz-item span {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
         .dice-reward-item {
             display: flex;
             align-items: center;
@@ -352,6 +366,52 @@
             margin: 0;
             border: 1px solid #bdc3c7;
             border-radius: 4px;
+        }
+
+        /* 토글 스위치 스타일 (이벤트 온오프용) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #2ecc71;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(26px);
         }
     </style>
 </head>
@@ -443,6 +503,8 @@
                 <button type="button" id="btnTabManual" style="background-color: #8e44ad;">✏️ 수동 입력</button>
                 <button type="button" id="btnTabQuiz" style="background-color: #27ae60;">📝 퀴즈 관리</button>
                 <button type="button" id="btnTabDice" style="background-color: #3498db;">🎲 주사위 상품</button>
+                <!-- ✨ 새롭게 추가된 설정 탭 ✨ -->
+                <button type="button" id="btnTabSettings" style="background-color: #e67e22;">⚙️ 이벤트 설정</button>
             </div>
 
             <div id="adminViewSection">
@@ -550,8 +612,7 @@
                     <div style="display: flex; gap: 10px;">
                         <button type="button" id="btnAddQuiz"
                             style="padding: 10px; font-size: 15px; background-color: #8e44ad; margin-top: 5px; flex: 1;">+
-                            문제 DB에
-                            등록하기</button>
+                            문제 DB에 등록하기</button>
                         <button type="button" id="btnUpdateQuiz" class="hidden"
                             style="padding: 10px; font-size: 15px; background-color: #e67e22; margin-top: 5px; flex: 1;">저장(수정
                             완료)</button>
@@ -594,6 +655,24 @@
                 </div>
             </div>
 
+            <!-- ✨ 새롭게 추가된 설정 섹션 ✨ -->
+            <div id="adminSettingsSection" class="hidden">
+                <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 시스템 전체의 기능 작동 여부를 설정합니다.</p>
+
+                <div
+                    style="background: #fdf2e9; padding: 20px; border-radius: 8px; border: 1px solid #fad7a1; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: #e67e22; font-size: 16px;">🎉 이벤트 존 활성화</strong>
+                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #d35400;">스위치를 끄면 학생들이 5회를 달성해도 이벤트에 입장할 수
+                            없도록 잠깁니다.</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggleEventStatus">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -603,6 +682,33 @@
         let studentPresentations = [];
         let monitoredSubmissions = [];
         let statusCheckInterval = null;
+
+        // 시스템 설정값을 저장하는 전역 변수 (기본값 true)
+        let isEventEnabled = true;
+
+        // DB에서 현재 설정 상태를 불러오는 함수
+        async function fetchSystemSettings() {
+            try {
+                const { data, error } = await db.from('system_settings').select('*').eq('key', 'event_enabled').maybeSingle();
+                if (error && error.code !== 'PGRST116') throw error;
+
+                // DB에 값이 있으면 해당 값으로, 없으면 기본값 true 유지
+                if (data) {
+                    isEventEnabled = data.value === 'true';
+                }
+
+                // 관리자 탭 스위치 UI 동기화
+                const toggleBtn = document.getElementById('toggleEventStatus');
+                if (toggleBtn) {
+                    toggleBtn.checked = isEventEnabled;
+                }
+            } catch (err) {
+                console.error('설정 불러오기 실패:', err);
+            }
+        }
+
+        // 페이지 로드 시 설정값을 가져옴
+        window.addEventListener('DOMContentLoaded', fetchSystemSettings);
 
         document.getElementById('btnSearch').addEventListener('click', async function () {
             const studentIdValue = document.getElementById('searchId').value.trim();
@@ -623,6 +729,8 @@
                 currentStudentName = studentNameValue;
 
                 resetSubmissionStatus();
+                // 조회 시 항상 최신 이벤트 활성화 설정을 다시 가져옴
+                await fetchSystemSettings();
                 await refreshStats();
                 await loadPendingSubmissions();
 
@@ -667,14 +775,24 @@
                     const availableCount = (maxMilestone / 5) - completedCount;
 
                     if (availableCount > 0) {
-                        btnGoEvent.disabled = false;
-                        btnGoEvent.style.backgroundColor = '#f1c40f';
-                        btnGoEvent.style.color = '#2c3e50';
-                        btnGoEvent.style.cursor = 'pointer';
-                        btnGoEvent.innerText = `🎉 이벤트 입장 (${availableCount}개 가능)`;
-                        btnGoEvent.onclick = () => {
-                            window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
-                        };
+                        // ✨ 이벤트 활성 상태에 따른 조건 분기 추가 ✨
+                        if (isEventEnabled) {
+                            btnGoEvent.disabled = false;
+                            btnGoEvent.style.backgroundColor = '#f1c40f';
+                            btnGoEvent.style.color = '#2c3e50';
+                            btnGoEvent.style.cursor = 'pointer';
+                            btnGoEvent.innerText = `🎉 이벤트 입장 (${availableCount}개 가능)`;
+                            btnGoEvent.onclick = () => {
+                                window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
+                            };
+                        } else {
+                            // 비활성화 상태일 때
+                            btnGoEvent.disabled = true;
+                            btnGoEvent.style.backgroundColor = '#95a5a6';
+                            btnGoEvent.style.color = 'white';
+                            btnGoEvent.style.cursor = 'not-allowed';
+                            btnGoEvent.innerText = `🔒 이벤트 준비중 (선생님 설정)`;
+                        }
                     } else {
                         btnGoEvent.disabled = true;
                         btnGoEvent.style.backgroundColor = '#bdc3c7';
@@ -697,7 +815,6 @@
 
                 const { data: gradeStudents } = await db.from('student').select('student_id').gte('student_id', startIdStr).lte('student_id', endIdStr);
                 const { data: gradeManuals } = await db.from('manual_records').select('student_id, manual_count').gte('student_id', startIdStr).lte('student_id', endIdStr);
-
                 const { data: gradeAutos } = await db.from('presentation').select('student_id').gte('student_id', startIdStr).lte('student_id', endIdStr).eq('is_approved', true);
 
                 const studentTotals = {};
@@ -787,7 +904,6 @@
             });
             container.innerHTML = html;
         }
-
 
         function resetSubmissionStatus() {
             monitoredSubmissions = [];
@@ -881,38 +997,8 @@
             }
         }
 
-
-        document.getElementById('btnSubmit').addEventListener('click', async function () {
-            const content = document.getElementById('content').value.trim();
-            if (!content) return alert("발표 내용을 입력해주세요.");
-            if (!confirm(`제출하시겠습니까?`)) return;
-            const { data } = await db.from('presentation').insert([{ student_id: currentStudentId, student_name: currentStudentName, content: content, is_approved: false }]).select();
-            monitoredSubmissions.push({ id: data[0].id, time: new Date(data[0].created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }), status: 'waiting', content: data[0].content });
-            document.getElementById('content').value = '';
-            renderSubmissionsStatus(); startStatusMonitoring();
-        });
-
-        function startStatusMonitoring() {
-            if (statusCheckInterval) clearInterval(statusCheckInterval);
-            statusCheckInterval = setInterval(async () => {
-                const waitingIds = monitoredSubmissions.filter(s => s.status === 'waiting').map(s => s.id);
-                if (waitingIds.length === 0) return clearInterval(statusCheckInterval);
-                const { data } = await db.from('presentation').select('id, is_approved').in('id', waitingIds);
-                let changed = false, refresh = false;
-                const dbMap = {}; data.forEach(r => dbMap[r.id] = r.is_approved);
-                monitoredSubmissions.forEach(sub => {
-                    if (sub.status === 'waiting') {
-                        if (dbMap[sub.id] === undefined) { sub.status = 'rejected'; changed = true; }
-                        else if (dbMap[sub.id] === true) { sub.status = 'approved'; changed = true; refresh = true; }
-                    }
-                });
-                if (changed) renderSubmissionsStatus();
-                if (refresh) await refreshStats();
-            }, 3000);
-        }
         document.getElementById('btnCancel').addEventListener('click', () => location.reload());
 
-        // 🌟 Ctrl + 더블클릭 시 바로 관리자 모달 열리도록 수정 완료 (비밀번호 생략) 🌟
         document.getElementById('btnApproveWait').addEventListener('dblclick', async (e) => {
             if (e.ctrlKey) {
                 document.getElementById('approvalModal').classList.remove('hidden');
@@ -921,7 +1007,6 @@
         });
         document.getElementById('btnCloseApproval').addEventListener('click', () => document.getElementById('approvalModal').classList.add('hidden'));
 
-        // ✨ 관리자 목록 압축 렌더링을 적용한 부분 ✨
         async function fetchPendingApprovals() {
             const container = document.getElementById('approvalListContainer');
             container.innerHTML = '<p style="text-align:center;">데이터를 불러오는 중...</p>';
@@ -937,7 +1022,6 @@
 
                 let html = '';
 
-                // 이벤트 보상 대기 목록 (압축 버전)
                 if (eventData) {
                     eventData.forEach(item => {
                         html += `
@@ -960,7 +1044,6 @@
                     });
                 }
 
-                // 발표 승인 대기 목록 (압축 버전)
                 if (presData) {
                     presData.forEach(item => {
                         html += `
@@ -1003,6 +1086,7 @@
                 }));
 
                 document.querySelectorAll('.btn-event-cancel').forEach(b => b.addEventListener('click', async (e) => {
+                    if (!confirm("해당 학생의 이벤트 기록을 삭제하고 다시 진행하게 하시겠습니까?")) return;
                     try {
                         await db.from('event_logs').delete().eq('id', e.target.dataset.id);
                         await fetchPendingApprovals();
@@ -1026,36 +1110,68 @@
         });
         document.getElementById('btnCloseAdmin').addEventListener('click', () => document.getElementById('adminModal').classList.add('hidden'));
 
+        // 탭 메뉴 핸들링 함수
+        function switchAdminTab(showSectionId) {
+            const sections = ['adminViewSection', 'adminManualSection', 'adminQuizSection', 'adminDiceSection', 'adminSettingsSection'];
+            sections.forEach(id => {
+                if (id === showSectionId) {
+                    document.getElementById(id).classList.remove('hidden');
+                } else {
+                    document.getElementById(id).classList.add('hidden');
+                }
+            });
+        }
+
         document.getElementById('btnTabClass').addEventListener('click', () => {
-            document.getElementById('adminViewSection').classList.remove('hidden');
-            document.getElementById('adminManualSection').classList.add('hidden');
-            document.getElementById('adminQuizSection').classList.add('hidden');
-            document.getElementById('adminDiceSection').classList.add('hidden');
+            switchAdminTab('adminViewSection');
             populateClassSelect('classSelect');
         });
 
         document.getElementById('btnTabManual').addEventListener('click', () => {
-            document.getElementById('adminViewSection').classList.add('hidden');
-            document.getElementById('adminManualSection').classList.remove('hidden');
-            document.getElementById('adminQuizSection').classList.add('hidden');
-            document.getElementById('adminDiceSection').classList.add('hidden');
+            switchAdminTab('adminManualSection');
             populateClassSelect('manualClassSelect');
         });
 
         document.getElementById('btnTabQuiz').addEventListener('click', () => {
-            document.getElementById('adminViewSection').classList.add('hidden');
-            document.getElementById('adminManualSection').classList.add('hidden');
-            document.getElementById('adminQuizSection').classList.remove('hidden');
-            document.getElementById('adminDiceSection').classList.add('hidden');
+            switchAdminTab('adminQuizSection');
             fetchQuizList();
         });
 
         document.getElementById('btnTabDice').addEventListener('click', () => {
-            document.getElementById('adminViewSection').classList.add('hidden');
-            document.getElementById('adminManualSection').classList.add('hidden');
-            document.getElementById('adminQuizSection').classList.add('hidden');
-            document.getElementById('adminDiceSection').classList.remove('hidden');
+            switchAdminTab('adminDiceSection');
             fetchDiceRewards();
+        });
+
+        // ✨ 설정 탭 클릭 이벤트 ✨
+        document.getElementById('btnTabSettings').addEventListener('click', () => {
+            switchAdminTab('adminSettingsSection');
+            fetchSystemSettings(); // 최신 설정 불러오기
+        });
+
+        // ✨ 이벤트 토글 스위치 이벤트 리스너 ✨
+        document.getElementById('toggleEventStatus').addEventListener('change', async (e) => {
+            const isChecked = e.target.checked;
+            try {
+                // DB에 설정값 저장 (Upsert: 없으면 만들고 있으면 업데이트)
+                const { error } = await db.from('system_settings').upsert({
+                    key: 'event_enabled',
+                    value: isChecked ? 'true' : 'false'
+                }, { onConflict: 'key' });
+
+                if (error) throw error;
+
+                isEventEnabled = isChecked;
+                alert(`이벤트가 성공적으로 ${isChecked ? '활성화' : '비활성화'} 되었습니다.`);
+
+                // 만약 현재 학생 통계가 띄워져 있다면 화면 즉시 갱신
+                if (currentStudentId) {
+                    refreshStats();
+                }
+            } catch (err) {
+                alert("설정 저장 실패: " + err.message);
+                // 실패 시 스위치를 원래 상태로 되돌림
+                e.target.checked = !isChecked;
+            }
         });
 
         async function fetchDiceRewards() {

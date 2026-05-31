@@ -556,13 +556,21 @@
 
                     <div>
                         <label style="margin-top: 0; font-size: 13px;">A. 정답</label>
-                        <input type="text" id="newQuizAnswer" placeholder="정답을 입력하세요 (객관식은 보기 내용과 똑같이)"
+                        <input type="text" id="newQuizAnswer" placeholder="정답을 입력하세요 (유사 정답은 콤마(,)로 구분)"
                             style="padding: 8px; margin-top: 5px;">
                     </div>
 
-                    <button type="button" id="btnAddQuiz"
-                        style="padding: 10px; font-size: 15px; background-color: #8e44ad; margin-top: 5px;">+ 문제 DB에
-                        등록하기</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" id="btnAddQuiz"
+                            style="padding: 10px; font-size: 15px; background-color: #8e44ad; margin-top: 5px; flex: 1;">+
+                            문제 DB에
+                            등록하기</button>
+                        <button type="button" id="btnUpdateQuiz" class="hidden"
+                            style="padding: 10px; font-size: 15px; background-color: #e67e22; margin-top: 5px; flex: 1;">저장(수정
+                            완료)</button>
+                        <button type="button" id="btnCancelEditQuiz" class="hidden"
+                            style="padding: 10px; font-size: 15px; background-color: #95a5a6; margin-top: 5px; width: auto;">취소</button>
+                    </div>
                 </div>
 
                 <div
@@ -1152,6 +1160,8 @@
         // ✨ 업그레이드된 퀴즈 관리 기능 ✨
         // ==========================================
 
+        let editingQuizId = null; // 수정 중인 퀴즈의 ID를 저장할 변수
+
         // 카테고리 및 유형에 따라 입력란 보이기/숨기기
         window.toggleQuizFields = function () {
             const category = document.getElementById('newQuizCategory').value;
@@ -1180,7 +1190,7 @@
                 data.forEach(q => {
                     const badgeColor = q.category === '수학' ? '#1abc9c' : (q.category === '상식' ? '#e67e22' : (q.category === '사자성어' ? '#34495e' : '#9b59b6'));
                     const topicHtml = q.topic ? `<span style="color:#7f8c8d; font-size:12px;">[${q.topic}]</span>` : '';
-                    const typeHtml = q.question_type === 'multiple' ? '<span style="font-size:11px; color:#3498db; border:1px solid #3498db; padding:2px 4px; border-radius:4px;">객관식</span>' : '';
+                    const typeHtml = q.question_type === 'multiple' ? '<span style="font-size:11px; color:#3498db; border:1px solid #3498db; padding:2px 4px; border-radius:4px;">객관식</span>' : '<span style="font-size:11px; color:#e67e22; border:1px solid #e67e22; padding:2px 4px; border-radius:4px;">단답형</span>';
 
                     html += `
                         <div class="quiz-item" style="align-items: flex-start;">
@@ -1194,7 +1204,10 @@
                                     <span style="color:#27ae60; font-weight:bold;">A.</span> ${q.answer}
                                 </div>
                             </div>
-                            <button class="btn-del-quiz" data-id="${q.id}" style="width:auto; padding:6px 12px; margin:0; background:#e74c3c; font-size:12px;">삭제</button>
+                            <div style="display: flex; flex-direction: column; gap: 5px;">
+                                <button class="btn-edit-quiz" data-id="${q.id}" data-quiz='${JSON.stringify(q)}' style="width:auto; padding:6px 12px; margin:0; background:#f39c12; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">수정</button>
+                                <button class="btn-del-quiz" data-id="${q.id}" style="width:auto; padding:6px 12px; margin:0; background:#e74c3c; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">삭제</button>
+                            </div>
                         </div>
                     `;
                 });
@@ -1206,20 +1219,83 @@
                     fetchQuizList();
                 }));
 
+                // ✨ 수정 버튼 이벤트 리스너 연결 ✨
+                document.querySelectorAll('.btn-edit-quiz').forEach(btn => btn.addEventListener('click', (e) => {
+                    const quizData = JSON.parse(e.target.dataset.quiz);
+                    loadQuizForEditing(quizData);
+                }));
+
             } catch (err) {
                 container.innerHTML = `<p style="color:red;">오류: ${err.message}</p>`;
             }
         }
 
-        document.getElementById('btnAddQuiz').addEventListener('click', async () => {
+        // ✨ 퀴즈 수정 모드로 입력 폼 세팅하기 ✨
+        function loadQuizForEditing(quiz) {
+            editingQuizId = quiz.id; // 수정 모드 켜짐
+
+            document.getElementById('newQuizCategory').value = quiz.category;
+            document.getElementById('newQuizType').value = quiz.question_type;
+
+            if (quiz.category === '수학') {
+                document.getElementById('newQuizTopic').value = quiz.topic || '';
+            }
+
+            document.getElementById('newQuizQuestion').value = quiz.question;
+            document.getElementById('newQuizAnswer').value = quiz.answer;
+
+            if (quiz.question_type === 'multiple' && quiz.options) {
+                document.getElementById('opt1').value = quiz.options[0] || '';
+                document.getElementById('opt2').value = quiz.options[1] || '';
+                document.getElementById('opt3').value = quiz.options[2] || '';
+                document.getElementById('opt4').value = quiz.options[3] || '';
+            }
+
+            toggleQuizFields(); // 화면 상태 업데이트
+
+            // 버튼 교체 (추가 버튼 감추고 수정/취소 버튼 보이기)
+            document.getElementById('btnAddQuiz').classList.add('hidden');
+            document.getElementById('btnUpdateQuiz').classList.remove('hidden');
+            document.getElementById('btnCancelEditQuiz').classList.remove('hidden');
+
+            // 시선 이동
+            document.getElementById('newQuizCategory').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ✨ 퀴즈 입력 폼 초기화 및 추가 모드로 복귀 ✨
+        function resetQuizForm() {
+            editingQuizId = null;
+
+            document.getElementById('newQuizQuestion').value = '';
+            document.getElementById('newQuizAnswer').value = '';
+            document.getElementById('opt1').value = '';
+            document.getElementById('opt2').value = '';
+            document.getElementById('opt3').value = '';
+            document.getElementById('opt4').value = '';
+
+            document.getElementById('btnAddQuiz').classList.remove('hidden');
+            document.getElementById('btnUpdateQuiz').classList.add('hidden');
+            document.getElementById('btnCancelEditQuiz').classList.add('hidden');
+        }
+
+        document.getElementById('btnCancelEditQuiz').addEventListener('click', resetQuizForm);
+
+        // 퀴즈 데이터 검증 및 객체 생성 공통 함수
+        function buildQuizData() {
             const category = document.getElementById('newQuizCategory').value;
             const topic = document.getElementById('newQuizTopic').value.trim();
             const qType = document.getElementById('newQuizType').value;
             const q = document.getElementById('newQuizQuestion').value.trim();
             const a = document.getElementById('newQuizAnswer').value.trim();
 
-            if (!q || !a) return alert("문제와 정답을 모두 입력해주세요!");
-            if (category === '수학' && !topic) return alert("수학 문제는 단원명을 반드시 입력해야 합니다!");
+            if (!q || !a) {
+                alert("문제와 정답을 모두 입력해주세요!");
+                return null;
+            }
+            if (category === '수학' && !topic) {
+                alert("수학 문제는 단원명을 반드시 입력해야 합니다!");
+                return null;
+            }
 
             let optionsArr = null;
             if (qType === 'multiple') {
@@ -1228,43 +1304,66 @@
                 const opt3 = document.getElementById('opt3').value.trim();
                 const opt4 = document.getElementById('opt4').value.trim();
 
-                if (!opt1 || !opt2 || !opt3 || !opt4) return alert("객관식 보기를 모두 입력해주세요!");
+                if (!opt1 || !opt2 || !opt3 || !opt4) {
+                    alert("객관식 보기를 모두 입력해주세요!");
+                    return null;
+                }
                 optionsArr = [opt1, opt2, opt3, opt4];
 
-                if (!optionsArr.includes(a)) return alert("정답은 객관식 보기 내용 중 하나와 정확히 일치해야 합니다!");
+                // 단답형(유사정답)과 달리 객관식은 콤마 허용 없이 보기 중 하나와 완벽 일치해야 함
+                if (!optionsArr.includes(a)) {
+                    alert("객관식 정답은 4개의 보기 중 하나와 정확히 일치해야 합니다!");
+                    return null;
+                }
             }
 
-            try {
-                // DB에 전송할 데이터 조립
-                const insertData = {
-                    category: category,
-                    topic: category === '수학' ? topic : null,
-                    question_type: qType,
-                    question: q,
-                    answer: a,
-                    options: optionsArr
-                };
+            return {
+                category: category,
+                topic: category === '수학' ? topic : null,
+                question_type: qType,
+                question: q,
+                answer: a,
+                options: optionsArr
+            };
+        }
 
+        // 신규 퀴즈 추가 버튼
+        document.getElementById('btnAddQuiz').addEventListener('click', async () => {
+            const insertData = buildQuizData();
+            if (!insertData) return;
+
+            try {
                 const { error } = await db.from('quiz_bank').insert([insertData]);
                 if (error) throw error;
 
                 alert("문제가 DB에 성공적으로 추가되었습니다!");
-
-                // 폼 초기화
-                document.getElementById('newQuizQuestion').value = '';
-                document.getElementById('newQuizAnswer').value = '';
-                document.getElementById('opt1').value = '';
-                document.getElementById('opt2').value = '';
-                document.getElementById('opt3').value = '';
-                document.getElementById('opt4').value = '';
-
+                resetQuizForm();
                 fetchQuizList();
             } catch (err) {
                 alert("문제 추가 실패: " + err.message);
             }
         });
 
-        // 🌟 [추가] JSON 대량 등록 버튼 이벤트 🌟
+        // ✨ 퀴즈 수정 완료 버튼 ✨
+        document.getElementById('btnUpdateQuiz').addEventListener('click', async () => {
+            if (!editingQuizId) return;
+
+            const updateData = buildQuizData();
+            if (!updateData) return;
+
+            try {
+                const { error } = await db.from('quiz_bank').update(updateData).eq('id', editingQuizId);
+                if (error) throw error;
+
+                alert("문제가 성공적으로 수정되었습니다!");
+                resetQuizForm();
+                fetchQuizList();
+            } catch (err) {
+                alert("문제 수정 실패: " + err.message);
+            }
+        });
+
+        // 🌟 JSON 대량 등록 버튼 이벤트 🌟
         document.getElementById('btnBulkAddQuiz').addEventListener('click', async () => {
             const jsonText = document.getElementById('bulkJsonInput').value.trim();
 

@@ -594,14 +594,12 @@
                 </div>
             </div>
 
-            <!-- 🌟 새롭게 추가된 주사위 상품 관리 섹션 🌟 -->
             <div id="adminDiceSection" class="hidden">
                 <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 1~6번까지 주사위를 굴렸을 때 당첨될 상품을 설정합니다.
                     (비워두면 '상품 없음'으로 처리됩니다)</p>
 
                 <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; border: 1px solid #bde0fe;">
                     <div id="diceRewardForm">
-                        <!-- 자바스크립트로 1~6번 입력 폼이 생성됩니다 -->
                         <p style="text-align: center; color: #7f8c8d;">불러오는 중...</p>
                     </div>
                     <button type="button" id="btnSaveDiceRewards"
@@ -939,7 +937,7 @@
 
         document.getElementById('btnApproveWait').addEventListener('dblclick', async (e) => {
             if (e.ctrlKey) {
-                if (prompt("교사 비밀번호를 입력하세요. (1234)") !== "1234") return;
+                // if (prompt("교사 비밀번호를 입력하세요. (1234)") !== "1234") return; // 이 부분 삭제
                 document.getElementById('approvalModal').classList.remove('hidden');
                 await fetchPendingApprovals();
             }

@@ -486,7 +486,9 @@
                     is_rewarded: false
                 }]);
                 if (error) throw error;
-                alert(`${resultMsg}\n\n(선생님께 상품 지급 요청이 전송되었습니다!)`);
+                alert(`${resultMsg}
+
+(선생님께 상품 지급 요청이 전송되었습니다!)`);
                 closeGameModal();
                 loadMilestones();
             } catch (err) {
@@ -510,7 +512,9 @@
             if (type === '제비뽑기') {
                 const results = ["꽝! 다음 기회에...", "발표 1회 면제권?!", "선생님께 칭찬받기", "꽝! 아쉽네요."];
                 const res = results[Math.floor(Math.random() * results.length)];
-                saveEventResult('제비뽑기', `🎫 제비뽑기 결과:\n\n[ ${res} ]`, res);
+                saveEventResult('제비뽑기', `🎫 제비뽑기 결과:
+
+[ ${res} ]`, res);
             }
             else if (type === '주사위') {
                 document.querySelectorAll('.game-btn').forEach(btn => btn.style.display = 'none');
@@ -548,7 +552,10 @@
 
                 setTimeout(() => {
                     const rewardText = diceRewardMap[num] || "상품 미정";
-                    saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]\n당첨 상품: 🎉 ${rewardText} 🎉`, `주사위 ${num} (${rewardText})`);
+                    saveEventResult('주사위', `🎲 주사위를 굴렸습니다!
+
+나온 숫자: [ ${num} ]
+당첨 상품: 🎉 ${rewardText} 🎉`, `주사위 ${num} (${rewardText})`);
                 }, 2500);
             }
             else if (type === '수학') {
@@ -637,7 +644,8 @@
             document.getElementById('mathProblemSection').style.display = 'block';
 
             currentMathQuiz = questions[Math.floor(Math.random() * questions.length)];
-            document.getElementById('mathQuestionText').innerText = `[${topic}]\nQ. ${currentMathQuiz.q}`;
+            document.getElementById('mathQuestionText').innerText = `[${topic}]
+Q. ${currentMathQuiz.q}`;
 
             const answerArea = document.getElementById('mathAnswerArea');
             answerArea.innerHTML = '';
@@ -659,7 +667,6 @@
             }
         }
 
-        // ✨ 콤마로 구분된 정답 처리 로직 적용 (수학) ✨
         function submitMathAnswer() {
             let userAnswer = "";
 
@@ -673,14 +680,17 @@
             }
 
             const cleanUserAns = String(userAnswer).replace(/\s/g, '');
-            const correctAnswers = String(currentMathQuiz.a).split(',').map(a => a.replace(/\s/g, ''));
+            const cleanCorrectAns = String(currentMathQuiz.a).replace(/\s/g, '');
 
             document.getElementById('mathProblemSection').style.display = 'none';
 
-            if (correctAnswers.includes(cleanUserAns)) {
-                saveEventResult('수학', "정답입니다! 👏👏👏", `정답 맞춤 (${userAnswer})`);
+            if (cleanUserAns === cleanCorrectAns) {
+                saveEventResult('수학', "정답입니다! 👏👏👏", `정답 맞춤 (${currentMathQuiz.a})`);
             } else {
-                saveEventResult('수학', `틀렸습니다! 😝\n\n입력하신 답: ${userAnswer}\n정답은 '${currentMathQuiz.a}' 입니다.`, `오답 제출 (${userAnswer})`);
+                saveEventResult('수학', `틀렸습니다! 😝
+
+입력하신 답: ${userAnswer}
+정답은 '${currentMathQuiz.a}' 입니다.`, `오답 제출 (${userAnswer})`);
             }
         }
 
@@ -718,13 +728,14 @@
             let themeColor = '#9b59b6'; // 퀴즈 기본값
             if (type === '상식') themeColor = '#e67e22';
             else if (type === '사자성어') themeColor = '#34495e';
-
+            
             section.style.borderColor = themeColor;
             document.getElementById('btnSubmitQuizAnswer').style.backgroundColor = themeColor;
 
             currentGeneralQuiz = quiz;
             currentGeneralQuizType = type;
-            document.getElementById('quizQuestionText').innerText = `[${type} 문제]\nQ. ${quiz.question}`;
+            document.getElementById('quizQuestionText').innerText = `[${type} 문제]
+Q. ${quiz.question}`;
 
             const answerArea = document.getElementById('quizAnswerArea');
             answerArea.innerHTML = '';
@@ -732,7 +743,7 @@
             // 주관식 단답형 또는 보기가 없는 경우
             if (quiz.question_type === 'short' || !quiz.options || quiz.options.length === 0) {
                 answerArea.innerHTML = `<input type="text" id="quizShortAnswer" class="math-input" placeholder="정답을 입력하세요">`;
-            }
+            } 
             // 객관식 사지선다형인 경우
             else if (quiz.question_type === 'multiple') {
                 let optionsHtml = '<div class="math-options">';
@@ -749,7 +760,6 @@
             }
         }
 
-        // ✨ 콤마로 구분된 정답 처리 로직 적용 (일반 퀴즈) ✨
         function submitGeneralQuizAnswer() {
             let userAnswer = "";
 
@@ -763,16 +773,17 @@
             }
 
             const cleanUserAns = String(userAnswer).replace(/\s/g, '');
-            // 정답을 콤마(,) 기준으로 나누고 각각 공백을 제거한 배열 생성
-            const correctAnswers = String(currentGeneralQuiz.answer).split(',').map(a => a.replace(/\s/g, ''));
+            const cleanCorrectAns = String(currentGeneralQuiz.answer).replace(/\s/g, '');
 
             document.getElementById('quizProblemSection').style.display = 'none';
 
-            // 사용자가 입력한 답이 정답 배열에 포함되어 있는지 확인
-            if (correctAnswers.includes(cleanUserAns)) {
-                saveEventResult(currentGeneralQuizType, "정답입니다! 👏👏👏", `정답 맞춤 (${userAnswer})`);
+            if (cleanUserAns === cleanCorrectAns) {
+                saveEventResult(currentGeneralQuizType, "정답입니다! 👏👏👏", `정답 맞춤 (${currentGeneralQuiz.answer})`);
             } else {
-                saveEventResult(currentGeneralQuizType, `틀렸습니다! 😝\n\n입력하신 답: ${userAnswer}\n정답은 '${currentGeneralQuiz.answer.replace(/,/g, ' 또는 ')}' 입니다.`, `오답 제출 (${userAnswer})`);
+                saveEventResult(currentGeneralQuizType, `틀렸습니다! 😝
+
+입력하신 답: ${userAnswer}
+정답은 '${currentGeneralQuiz.answer}' 입니다.`, `오답 제출 (${userAnswer})`);
             }
         }
 

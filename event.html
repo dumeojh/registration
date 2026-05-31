@@ -251,7 +251,7 @@
             }
         }
 
-        /* ✨ 수학 바둑판 및 문제 영역 스타일 ✨ */
+        /* ✨ 수학 및 퀴즈 문제 영역 스타일 ✨ */
         .math-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -367,6 +367,18 @@
                     style="width: 100%; padding: 10px; background: transparent; color: #7f8c8d; border: none; margin-top: 5px; cursor: pointer; text-decoration: underline;">포기하기</button>
             </div>
 
+            <!-- ✨ 상식 / 퀴즈 / 사자성어 모달 문제 영역 추가 ✨ -->
+            <div id="quizProblemSection" class="math-problem-container" style="display: none; border-color: #e67e22;">
+                <div id="quizQuestionText"
+                    style="font-size: 15px; font-weight: bold; color: #2c3e50; margin-bottom: 15px;"></div>
+                <div id="quizAnswerArea"></div>
+                <button id="btnSubmitQuizAnswer" onclick="submitGeneralQuizAnswer()"
+                    style="width: 100%; padding: 12px; background: #e67e22; color: white; border: none; border-radius: 6px; font-weight: bold; margin-top: 15px; cursor: pointer;">정답
+                    제출</button>
+                <button onclick="cancelGeneralQuizGame()"
+                    style="width: 100%; padding: 10px; background: transparent; color: #7f8c8d; border: none; margin-top: 5px; cursor: pointer; text-decoration: underline;">포기하기</button>
+            </div>
+
             <button id="btnCancelGame"
                 style="width:100%; padding:10px; margin-top:10px; background:transparent; border:none; color:#7f8c8d; text-decoration:underline; cursor:pointer;"
                 onclick="closeGameModal()">취소</button>
@@ -446,6 +458,9 @@
             document.getElementById('btnCancelGame').style.display = 'block';
             document.getElementById('diceContainer').style.display = 'none';
             document.getElementById('diceRewardInfo').style.cursor = 'default';
+            document.getElementById('mathGridSection').style.display = 'none';
+            document.getElementById('mathProblemSection').style.display = 'none';
+            document.getElementById('quizProblemSection').style.display = 'none'; // 초기화 추가
             document.getElementById('gameSelection').style.display = 'block';
             document.getElementById('gameTitle').innerText = `⭐ ${milestone}회차 보상 선택 ⭐`;
             document.getElementById('gameSelection').scrollIntoView({ behavior: 'smooth' });
@@ -471,7 +486,9 @@
                     is_rewarded: false
                 }]);
                 if (error) throw error;
-                alert(`${resultMsg}\n\n(선생님께 상품 지급 요청이 전송되었습니다!)`);
+                alert(`${resultMsg}
+
+(선생님께 상품 지급 요청이 전송되었습니다!)`);
                 closeGameModal();
                 loadMilestones();
             } catch (err) {
@@ -495,7 +512,9 @@
             if (type === '제비뽑기') {
                 const results = ["꽝! 다음 기회에...", "발표 1회 면제권?!", "선생님께 칭찬받기", "꽝! 아쉽네요."];
                 const res = results[Math.floor(Math.random() * results.length)];
-                saveEventResult('제비뽑기', `🎫 제비뽑기 결과:\n\n[ ${res} ]`, res);
+                saveEventResult('제비뽑기', `🎫 제비뽑기 결과:
+
+[ ${res} ]`, res);
             }
             else if (type === '주사위') {
                 document.querySelectorAll('.game-btn').forEach(btn => btn.style.display = 'none');
@@ -533,13 +552,16 @@
 
                 setTimeout(() => {
                     const rewardText = diceRewardMap[num] || "상품 미정";
-                    saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]\n당첨 상품: 🎉 ${rewardText} 🎉`, `주사위 ${num} (${rewardText})`);
+                    saveEventResult('주사위', `🎲 주사위를 굴렸습니다!
+
+나온 숫자: [ ${num} ]
+당첨 상품: 🎉 ${rewardText} 🎉`, `주사위 ${num} (${rewardText})`);
                 }, 2500);
             }
             else if (type === '수학') {
                 openMathGrid();
             }
-            // ✨ 퀴즈, 상식, 사자성어 통합 DB 조회 로직 ✨
+            // ✨ 퀴즈, 상식, 사자성어 모달 기반 문제 조회 연동 로직 ✨
             else if (type === '퀴즈' || type === '상식' || type === '사자성어') {
                 try {
                     const { data, error } = await db.from('quiz_bank').select('*').eq('category', type);
@@ -556,25 +578,7 @@
                     }
 
                     const randomQuiz = data[Math.floor(Math.random() * data.length)];
-                    const ans = prompt(`🤔 ${type} 퀴즈!\n\nQ. ${randomQuiz.question}\n(정답을 입력해 주세요)`);
-
-                    if (ans === null) {
-                        document.querySelectorAll('.game-btn').forEach(btn => {
-                            btn.disabled = false;
-                            btn.style.opacity = '1';
-                            btn.style.cursor = 'pointer';
-                        });
-                        return;
-                    }
-
-                    const cleanAns = ans.replace(/\s/g, '');
-                    const cleanCorrectAns = randomQuiz.answer.replace(/\s/g, '');
-
-                    if (cleanAns === cleanCorrectAns) {
-                        saveEventResult(type, "정답입니다! 👏👏👏", `정답 맞춤 (${randomQuiz.answer})`);
-                    } else {
-                        saveEventResult(type, `틀렸습니다! 😝\n\n입력하신 답: ${ans}\n정답은 '${randomQuiz.answer}' 입니다.`, `오답 제출 (${ans})`);
-                    }
+                    showGeneralQuizProblem(type, randomQuiz);
                 } catch (err) {
                     alert("문제를 불러오는 중 오류가 발생했습니다: " + err.message);
                     document.querySelectorAll('.game-btn').forEach(btn => {
@@ -600,7 +604,6 @@
             document.getElementById('mathGridSection').style.display = 'block';
 
             try {
-                // DB에서 카테고리가 '수학'인 문제만 가져오기
                 const { data, error } = await db.from('quiz_bank').select('*').eq('category', '수학');
                 if (error) throw error;
 
@@ -609,7 +612,6 @@
                     return;
                 }
 
-                // 단원(topic)별로 그룹화
                 const mathQuizData = {};
                 data.forEach(q => {
                     const topic = q.topic || '기타';
@@ -642,7 +644,8 @@
             document.getElementById('mathProblemSection').style.display = 'block';
 
             currentMathQuiz = questions[Math.floor(Math.random() * questions.length)];
-            document.getElementById('mathQuestionText').innerText = `[${topic}]\nQ. ${currentMathQuiz.q}`;
+            document.getElementById('mathQuestionText').innerText = `[${topic}]
+Q. ${currentMathQuiz.q}`;
 
             const answerArea = document.getElementById('mathAnswerArea');
             answerArea.innerHTML = '';
@@ -651,7 +654,6 @@
                 answerArea.innerHTML = `<input type="text" id="mathShortAnswer" class="math-input" placeholder="정답을 입력하세요 (숫자 또는 식)">`;
             } else if (currentMathQuiz.type === 'multiple') {
                 let optionsHtml = '<div class="math-options">';
-                // Supabase에서 JSONB로 불러온 options 배열 렌더링
                 currentMathQuiz.options.forEach((opt, idx) => {
                     optionsHtml += `
                         <label class="math-option-label">
@@ -685,13 +687,108 @@
             if (cleanUserAns === cleanCorrectAns) {
                 saveEventResult('수학', "정답입니다! 👏👏👏", `정답 맞춤 (${currentMathQuiz.a})`);
             } else {
-                saveEventResult('수학', `틀렸습니다! 😝\n\n입력하신 답: ${userAnswer}\n정답은 '${currentMathQuiz.a}' 입니다.`, `오답 제출 (${userAnswer})`);
+                saveEventResult('수학', `틀렸습니다! 😝
+
+입력하신 답: ${userAnswer}
+정답은 '${currentMathQuiz.a}' 입니다.`, `오답 제출 (${userAnswer})`);
             }
         }
 
         function cancelMathGame() {
             document.getElementById('mathGridSection').style.display = 'none';
             document.getElementById('mathProblemSection').style.display = 'none';
+
+            document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => {
+                btn.style.display = 'block';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            });
+            document.getElementById('btnCancelGame').style.display = 'block';
+        }
+
+        // ==========================================
+        // ✨ [추가] 퀴즈 / 상식 / 사자성어 모달 처리 로직 ✨
+        // ==========================================
+        let currentGeneralQuiz = null;
+        let currentGeneralQuizType = '';
+
+        function showGeneralQuizProblem(type, quiz) {
+            // 다른 게임 버튼들과 취소 버튼 감추기
+            document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => btn.style.display = 'none');
+            document.getElementById('btnCancelGame').style.display = 'none';
+            document.getElementById('mathGridSection').style.display = 'none';
+            document.getElementById('mathProblemSection').style.display = 'none';
+
+            // 퀴즈 전용 섹션 열기
+            const section = document.getElementById('quizProblemSection');
+            section.style.display = 'block';
+
+            // 카테고리별 테마 디자인 설정
+            let themeColor = '#9b59b6'; // 퀴즈 기본값
+            if (type === '상식') themeColor = '#e67e22';
+            else if (type === '사자성어') themeColor = '#34495e';
+            
+            section.style.borderColor = themeColor;
+            document.getElementById('btnSubmitQuizAnswer').style.backgroundColor = themeColor;
+
+            currentGeneralQuiz = quiz;
+            currentGeneralQuizType = type;
+            document.getElementById('quizQuestionText').innerText = `[${type} 문제]
+Q. ${quiz.question}`;
+
+            const answerArea = document.getElementById('quizAnswerArea');
+            answerArea.innerHTML = '';
+
+            // 주관식 단답형 또는 보기가 없는 경우
+            if (quiz.question_type === 'short' || !quiz.options || quiz.options.length === 0) {
+                answerArea.innerHTML = `<input type="text" id="quizShortAnswer" class="math-input" placeholder="정답을 입력하세요">`;
+            } 
+            // 객관식 사지선다형인 경우
+            else if (quiz.question_type === 'multiple') {
+                let optionsHtml = '<div class="math-options">';
+                quiz.options.forEach((opt, idx) => {
+                    optionsHtml += `
+                        <label class="math-option-label">
+                            <input type="radio" name="quizMultipleAnswer" value="${opt}">
+                            <b>${idx + 1}.</b> ${opt}
+                        </label>
+                    `;
+                });
+                optionsHtml += '</div>';
+                answerArea.innerHTML = optionsHtml;
+            }
+        }
+
+        function submitGeneralQuizAnswer() {
+            let userAnswer = "";
+
+            if (currentGeneralQuiz.question_type === 'short' || !currentGeneralQuiz.options || currentGeneralQuiz.options.length === 0) {
+                userAnswer = document.getElementById('quizShortAnswer').value.trim();
+                if (!userAnswer) return alert("정답을 입력해주세요.");
+            } else {
+                const selected = document.querySelector('input[name="quizMultipleAnswer"]:checked');
+                if (!selected) return alert("보기를 선택해 주세요.");
+                userAnswer = selected.value;
+            }
+
+            const cleanUserAns = String(userAnswer).replace(/\s/g, '');
+            const cleanCorrectAns = String(currentGeneralQuiz.answer).replace(/\s/g, '');
+
+            document.getElementById('quizProblemSection').style.display = 'none';
+
+            if (cleanUserAns === cleanCorrectAns) {
+                saveEventResult(currentGeneralQuizType, "정답입니다! 👏👏👏", `정답 맞춤 (${currentGeneralQuiz.answer})`);
+            } else {
+                saveEventResult(currentGeneralQuizType, `틀렸습니다! 😝
+
+입력하신 답: ${userAnswer}
+정답은 '${currentGeneralQuiz.answer}' 입니다.`, `오답 제출 (${userAnswer})`);
+            }
+        }
+
+        function cancelGeneralQuizGame() {
+            document.getElementById('quizProblemSection').style.display = 'none';
 
             document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => {
                 btn.style.display = 'block';

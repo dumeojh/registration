@@ -1,14 +1,10 @@
 // common.js
+const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
 
-// 1. 공통 인쇄 기능
-function printPage() {
-    window.print();
-}
-
-// 2. 공통 네비게이션 기능
-function goBack() {
-    history.back();
-}
+// 다른 파일에서 db라는 변수명으로 바로 접근할 수 있도록 전역(window) 객체에 등록합니다.
+// settings.html에서 사용하던 세션 비활성화 옵션을 공통 적용해도 다른 페이지에 문제가 없습니다.
+window.db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 
 // 3. AI 분석 요청 공통 함수
 async function submitToAI(currentGrade) {

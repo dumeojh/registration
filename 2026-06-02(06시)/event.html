@@ -340,7 +340,7 @@
             <button class="game-btn btn-dice" id="btnDiceGame" onclick="playGame('주사위')">🎲 주사위 굴리기</button>
 
             <div id="diceRewardInfo" class="game-btn"
-                style="background:#fff; border:2px dashed #3498db; cursor:default; margin-bottom:15px; text-align:left; color:#2c3e50; font-weight:normal; display:none;">
+                style="background:#fff; border:2px dashed #3498db; cursor:default; margin-bottom:15px; text-align:left; color:#2c3e50; font-weight:normal;">
                 상품 정보를 불러오는 중입니다...
             </div>
 
@@ -367,6 +367,7 @@
                     style="width: 100%; padding: 10px; background: transparent; color: #7f8c8d; border: none; margin-top: 5px; cursor: pointer; text-decoration: underline;">포기하기</button>
             </div>
 
+            <!-- ✨ 상식 / 퀴즈 / 사자성어 모달 문제 영역 추가 ✨ -->
             <div id="quizProblemSection" class="math-problem-container" style="display: none; border-color: #e67e22;">
                 <div id="quizQuestionText"
                     style="font-size: 15px; font-weight: bold; color: #2c3e50; margin-bottom: 15px;"></div>
@@ -401,29 +402,6 @@
         let currentActiveMilestone = 0;
         const maxMilestone = Math.floor(totalCount / 5) * 5;
         let diceRewardMap = {};
-
-        // 💡 전역 변수로 개별 게임 상태 저장 (기본값은 true)
-        let gameSettings = {
-            lottery: true, dice: true, quiz: true, math: true, common: true, idiom: true
-        };
-
-        // 💡 개별 게임 설정 DB에서 불러오기
-        async function loadGameSettings() {
-            try {
-                const { data, error } = await db.from('system_settings').select('*').like('key', 'event_%_enabled');
-                if (data) {
-                    data.forEach(s => {
-                        // 키워드 분리 (예: event_lottery_enabled -> lottery)
-                        const type = s.key.split('_')[1];
-                        if (gameSettings[type] !== undefined) {
-                            gameSettings[type] = (s.value === 'true');
-                        }
-                    });
-                }
-            } catch (e) {
-                console.error('개별 게임 설정 로드 실패', e);
-            }
-        }
 
         async function loadDiceRewards() {
             try {
@@ -471,33 +449,18 @@
 
         function openGameModal(milestone) {
             currentActiveMilestone = milestone;
-
-            // 1. 모든 게임 버튼을 먼저 보이지 않도록 숨깁니다.
             document.querySelectorAll('.game-btn').forEach(btn => {
-                btn.style.display = 'none';
+                btn.style.display = 'block';
                 btn.disabled = false;
                 btn.style.opacity = '1';
                 btn.style.cursor = 'pointer';
             });
-
-            // 2. DB에서 읽어온 설정값에 따라 개별적으로 노출시킵니다.
-            if (gameSettings.lottery) document.getElementById('btnLotteryGame').style.display = 'block';
-            if (gameSettings.dice) {
-                document.getElementById('btnDiceGame').style.display = 'block';
-                document.getElementById('diceRewardInfo').style.display = 'block';
-            }
-            if (gameSettings.quiz) document.getElementById('btnQuizGame').style.display = 'block';
-            if (gameSettings.math) document.getElementById('btnMathGame').style.display = 'block';
-            if (gameSettings.common) document.getElementById('btnCommonGame').style.display = 'block';
-            if (gameSettings.idiom) document.getElementById('btnIdiomGame').style.display = 'block';
-
             document.getElementById('btnCancelGame').style.display = 'block';
             document.getElementById('diceContainer').style.display = 'none';
             document.getElementById('diceRewardInfo').style.cursor = 'default';
             document.getElementById('mathGridSection').style.display = 'none';
             document.getElementById('mathProblemSection').style.display = 'none';
-            document.getElementById('quizProblemSection').style.display = 'none';
-
+            document.getElementById('quizProblemSection').style.display = 'none'; // 초기화 추가
             document.getElementById('gameSelection').style.display = 'block';
             document.getElementById('gameTitle').innerText = `⭐ ${milestone}회차 보상 선택 ⭐`;
             document.getElementById('gameSelection').scrollIntoView({ behavior: 'smooth' });
@@ -528,8 +491,12 @@
                 loadMilestones();
             } catch (err) {
                 alert("기록 중 오류: " + err.message);
-                // 오류 시 다시 버튼 상태 복원 (현재 활성화된 버튼만)
-                openGameModal(currentActiveMilestone);
+                document.querySelectorAll('.game-btn').forEach(btn => {
+                    btn.style.display = 'block';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                });
             }
         }
 
@@ -595,8 +562,11 @@
 
                     if (!data || data.length === 0) {
                         alert(`등록된 ${type} 문제가 없습니다! 선생님께 문의해주세요.`);
-                        // 다시 버튼 활성화 복원
-                        openGameModal(currentActiveMilestone);
+                        document.querySelectorAll('.game-btn').forEach(btn => {
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.style.cursor = 'pointer';
+                        });
                         return;
                     }
 
@@ -604,7 +574,11 @@
                     showGeneralQuizProblem(type, randomQuiz);
                 } catch (err) {
                     alert("문제를 불러오는 중 오류가 발생했습니다: " + err.message);
-                    openGameModal(currentActiveMilestone);
+                    document.querySelectorAll('.game-btn').forEach(btn => {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    });
                 }
             }
         }
@@ -714,8 +688,13 @@
             document.getElementById('mathGridSection').style.display = 'none';
             document.getElementById('mathProblemSection').style.display = 'none';
 
-            // 취소 시 활성화 설정된 버튼들만 다시 복구
-            openGameModal(currentActiveMilestone);
+            document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => {
+                btn.style.display = 'block';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            });
+            document.getElementById('btnCancelGame').style.display = 'block';
         }
 
         // ==========================================
@@ -800,13 +779,17 @@
         function cancelGeneralQuizGame() {
             document.getElementById('quizProblemSection').style.display = 'none';
 
-            // 취소 시 활성화 설정된 버튼들만 다시 복구
-            openGameModal(currentActiveMilestone);
+            document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => {
+                btn.style.display = 'block';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            });
+            document.getElementById('btnCancelGame').style.display = 'block';
         }
 
         loadDiceRewards();
         loadMilestones();
-        loadGameSettings(); // 페이지 로딩 시 게임 설정 불러오기
     </script>
 </body>
 

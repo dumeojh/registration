@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>안성여고 2026 교육과정 박람회</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="common.js"></script>
     <style>
         /* 기본 배경 및 폰트 설정 */
         body {
@@ -406,6 +407,11 @@
                 <h2>과목선택 가이드</h2>
                 <p>관련 홈페이지로 이동하여 추가 정보를 확인하세요.</p>
             </a>
+            <a href="teacher_advice.html" class="card" style="border-color: #28a745;">
+                <div class="icon">👩‍🏫</div>
+                <h2 style="color: #28a745;">교사용 진학 상담 조회</h2>
+                <p>1학년 학생들의 희망 계열 및 학과를 학급별로 조회하고 출력합니다.</p>
+            </a>
 
         </div>
     </div>
@@ -482,9 +488,7 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
-        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 
         // 부스 조회 관련 함수
         function openModal() {
@@ -581,11 +585,9 @@
                 const subjects = await fetchAllRows('subjects', 'subject_name, subject_group');
                 const groupMap = {};
                 if (subjects) subjects.forEach(sub => groupMap[sub.subject_name] = sub.subject_group || "기타");
+                const { data: students, error: stuErr } = await db.from('students').select('uid, student_id, name').order('student_id', { ascending: true }); if (stuErr) throw stuErr;
 
-                const { data: students, error: stuErr } = await db.from('students').select('student_id, name').order('student_id', { ascending: true });
-                if (stuErr) throw stuErr;
-
-                const enrollments = await fetchAllRows('student_enrollments', 'student_id, subject_name');
+                const enrollments = await fetchAllRows('student_enrollments', 'student_uid, subject_name');
 
                 globalAdminData = { students, enrollments, groupMap };
 
@@ -636,7 +638,7 @@
                     if (student.student_id.substring(1, 3) !== classFilter) return;
                 }
 
-                const myEnrollments = enrollments.filter(e => e.student_id === student.student_id);
+                const myEnrollments = enrollments.filter(e => e.student_uid === student.uid);
                 const groupCounts = { "사회": 0, "예술": 0 };
 
                 myEnrollments.forEach(e => {

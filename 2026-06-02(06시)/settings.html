@@ -7,6 +7,7 @@
     <title>시스템 환경설정</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="common.js"></script>
     <style>
         :root {
             --primary-color: #4a90e2;
@@ -354,9 +355,6 @@
             if (btnElement) btnElement.classList.add('active');
         }
 
-        const SUPABASE_URL = 'https://xkxqbowangecvotyxwsz.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhreHFib3dhbmdlY3ZvdHl4d3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTEwNDEsImV4cCI6MjA5NDMyNzA0MX0.LvNmU2zzN70VnHvIIxv0hGZxvjUE2HlLKc5H-inSQLM';
-        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 
 
         // ✨ 1. 학생 명단 스마트 업로드 로직 ✨

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>이벤트 존</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="common.js"></script>
     <style>
@@ -255,6 +256,62 @@
             }
         }
 
+        /* 🌟 꽝(폭탄) 당첨 시 화면 흔들림 효과 CSS */
+        @keyframes shake {
+            0% {
+                transform: translate(1px, 1px) rotate(0deg);
+            }
+
+            10% {
+                transform: translate(-1px, -2px) rotate(-1deg);
+            }
+
+            20% {
+                transform: translate(-3px, 0px) rotate(1deg);
+            }
+
+            30% {
+                transform: translate(3px, 2px) rotate(0deg);
+            }
+
+            40% {
+                transform: translate(1px, -1px) rotate(1deg);
+            }
+
+            50% {
+                transform: translate(-1px, 2px) rotate(-1deg);
+            }
+
+            60% {
+                transform: translate(-3px, 1px) rotate(0deg);
+            }
+
+            70% {
+                transform: translate(3px, 1px) rotate(-1deg);
+            }
+
+            80% {
+                transform: translate(-1px, -1px) rotate(1deg);
+            }
+
+            90% {
+                transform: translate(1px, 2px) rotate(0deg);
+            }
+
+            100% {
+                transform: translate(1px, -2px) rotate(-1deg);
+            }
+        }
+
+        .shake-animation {
+            animation: shake 0.5s;
+            animation-iteration-count: 2;
+            /* 흔들림 2번 반복 */
+            background-color: #ffeaea !important;
+            /* 배경색 붉게 변경 */
+            transition: background-color 0.3s;
+        }
+
         .math-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -447,7 +504,11 @@
                     let html = '<div style="font-weight:bold; color:#2980b9; margin-bottom:12px; text-align:center;">🎁 오늘의 주사위 상품</div>';
                     html += '<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px;">';
                     data.forEach(r => {
-                        diceRewardMap[r.dice_number] = r.reward_name;
+                        // 🌟 단순 이름뿐만 아니라 타입(type)도 객체로 저장합니다.
+                        diceRewardMap[r.dice_number] = {
+                            name: r.reward_name,
+                            type: r.reward_type || 'normal' // 만약 DB에 타입이 없다면 기본값 normal 적용
+                        };
                         html += `
                             <div style="background:#ecf0f1; padding:10px 5px; border-radius:6px; font-size:13px; text-align:center; word-break:keep-all; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:45px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); box-sizing:border-box;">
                                 <b style="color:#e74c3c; margin-bottom:4px; font-size:14px;">[${r.dice_number}]</b> 
@@ -626,9 +687,36 @@
                 dice3D.style.transition = 'transform 2s cubic-bezier(0.1, 0.8, 0.2, 1)';
                 dice3D.style.transform = `rotateX(${finalRotateX}deg) rotateY(${finalRotateY}deg)`;
 
+                // 🌟 주사위 애니메이션 종료 후 처리 로직 (이펙트 추가)
                 setTimeout(() => {
-                    const rewardText = diceRewardMap[num] || "상품 미정";
-                    saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]\n당첨 상품: 🎉 ${rewardText} 🎉`, `주사위 ${num} (${rewardText})`);
+                    const rewardInfo = diceRewardMap[num] || { name: "상품 미정", type: "normal" };
+
+                    if (rewardInfo.type === 'jackpot') {
+                        // 🎉 대박 효과: 폭죽 터뜨리기
+                        confetti({
+                            particleCount: 150,
+                            spread: 80,
+                            origin: { y: 0.6 },
+                            zIndex: 9999
+                        });
+
+                        setTimeout(() => {
+                            saveEventResult('주사위', `🎉 대박 당첨!! 🎉\n\n나온 숫자: [ ${num} ]\n당첨 상품: ${rewardInfo.name}`, `주사위 ${num} (${rewardInfo.name} - 대박)`);
+                        }, 1000); // 폭죽 감상 후 1초 뒤 알림
+
+                    } else if (rewardInfo.type === 'boom') {
+                        // 💣 꽝 효과: 화면 흔들림
+                        document.body.classList.add('shake-animation');
+
+                        setTimeout(() => {
+                            document.body.classList.remove('shake-animation'); // 흔들림 해제
+                            saveEventResult('주사위', `💣 꽝입니다!! 💣\n\n나온 숫자: [ ${num} ]\n당첨 상품: ${rewardInfo.name}`, `주사위 ${num} (${rewardInfo.name} - 꽝)`);
+                        }, 1000); // 흔들림 종료 후 알림
+
+                    } else {
+                        // 🎲 일반 상품
+                        saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]\n당첨 상품: 🎉 ${rewardInfo.name} 🎉`, `주사위 ${num} (${rewardInfo.name})`);
+                    }
                 }, 2500);
             }
             else if (type === '수학') {
@@ -830,14 +918,13 @@
             openGameModal(currentActiveMilestone);
         }
 
-        // 🌟 수정된 부분: 설정부터 불러오고, 완료되면 화면을 그리도록 변경
         async function initializeEventZone() {
-            await loadGameSettings(); // 설정이 모두 불러와질 때까지 대기
-            loadMilestones();         // 설정 값(ON/OFF)을 바탕으로 화면 그리기
-            loadDiceRewards();        // 주사위 보상 정보 불러오기
+            await loadGameSettings();
+            loadMilestones();
+            loadDiceRewards();
         }
 
-        initializeEventZone(); // 실행
+        initializeEventZone(); 
     </script>
 </body>
 

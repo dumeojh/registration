@@ -652,26 +652,11 @@
                     </div>
                 </div>
 
-                <div
-                    style="background: #e8f8f5; padding: 15px; border-radius: 8px; border: 1px solid #a3e4d7; margin-bottom: 15px;">
-                    <label style="margin-top: 0; font-size: 14px; font-weight: bold; color: #117864;">JSON 대량 등록
-                        (고급)</label>
-                    <p style="font-size: 12px; color: #148f77; margin: 5px 0;">여러 개의 문제를 한 번에 등록하려면 아래에 JSON 배열을 붙여넣고
-                        버튼을 누르세요.</p>
-                    <textarea id="bulkJsonInput" rows="5"
-                        placeholder='[{"category":"퀴즈","question_type":"short","question":"문제","answer":"정답"}, ...]'
-                        style="font-size: 12px; font-family: monospace;"></textarea>
-                    <button type="button" id="btnBulkAddQuiz"
-                        style="padding: 10px; font-size: 14px; background-color: #1abc9c; margin-top: 10px;">🚀 JSON 데이터
-                        일괄 등록하기</button>
-                </div>
-
-                <!-- 🌟 카테고리 필터가 추가된 부분 -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <h4 style="margin: 0; color: #2c3e50;">📌 등록된 문제 목록</h4>
                     <select id="filterQuizCategory" onchange="fetchQuizList()"
                         style="width: auto; padding: 6px; font-size: 13px; border-radius: 6px; border: 1px solid #bdc3c7;">
-                        <option value="all">전체 보기</option>
+                        <option value="none" selected>목록 숨기기 (선택 시 조회)</option>
                         <option value="퀴즈">🤔 넌센스</option>
                         <option value="수학">📐 수학</option>
                         <option value="상식">🌍 상식</option>
@@ -681,7 +666,7 @@
 
                 <div id="quizListContainer"
                     style="max-height: 350px; overflow-y: auto; background: #ecf0f1; padding: 10px; border-radius: 8px;">
-                    <p style="text-align: center; color: #7f8c8d; font-size: 13px;">불러오는 중...</p>
+                    <p style="text-align: center; color: #7f8c8d; font-size: 13px;">카테고리를 선택하면 문제가 표시됩니다.</p>
                 </div>
             </div>
 
@@ -1313,7 +1298,8 @@
             if (e.ctrlKey) {
                 document.getElementById('adminModal').classList.remove('hidden');
                 populateClassSelect('classSelect');
-                fetchQuizList();
+                document.getElementById('filterQuizCategory').value = 'none';
+                document.getElementById('quizListContainer').innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">카테고리를 선택하면 문제가 표시됩니다.</p>';
             }
         });
 
@@ -1330,7 +1316,8 @@
                 if (pwd === "1") {
                     document.getElementById('adminModal').classList.remove('hidden');
                     populateClassSelect('classSelect');
-                    fetchQuizList();
+                    document.getElementById('filterQuizCategory').value = 'none';
+                    document.getElementById('quizListContainer').innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">카테고리를 선택하면 문제가 표시됩니다.</p>';
                 } else if (pwd !== null) {
                     alert("비밀번호가 틀렸습니다.");
                 }
@@ -1362,7 +1349,6 @@
 
         document.getElementById('btnTabQuiz').addEventListener('click', () => {
             switchAdminTab('adminQuizSection');
-            fetchQuizList();
         });
 
         document.getElementById('btnTabDice').addEventListener('click', () => {
@@ -1567,69 +1553,76 @@
 
         setTimeout(toggleQuizFields, 100);
 
-        // 🌟 [수정됨] 선택한 카테고리에 맞는 퀴즈만 불러오도록 필터링 로직 추가
+        // 🌟 수정됨: 카테고리가 'none'이면 데이터베이스에 요청을 보내지 않고 대기합니다.
         async function fetchQuizList() {
             const container = document.getElementById('quizListContainer');
-            const selectedCategory = document.getElementById('filterQuizCategory') ? document.getElementById('filterQuizCategory').value : 'all';
+            const selectedCategory = document.getElementById('filterQuizCategory') ? document.getElementById('filterQuizCategory').value : 'none';
+
+            if (selectedCategory === 'none') {
+                container.innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">카테고리를 선택하면 문제가 표시됩니다.</p>';
+                return;
+            }
 
             container.innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">불러오는 중...</p>';
             try {
-                let query = db.from('quiz_bank').select('*').order('created_at', { ascending: false });
+                const { data, error } = await db.from('quiz_bank')
+                    .select('*')
+                    .eq('category', selectedCategory)
+                    .order('created_at', { ascending: false });
 
-                // '전체 보기'가 아닐 때만 카테고리 필터 적용
-                if (selectedCategory !== 'all') {
-                    query = query.eq('category', selectedCategory);
-                }
-
-                const { data, error } = await query;
                 if (error) throw error;
 
                 if (!data || data.length === 0) {
-                    container.innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">등록된 문제가 없습니다.</p>';
+                    container.innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">해당 카테고리에 등록된 문제가 없습니다.</p>';
                     return;
                 }
 
-                let html = '';
-                data.forEach(q => {
-                    const badgeColor = q.category === '수학' ? '#1abc9c' : (q.category === '상식' ? '#e67e22' : (q.category === '사자성어' ? '#34495e' : '#9b59b6'));
-                    const topicHtml = q.topic ? `<span style="color:#7f8c8d; font-size:12px;">[${q.topic}]</span>` : '';
-                    const typeHtml = q.question_type === 'multiple' ? '<span style="font-size:11px; color:#3498db; border:1px solid #3498db; padding:2px 4px; border-radius:4px;">객관식</span>' : '<span style="font-size:11px; color:#e67e22; border:1px solid #e67e22; padding:2px 4px; border-radius:4px;">단답형</span>';
-
-                    html += `
-                        <div class="quiz-item" style="align-items: flex-start;">
-                            <div style="flex: 1; padding-right: 10px;">
-                                <div style="margin-bottom: 5px;">
-                                    <span style="background:${badgeColor}; color:white; padding:3px 6px; border-radius:4px; font-size:11px; font-weight:bold;">${q.category}</span>
-                                    ${topicHtml} ${typeHtml}
-                                </div>
-                                <div style="line-height: 1.4;">
-                                    <span style="color:#2c3e50; font-weight:bold;">Q.</span> ${q.question}<br>
-                                    <span style="color:#27ae60; font-weight:bold;">A.</span> ${q.answer}
-                                </div>
-                            </div>
-                            <div style="display: flex; flex-direction: column; gap: 5px;">
-                                <button class="btn-edit-quiz" data-id="${q.id}" data-quiz='${JSON.stringify(q)}' style="width:auto; padding:6px 12px; margin:0; background:#f39c12; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">수정</button>
-                                <button class="btn-del-quiz" data-id="${q.id}" style="width:auto; padding:6px 12px; margin:0; background:#e74c3c; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">삭제</button>
-                            </div>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
-
-                document.querySelectorAll('.btn-del-quiz').forEach(btn => btn.addEventListener('click', async (e) => {
-                    if (!confirm("이 문제를 삭제하시겠습니까?")) return;
-                    await db.from('quiz_bank').delete().eq('id', e.target.dataset.id);
-                    fetchQuizList();
-                }));
-
-                document.querySelectorAll('.btn-edit-quiz').forEach(btn => btn.addEventListener('click', (e) => {
-                    const quizData = JSON.parse(e.target.dataset.quiz);
-                    loadQuizForEditing(quizData);
-                }));
-
+                renderQuizItems(data); // 🌟 목록을 그리는 부분을 별도 함수로 분리했습니다.
             } catch (err) {
                 container.innerHTML = `<p style="color:red;">오류: ${err.message}</p>`;
             }
+        }
+
+        // 🌟 새로 추가됨: 화면에 퀴즈 목록을 그려주는 전용 함수
+        function renderQuizItems(data) {
+            const container = document.getElementById('quizListContainer');
+            let html = '';
+            data.forEach(q => {
+                const badgeColor = q.category === '수학' ? '#1abc9c' : (q.category === '상식' ? '#e67e22' : (q.category === '사자성어' ? '#34495e' : '#9b59b6'));
+                const topicHtml = q.topic ? `<span style="color:#7f8c8d; font-size:12px;">[${q.topic}]</span>` : '';
+                const typeHtml = q.question_type === 'multiple' ? '<span style="font-size:11px; color:#3498db; border:1px solid #3498db; padding:2px 4px; border-radius:4px;">객관식</span>' : '<span style="font-size:11px; color:#e67e22; border:1px solid #e67e22; padding:2px 4px; border-radius:4px;">단답형</span>';
+
+                html += `
+                    <div class="quiz-item" style="align-items: flex-start;">
+                        <div style="flex: 1; padding-right: 10px;">
+                            <div style="margin-bottom: 5px;">
+                                <span style="background:${badgeColor}; color:white; padding:3px 6px; border-radius:4px; font-size:11px; font-weight:bold;">${q.category}</span>
+                                ${topicHtml} ${typeHtml}
+                            </div>
+                            <div style="line-height: 1.4;">
+                                <span style="color:#2c3e50; font-weight:bold;">Q.</span> ${q.question}<br>
+                                <span style="color:#27ae60; font-weight:bold;">A.</span> ${q.answer}
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <button class="btn-edit-quiz" data-id="${q.id}" data-quiz='${JSON.stringify(q).replace(/'/g, "&#39;")}' style="width:auto; padding:6px 12px; margin:0; background:#f39c12; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">수정</button>
+                            <button class="btn-del-quiz" data-id="${q.id}" style="width:auto; padding:6px 12px; margin:0; background:#e74c3c; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">삭제</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+
+            document.querySelectorAll('.btn-del-quiz').forEach(btn => btn.addEventListener('click', async (e) => {
+                if (!confirm("이 문제를 삭제하시겠습니까?")) return;
+                await db.from('quiz_bank').delete().eq('id', e.target.dataset.id);
+                fetchQuizList();
+            }));
+
+            document.querySelectorAll('.btn-edit-quiz').forEach(btn => btn.addEventListener('click', (e) => {
+                const quizData = JSON.parse(e.target.dataset.quiz);
+                loadQuizForEditing(quizData);
+            }));
         }
 
         function loadQuizForEditing(quiz) {
@@ -1723,22 +1716,28 @@
             };
         }
 
+        // 🌟 수정됨: 새로운 문제를 추가한 후, 전체를 불러오지 않고 해당 문제만 화면에 띄웁니다.
         document.getElementById('btnAddQuiz').addEventListener('click', async () => {
             const insertData = buildQuizData();
             if (!insertData) return;
 
             try {
-                const { error } = await db.from('quiz_bank').insert([insertData]);
+                const { data, error } = await db.from('quiz_bank').insert([insertData]).select();
                 if (error) throw error;
 
                 alert("문제가 DB에 성공적으로 추가되었습니다!");
                 resetQuizForm();
-                fetchQuizList();
+
+                // 추가된 문제를 목록에 바로 표시 (DB 추가 요청 없음)
+                document.getElementById('filterQuizCategory').value = 'none';
+                renderQuizItems(data);
+
             } catch (err) {
                 alert("문제 추가 실패: " + err.message);
             }
         });
 
+        // 🌟 수정됨: 기존 문제를 수정한 후, 전체를 불러오지 않고 수정된 문제만 화면에 띄웁니다.
         document.getElementById('btnUpdateQuiz').addEventListener('click', async () => {
             if (!editingQuizId) return;
 
@@ -1746,12 +1745,16 @@
             if (!updateData) return;
 
             try {
-                const { error } = await db.from('quiz_bank').update(updateData).eq('id', editingQuizId);
+                const { data, error } = await db.from('quiz_bank').update(updateData).eq('id', editingQuizId).select();
                 if (error) throw error;
 
                 alert("문제가 성공적으로 수정되었습니다!");
                 resetQuizForm();
-                fetchQuizList();
+
+                // 수정된 문제를 목록에 바로 표시 (DB 추가 요청 없음)
+                document.getElementById('filterQuizCategory').value = 'none';
+                renderQuizItems(data);
+
             } catch (err) {
                 alert("문제 수정 실패: " + err.message);
             }
@@ -1774,9 +1777,12 @@
                 const { error } = await db.from('quiz_bank').insert(dataToInsert);
                 if (error) throw error;
 
-                alert(`🎉 성공적으로 ${dataToInsert.length}개의 문제가 등록되었습니다!`);
+                alert(`🎉 성공적으로 ${dataToInsert.length}개의 문제가 등록되었습니다!\n\n(대량 등록 후에는 카테고리를 선택하여 확인하세요)`);
                 document.getElementById('bulkJsonInput').value = '';
-                fetchQuizList();
+
+                // 대량 등록 후에는 목록 숨김
+                document.getElementById('filterQuizCategory').value = 'none';
+                document.getElementById('quizListContainer').innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">카테고리를 선택하면 문제가 표시됩니다.</p>';
 
             } catch (err) {
                 alert("등록 실패! JSON 형식을 다시 확인해 주세요.\n\n에러 메시지: " + err.message);

@@ -404,6 +404,7 @@
             lottery: true, dice: true, quiz: true, math: true, common: true, idiom: true
         };
         let isWholeClassEventEnabled = false;
+        let isRegularEventEnabled = true; // 🌟 5의 배수 변수 추가
 
         async function loadGameSettings() {
             try {
@@ -418,6 +419,10 @@
                         }
                         if (s.key === 'whole_class_event_enabled') {
                             isWholeClassEventEnabled = (s.value === 'true');
+                        }
+                        // 🌟 5의 배수 이벤트 상태 불러오기
+                        if (s.key === 'regular_event_enabled') {
+                            isRegularEventEnabled = (s.value === 'true');
                         }
                     });
                 }
@@ -475,8 +480,9 @@
                 html += `</div>`;
             }
 
-            // 🎯 2. 정규 발표(5의 배수) 이벤트 영역 분리
-            if (maxMilestone >= 5) {
+            // 🎯 2. 정규 발표(5의 배수) 이벤트 영역 제어
+            // 관리자가 5의 배수 이벤트를 켜두었을 때만 렌더링되도록 isRegularEventEnabled 조건을 추가합니다.
+            if (isRegularEventEnabled && maxMilestone >= 5) {
                 html += `
                 <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; border: 1px solid #bde0fe; text-align: left;">
                     <h3 style="margin-top: 0; margin-bottom: 15px; color: #2980b9; font-size: 16px;">🎯 발표 달성 이벤트 (5회 단위)</h3>
@@ -496,10 +502,13 @@
                 html += `</div>`;
             }
 
+            // 활성화된 이벤트가 하나도 없을 때 보여줄 안내 문구 추가
+            if (!isWholeClassEventEnabled && (!isRegularEventEnabled || maxMilestone < 5)) {
+                html += `<p style="color: #7f8c8d; text-align: center; padding: 20px;">현재 참여 가능한 이벤트가 없습니다.</p>`;
+            }
+
             document.getElementById('milestoneList').innerHTML = html;
         }
-
-
 
         function openGameModal(milestone) {
             currentActiveMilestone = milestone;

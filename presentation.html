@@ -2090,12 +2090,16 @@
 
             try {
                 const { error } = await db.from('manual_records').upsert(dataToUpsert, { onConflict: 'student_id' });
-                if (error) <input type="password" id="pwdInput" throw error;
+                if (error) throw error;
                 alert('✅ 전체 학생의 횟수가 일괄 저장되었습니다!');
             } catch (error) { alert('저장 중 에러 발생: ' + error.message); }
         });
 
     </script>
+</body>
+
+</html>
+</script>
 </body>
 
 </html>

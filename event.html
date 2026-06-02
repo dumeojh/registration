@@ -57,7 +57,6 @@
             justify-content: center;
             gap: 5px;
             box-sizing: border-box;
-            /* 패딩/테두리 포함 크기 계산 */
         }
 
         .milestone-btn.active {
@@ -95,7 +94,6 @@
             margin-top: 20px;
             cursor: pointer;
             box-sizing: border-box;
-            /* 패딩/테두리 포함 크기 계산 */
         }
 
         .game-modal {
@@ -127,7 +125,6 @@
             cursor: pointer;
             transition: 0.2s;
             box-sizing: border-box;
-            /* 패딩/테두리 포함 크기 계산 (삐져나감 방지) */
         }
 
         .game-btn:active {
@@ -317,7 +314,6 @@
             border: 1px solid #bdc3c7;
             border-radius: 6px;
             box-sizing: border-box;
-            /* 입력창도 패딩/테두리 포함 크기 계산 */
         }
     </style>
 </head>
@@ -834,9 +830,14 @@
             openGameModal(currentActiveMilestone);
         }
 
-        loadDiceRewards();
-        loadMilestones();
-        loadGameSettings();
+        // 🌟 수정된 부분: 설정부터 불러오고, 완료되면 화면을 그리도록 변경
+        async function initializeEventZone() {
+            await loadGameSettings(); // 설정이 모두 불러와질 때까지 대기
+            loadMilestones();         // 설정 값(ON/OFF)을 바탕으로 화면 그리기
+            loadDiceRewards();        // 주사위 보상 정보 불러오기
+        }
+
+        initializeEventZone(); // 실행
     </script>
 </body>
 

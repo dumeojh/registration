@@ -424,12 +424,15 @@
     </div>
 
     <div class="form-container hidden" id="recordSection">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-            <h2 style="margin: 0;">🎤 발표 기록</h2>
-            <button type="button" id="btnGoEvent" disabled
-                style="width: auto; padding: 8px 15px; margin-top: 0; background-color: #bdc3c7; color: white; font-size: 14px; cursor: not-allowed; border: none;">
-                🔒 이벤트 대기중
-            </button>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px;">
+            <h2 style="margin: 0; text-align: left;">🎤 발표 기록</h2>
+
+            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                <button type="button" id="btnGoSpecialEvent"
+                    style="display: none; flex: 1; padding: 10px 5px; margin-top: 0; font-size: 13px; border: none; border-radius: 6px;"></button>
+                <button type="button" id="btnGoRegularEvent"
+                    style="display: none; flex: 1; padding: 10px 5px; margin-top: 0; font-size: 13px; border: none; border-radius: 6px;"></button>
+            </div>
         </div>
 
         <div class="stats-box" id="statsBox"></div>
@@ -652,28 +655,37 @@
                 <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 시스템 전체 및 개별 이벤트의 작동 여부를 설정합니다.</p>
 
                 <div
-                    style="background: #fdf2e9; padding: 20px; border-radius: 8px; border: 1px solid #fad7a1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <div>
-                        <strong style="color: #e67e22; font-size: 16px;">🎉 이벤트 존 전체 활성화</strong>
-                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #d35400;">스위치를 끄면 이벤트 페이지 접근 자체가 차단됩니다.</p>
+                    style="background: #fdf2e9; padding: 15px; border-radius: 8px; border: 1px solid #fad7a1; margin-bottom: 15px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #fad7a1;">
+                        <div>
+                            <strong style="color: #e67e22; font-size: 16px;">🎉 이벤트 존 전체 활성화</strong>
+                            <p style="margin: 5px 0 0 0; font-size: 12px; color: #d35400;">스위치를 끄면 모든 이벤트 접근이 차단됩니다.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggleEventStatus">
+                            <span class="slider"></span>
+                        </label>
                     </div>
-                    <label class="switch">
-                        <input type="checkbox" id="toggleEventStatus">
-                        <span class="slider"></span>
-                    </label>
-                </div>
 
-                <div
-                    style="background: #fdf2e9; padding: 20px; border-radius: 8px; border: 1px solid #fad7a1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <div>
-                        <strong style="color: #8e44ad; font-size: 16px;">🎊 전체 학생 특별 이벤트 활성화</strong>
-                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #9b59b6;">스위치를 켜면 발표 횟수와 무관하게 모든 학생이 1회 참여할
-                            수 있습니다.</p>
+                    <div style="display: flex; gap: 10px;">
+                        <div
+                            style="flex: 1; background: white; padding: 10px; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; flex-direction: column; align-items: center; text-align: center;">
+                            <strong style="color: #8e44ad; font-size: 13px; margin-bottom: 10px;">🌟 전체 특별 이벤트</strong>
+                            <label class="switch">
+                                <input type="checkbox" id="toggleWholeClassEvent">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div
+                            style="flex: 1; background: white; padding: 10px; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; flex-direction: column; align-items: center; text-align: center;">
+                            <strong style="color: #2980b9; font-size: 13px; margin-bottom: 10px;">🎯 5의 배수 이벤트</strong>
+                            <label class="switch">
+                                <input type="checkbox" id="toggleRegularEvent">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
                     </div>
-                    <label class="switch">
-                        <input type="checkbox" id="toggleWholeClassEvent">
-                        <span class="slider"></span>
-                    </label>
                 </div>
 
                 <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; border: 1px solid #bde0fe;">
@@ -722,10 +734,11 @@
 
         let isEventEnabled = true;
         let isWholeClassEventEnabled = false;
+        let isRegularEventEnabled = true; // 5의 배수 이벤트 변수 추가
 
         async function fetchSystemSettings() {
             try {
-                const { data, error } = await db.from('system_settings').select('*').in('key', ['event_enabled', 'whole_class_event_enabled']);
+                const { data, error } = await db.from('system_settings').select('*').in('key', ['event_enabled', 'whole_class_event_enabled', 'regular_event_enabled']);
                 if (error && error.code !== 'PGRST116') throw error;
 
                 if (data) {
@@ -739,6 +752,11 @@
                             isWholeClassEventEnabled = setting.value === 'true';
                             const toggleWholeBtn = document.getElementById('toggleWholeClassEvent');
                             if (toggleWholeBtn) toggleWholeBtn.checked = isWholeClassEventEnabled;
+                        }
+                        if (setting.key === 'regular_event_enabled') {
+                            isRegularEventEnabled = setting.value === 'true';
+                            const toggleRegBtn = document.getElementById('toggleRegularEvent');
+                            if (toggleRegBtn) toggleRegBtn.checked = isRegularEventEnabled;
                         }
                     });
                 }
@@ -801,7 +819,6 @@
                 }
                 const totalCount = autoTotal + manualCount;
                 const maxMilestone = Math.floor(totalCount / 5) * 5;
-                const btnGoEvent = document.getElementById('btnGoEvent');
 
                 const { data: eventLogs } = await db.from('event_logs').select('milestone').eq('student_id', currentStudentId);
                 const uniqueMilestones = new Set();
@@ -817,39 +834,67 @@
                 const completedCount = uniqueMilestones.size;
                 const availableCount = (maxMilestone >= 5) ? Math.floor(maxMilestone / 5) - completedCount : 0;
 
+                // 🌟 분리된 버튼 2개 제어
+                const btnGoSpecialEvent = document.getElementById('btnGoSpecialEvent');
+                const btnGoRegularEvent = document.getElementById('btnGoRegularEvent');
+                btnGoSpecialEvent.style.display = 'block';
+                btnGoRegularEvent.style.display = 'block';
+
                 if (isEventEnabled) {
-                    if (isWholeClassEventEnabled && !hasParticipatedSpecial) {
-                        btnGoEvent.disabled = false;
-                        btnGoEvent.style.backgroundColor = '#8e44ad';
-                        btnGoEvent.style.color = 'white';
-                        btnGoEvent.style.cursor = 'pointer';
-                        btnGoEvent.innerText = `🎊 특별 이벤트 입장 가능!`;
-                        btnGoEvent.onclick = () => {
-                            window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
-                        };
-                    } else if (availableCount > 0) {
-                        btnGoEvent.disabled = false;
-                        btnGoEvent.style.backgroundColor = '#f1c40f';
-                        btnGoEvent.style.color = '#2c3e50';
-                        btnGoEvent.style.cursor = 'pointer';
-                        btnGoEvent.innerText = `🎉 달성 이벤트 입장 (${availableCount}개 가능)`;
-                        btnGoEvent.onclick = () => {
-                            window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
-                        };
+                    // 1. 특별 이벤트 버튼
+                    if (isWholeClassEventEnabled) {
+                        if (!hasParticipatedSpecial) {
+                            btnGoSpecialEvent.disabled = false;
+                            btnGoSpecialEvent.style.backgroundColor = '#8e44ad';
+                            btnGoSpecialEvent.style.color = 'white';
+                            btnGoSpecialEvent.style.cursor = 'pointer';
+                            btnGoSpecialEvent.innerText = `🎊 특별 이벤트 가능!`;
+                            btnGoSpecialEvent.onclick = () => {
+                                window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
+                            };
+                        } else {
+                            btnGoSpecialEvent.disabled = true;
+                            btnGoSpecialEvent.style.backgroundColor = '#d7bde2';
+                            btnGoSpecialEvent.style.color = 'white';
+                            btnGoSpecialEvent.style.cursor = 'not-allowed';
+                            btnGoSpecialEvent.innerText = `✅ 특별 이벤트 완료`;
+                        }
                     } else {
-                        btnGoEvent.disabled = true;
-                        btnGoEvent.style.backgroundColor = '#bdc3c7';
-                        btnGoEvent.style.color = 'white';
-                        btnGoEvent.style.cursor = 'not-allowed';
-                        const nextTarget = Math.floor((totalCount / 5)) * 5 + 5;
-                        btnGoEvent.innerText = `🔒 이벤트 대기 (다음: ${nextTarget}회)`;
+                        btnGoSpecialEvent.style.display = 'none';
+                    }
+
+                    // 2. 5의 배수 달성 이벤트 버튼
+                    if (isRegularEventEnabled) {
+                        if (availableCount > 0) {
+                            btnGoRegularEvent.disabled = false;
+                            btnGoRegularEvent.style.backgroundColor = '#f1c40f';
+                            btnGoRegularEvent.style.color = '#2c3e50';
+                            btnGoRegularEvent.style.cursor = 'pointer';
+                            btnGoRegularEvent.innerText = `🎉 달성 이벤트 (${availableCount}개)`;
+                            btnGoRegularEvent.onclick = () => {
+                                window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
+                            };
+                        } else {
+                            btnGoRegularEvent.disabled = true;
+                            btnGoRegularEvent.style.backgroundColor = '#bdc3c7';
+                            btnGoRegularEvent.style.color = 'white';
+                            btnGoRegularEvent.style.cursor = 'not-allowed';
+                            const nextTarget = Math.floor((totalCount / 5)) * 5 + 5;
+                            btnGoRegularEvent.innerText = `🔒 다음 이벤트 (${nextTarget}회)`;
+                        }
+                    } else {
+                        btnGoRegularEvent.style.display = 'none';
                     }
                 } else {
-                    btnGoEvent.disabled = true;
-                    btnGoEvent.style.backgroundColor = '#95a5a6';
-                    btnGoEvent.style.color = 'white';
-                    btnGoEvent.style.cursor = 'not-allowed';
-                    btnGoEvent.innerText = `🔒 이벤트 준비중 (선생님 설정)`;
+                    // 전체 활성화 스위치가 꺼진 경우
+                    btnGoSpecialEvent.style.display = 'block';
+                    btnGoSpecialEvent.disabled = true;
+                    btnGoSpecialEvent.style.backgroundColor = '#95a5a6';
+                    btnGoSpecialEvent.style.color = 'white';
+                    btnGoSpecialEvent.style.cursor = 'not-allowed';
+                    btnGoSpecialEvent.innerText = `🔒 이벤트 전체 차단됨`;
+
+                    btnGoRegularEvent.style.display = 'none';
                 }
 
                 const gradePrefix = Math.floor(currentStudentId / 10000);
@@ -1271,6 +1316,26 @@
 
                 isWholeClassEventEnabled = isChecked;
                 alert(`전체 학생 특별 이벤트가 성공적으로 ${isChecked ? '활성화' : '비활성화'} 되었습니다.`);
+
+                if (currentStudentId) refreshStats();
+            } catch (err) {
+                alert("설정 저장 실패: " + err.message);
+                e.target.checked = !isChecked;
+            }
+        });
+
+        document.getElementById('toggleRegularEvent').addEventListener('change', async (e) => {
+            const isChecked = e.target.checked;
+            try {
+                const { error } = await db.from('system_settings').upsert({
+                    key: 'regular_event_enabled',
+                    value: isChecked ? 'true' : 'false'
+                }, { onConflict: 'key' });
+
+                if (error) throw error;
+
+                isRegularEventEnabled = isChecked;
+                alert(`5의 배수 이벤트가 성공적으로 ${isChecked ? '활성화' : '비활성화'} 되었습니다.`);
 
                 if (currentStudentId) refreshStats();
             } catch (err) {

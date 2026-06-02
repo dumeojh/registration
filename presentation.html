@@ -508,12 +508,17 @@
                 <select id="classSelect" style="width: auto; padding: 10px;"></select>
                 <button id="btnFetchClass" style="width: auto; padding: 10px;">조회</button>
                 <div style="overflow-x: auto; margin-top:10px;">
+                    <!-- 🌟 정렬 기능이 추가된 테이블 헤더 -->
                     <table id="classTable">
                         <thead>
                             <tr>
-                                <th>학번</th>
-                                <th>이름</th>
-                                <th>합계</th>
+                                <th onclick="sortClassTable('student_id')" style="cursor:pointer; user-select:none;">학번
+                                    <span id="sort_icon_student_id" style="font-size:12px; color:#95a5a6;">↕</span></th>
+                                <th onclick="sortClassTable('name')" style="cursor:pointer; user-select:none;">이름 <span
+                                        id="sort_icon_name" style="font-size:12px; color:#95a5a6;">↕</span></th>
+                                <th onclick="sortClassTable('total')"
+                                    style="cursor:pointer; user-select:none; color:#2980b9;">합계 <span
+                                        id="sort_icon_total" style="font-size:12px;">▼</span></th>
                             </tr>
                         </thead>
                         <tbody id="classTableBody"></tbody>
@@ -950,7 +955,7 @@
 
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight" style="font-size: 1.2em;">${currentStudentId} ${currentStudentName}</p>
-                    <div style="font-size: 14px; background: #e8f4fd; padding: 10px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px 시olid #bde0fe; display: flex; justify-content: space-around; margin-top: 10px;">
+                    <div style="font-size: 14px; background: #e8f4fd; padding: 10px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; justify-content: space-around; margin-top: 10px;">
                         <span>🏆 반: <span style="color:#e74c3c; font-size: 16px;">${classRank}</span>등${classTieText}</span>
                         <span>🏅 학년: <span style="color:#e74c3c; font-size: 16px;">${gradeRank}</span>등${gradeTieText}</span>
                     </div>
@@ -1678,6 +1683,11 @@
             document.getElementById(elementId).innerHTML = html;
         }
 
+        // 🌟 [추가] 반별 통계 정렬을 위한 전역 변수
+        let currentClassData = [];
+        let currentSortCol = 'total'; // 기본 정렬 기준: 합계
+        let currentSortDesc = true;   // 기본 정렬 방향: 내림차순(높은순)
+
         document.getElementById('btnFetchClass').addEventListener('click', async () => {
             const classPrefix = document.getElementById('classSelect').value;
             if (!classPrefix) return alert('조회할 반을 선택해주세요.');
@@ -1699,14 +1709,64 @@
                 const { data: presRecords } = await db.from('presentation').select('student_id').in('student_id', studentIds).eq('is_approved', true);
                 const presMap = {}; if (presRecords) presRecords.forEach(r => presMap[r.student_id] = (presMap[r.student_id] || 0) + 1);
 
-                let html = '';
-                studentsList.forEach(s => {
-                    const total = (manualMap[parseInt(s.student_id, 10)] || 0) + (presMap[parseInt(s.student_id, 10)] || 0);
-                    html += `<tr><td>${s.student_id}</td><td>${s.name}</td><td style="font-weight:bold; color:#2980b9; font-size:1.1em;">${total}</td></tr>`;
+                // 🌟 데이터를 배열로 저장
+                currentClassData = studentsList.map(s => {
+                    return {
+                        student_id: s.student_id,
+                        name: s.name,
+                        total: (manualMap[parseInt(s.student_id, 10)] || 0) + (presMap[parseInt(s.student_id, 10)] || 0)
+                    };
                 });
-                tbody.innerHTML = html;
+
+                // 조회할 때마다 기본값(합계 높은 순)으로 정렬 초기화
+                currentSortCol = 'total';
+                currentSortDesc = true;
+                renderClassTable();
+
             } catch (error) { alert('목록 조회 중 에러: ' + error.message); }
         });
+
+        // 🌟 [추가] 테이블 정렬 실행 함수
+        window.sortClassTable = function (column) {
+            if (currentSortCol === column) {
+                currentSortDesc = !currentSortDesc; // 같은 열 클릭 시 오름/내림차순 토글
+            } else {
+                currentSortCol = column;
+                // 합계는 내림차순(▼)이 기본, 학번/이름은 오름차순(▲)이 기본
+                currentSortDesc = (column === 'total') ? true : false;
+            }
+            renderClassTable();
+        };
+
+        // 🌟 [추가] 정렬된 데이터를 화면에 그리는 함수
+        function renderClassTable() {
+            const tbody = document.getElementById('classTableBody');
+
+            // 데이터 정렬 로직
+            currentClassData.sort((a, b) => {
+                let valA = a[currentSortCol];
+                let valB = b[currentSortCol];
+
+                if (currentSortCol === 'total') {
+                    return currentSortDesc ? valB - valA : valA - valB;
+                } else {
+                    // 학번, 이름은 문자열 비교
+                    return currentSortDesc ? String(valB).localeCompare(String(valA)) : String(valA).localeCompare(String(valB));
+                }
+            });
+
+            // 아이콘 UI 업데이트
+            document.getElementById('sort_icon_student_id').innerText = currentSortCol === 'student_id' ? (currentSortDesc ? '▼' : '▲') : '↕';
+            document.getElementById('sort_icon_name').innerText = currentSortCol === 'name' ? (currentSortDesc ? '▼' : '▲') : '↕';
+            document.getElementById('sort_icon_total').innerText = currentSortCol === 'total' ? (currentSortDesc ? '▼' : '▲') : '↕';
+
+            // HTML 생성 및 적용
+            let html = '';
+            currentClassData.forEach(s => {
+                html += `<tr><td>${s.student_id}</td><td>${s.name}</td><td style="font-weight:bold; color:#2980b9; font-size:1.1em;">${s.total}</td></tr>`;
+            });
+            tbody.innerHTML = html;
+        }
 
         document.getElementById('btnFetchManualClass').addEventListener('click', async () => {
             const classPrefix = document.getElementById('manualClassSelect').value;

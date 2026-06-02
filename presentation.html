@@ -696,13 +696,11 @@
                 </div>
             </div>
 
-            <!-- 🎫 제비뽑기 관리 섹션 추가 -->
             <div id="adminLotterySection" class="hidden">
                 <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 제비뽑기 바둑판에 들어갈 문구와 개수를 설정합니다. 전체 합이
                     40개가 안 되면 나머지는 '꽝'으로 채워집니다.</p>
                 <div style="background: #fdf2e9; padding: 15px; border-radius: 8px; border: 1px solid #fad7a1;">
                     <div id="lotteryFormContainer" style="display: flex; flex-direction: column; gap: 10px;">
-                        <!-- 항목들이 자바스크립트로 들어갑니다 -->
                     </div>
                     <button type="button" id="btnAddLotteryItem"
                         style="background-color: #f39c12; margin-top: 10px; padding: 10px;">+ 항목 추가</button>
@@ -790,6 +788,21 @@
         </div>
     </div>
 
+    <div id="passwordModal" class="modal-overlay hidden" style="z-index: 20000;">
+        <div class="modal-content" style="max-width: 300px; text-align: center; padding: 30px;">
+            <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; margin-bottom: 20px;" id="pwdModalTitle">비밀번호 입력
+            </h3>
+            <input type="password" id="pwdInput"
+                style="text-align: center; letter-spacing: 8px; font-size: 24px; padding: 10px;" placeholder="****">
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="btnPwdCancel" class="btn-secondary"
+                    style="margin-top: 0; flex: 1; padding: 12px; font-size: 15px;">취소</button>
+                <button id="btnPwdConfirm"
+                    style="margin-top: 0; flex: 1; padding: 12px; font-size: 15px; background-color: #27ae60;">확인</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 전역 변수들
         let currentStudentId = null;
@@ -801,6 +814,49 @@
         let isEventEnabled = true;
         let isWholeClassEventEnabled = false;
         let isRegularEventEnabled = true;
+
+        // 🔒 커스텀 비밀번호 프롬프트 함수
+        function askPassword(title) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('passwordModal');
+                const titleEl = document.getElementById('pwdModalTitle');
+                const input = document.getElementById('pwdInput');
+                const btnConfirm = document.getElementById('btnPwdConfirm');
+                const btnCancel = document.getElementById('btnPwdCancel');
+
+                titleEl.innerText = title;
+                input.value = '';
+                modal.classList.remove('hidden');
+                setTimeout(() => input.focus(), 100);
+
+                const cleanup = () => {
+                    modal.classList.add('hidden');
+                    btnConfirm.removeEventListener('click', onConfirm);
+                    btnCancel.removeEventListener('click', onCancel);
+                    input.removeEventListener('keydown', onKeydown);
+                };
+
+                const onConfirm = () => {
+                    const pwd = input.value;
+                    cleanup();
+                    resolve(pwd);
+                };
+
+                const onCancel = () => {
+                    cleanup();
+                    resolve(null);
+                };
+
+                const onKeydown = (e) => {
+                    if (e.key === 'Enter') onConfirm();
+                    if (e.key === 'Escape') onCancel();
+                };
+
+                btnConfirm.addEventListener('click', onConfirm);
+                btnCancel.addEventListener('click', onCancel);
+                input.addEventListener('keydown', onKeydown);
+            });
+        }
 
         async function fetchSystemSettings() {
             try {
@@ -1170,7 +1226,7 @@
                 clearTimeout(tapTimerWait);
                 tapCountWait = 0;
 
-                const pwd = prompt("선생님 확인용 비밀번호를 입력하세요:");
+                const pwd = await askPassword("선생님 확인용 비밀번호를 입력하세요");
                 if (pwd === "1") {
                     document.getElementById('approvalModal').classList.remove('hidden');
                     await fetchPendingApprovals();
@@ -1346,7 +1402,7 @@
                 clearTimeout(tapTimerAdmin);
                 tapCountAdmin = 0;
 
-                const pwd = prompt("관리자용 비밀번호를 입력하세요:");
+                const pwd = await askPassword("관리자용 비밀번호를 입력하세요");
                 if (pwd === "1") {
                     document.getElementById('adminModal').classList.remove('hidden');
                     populateClassSelect('classSelect');

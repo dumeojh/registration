@@ -377,14 +377,13 @@
             box-sizing: border-box;
         }
 
-        /* 🎫 제비뽑기 보드 스타일 */
+        /* 🎫 제비뽑기 보드 스타일 (완전 개편) */
         #lotteryBoard {
             display: none;
             grid-template-columns: repeat(5, 1fr);
             gap: 8px;
             margin: 20px 0;
-            position: relative;
-            /* 중앙 팝업 계산을 위한 기준점 */
+            /* 원활한 z-index 계산을 위해 기준점 제거 */
         }
 
         .lottery-card {
@@ -392,7 +391,15 @@
             aspect-ratio: 1 / 1;
             background-color: transparent;
             cursor: pointer;
+            position: relative;
+            /* 카드가 선택되지 않았을 때는 뒤로, 선택되면 맨 앞으로 */
+            z-index: 1;
             perspective: 1000px;
+        }
+
+        .lottery-card.flipped {
+            z-index: 9999;
+            /* 오버레이보다 무조건 위로 오게 설정 */
         }
 
         .lottery-inner {
@@ -400,32 +407,17 @@
             width: 100%;
             height: 100%;
             text-align: center;
-            /* 기본 회전 속도 */
-            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            /* 뽕! 하고 통통 튀는 텐션 애니메이션 적용 */
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
             transform-style: preserve-3d;
-            border-radius: 6px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
-        /* 클릭된 카드가 중앙으로 날아오면서 뒤집히는 스타일 */
+        /* 🚀 핵심: 제자리에서 가로세로 2배(넓이 4배)로 커지며 뒤집힘 */
         .lottery-card.flipped .lottery-inner {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            /* fixed 포지션에서 중앙 정렬 후 크기를 키우고 회전 */
-            transform: translate(-50%, -50%) rotateY(180deg) scale(3.5);
-            z-index: 9999;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            /* 크기가 커질 때 부드럽게 전환되도록 시간 조정 */
-            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            /* 모달창보다 무조건 위에 오도록 설정 */
-            margin: 0;
-            width: 60px;
-            /* 원래 카드 크기를 고정시켜 비율 유지 */
-            height: 60px;
+            transform: rotateY(180deg) scale(2);
         }
 
-        /* 카드가 튀어나올 때 뒷배경을 살짝 어둡게 해주는 오버레이 효과 */
+        /* 카드가 튀어나올 때 뒷배경을 어둡게 해주는 오버레이 효과 */
         #lotteryOverlay {
             display: none;
             position: fixed;
@@ -433,7 +425,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.75);
             z-index: 9990;
             transition: opacity 0.5s;
         }
@@ -443,36 +435,44 @@
             position: absolute;
             width: 100%;
             height: 100%;
+            /* 사파리 등 모바일 브라우저 뒷면 겹침 버그 완벽 해결 */
+            -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
+            border-radius: 8px;
             box-sizing: border-box;
-            font-size: 13px;
-            font-weight: bold;
         }
 
+        /* 고급스러운 미스터리 박스 테마 (세련된 보라/파랑 그라데이션) */
         .lottery-front {
-            background-color: #ff9a9e;
-            /* 파스텔 코랄 핑크 */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            font-size: 20px;
-            border: 1px solid #ff7eb3;
+            font-size: 26px;
+            font-weight: bold;
+            border: 2px solid #a372f5;
+            box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.2), 0 3px 6px rgba(0, 0, 0, 0.1);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            /* 앞면 명시 */
+            transform: rotateY(0deg) translateZ(1px);
         }
 
+        /* 결과가 나오는 뒷면 (눈에 띄는 화이트/골드 톤) */
         .lottery-back {
-            background-color: #ffe5b4;
-            /* 파스텔 피치/노랑 */
+            background: linear-gradient(135deg, #ffffff 0%, #fff8e1 100%);
             color: #d35400;
-            /* 글씨 색상을 좀 더 진하고 선명하게 */
-            transform: rotateY(180deg);
-            border: 2px solid #f39c12;
+            /* 진한 오렌지/브라운 톤으로 텍스트 명시성 확보 */
+            border: 3px solid #f1c40f;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
             padding: 5px;
             word-break: keep-all;
-            /* scale로 커지기 때문에 폰트 크기를 약간 작게 설정해야 깨지지 않음 */
+            /* 2배 커질 것을 계산해 폰트는 작게 설정 (실제로는 선명하게 22px로 보임) */
             font-size: 11px;
-            line-height: 1.2;
+            font-weight: 900;
+            line-height: 1.3;
+            /* 뒷면 명시 */
+            transform: rotateY(180deg) translateZ(1px);
         }
     </style>
 </head>
@@ -488,7 +488,6 @@
         <div id="gameSelection" class="game-modal">
             <h3 id="gameTitle"></h3>
 
-            <!-- 🎫 제비뽑기 보드, 로딩, 오버레이 추가 -->
             <div id="lotteryOverlay"></div>
             <div id="lotteryBoard"></div>
             <p id="lotteryLoading" style="display:none; text-align:center; color:#7f8c8d; margin: 20px 0;">바둑판을 섞는
@@ -754,7 +753,7 @@
                             if (isFlipping) return;
                             isFlipping = true;
 
-                            // 배경 오버레이 표시 및 카드 뒤집기 애니메이션 적용
+                            // 배경 오버레이 표시 및 카드를 최상단으로 올리기
                             overlay.style.display = 'block';
                             card.classList.add('flipped');
 

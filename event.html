@@ -721,7 +721,9 @@
                 btn.style.cursor = 'not-allowed';
             });
 
-            // 🎫 제비뽑기 게임 로직 완전히 수정
+
+
+            // 🎫 제비뽑기 게임 로직 수정
             if (type === '제비뽑기') {
                 document.querySelectorAll('.game-btn').forEach(btn => btn.style.display = 'none');
                 document.getElementById('btnCancelGame').style.display = 'none';
@@ -783,16 +785,18 @@
                                 confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
                             }
 
-                            // 2초 뒤에 결과 저장 및 창 닫기
+                            // ⏱️ 3.5초 뒤에 결과 저장 및 창 닫기로 변경 (기존 2000 -> 3500)
                             setTimeout(() => {
                                 board.style.display = 'none';
                                 saveEventResult('제비뽑기', `🎫 제비뽑기 결과:\n\n[ ${reward} ]`, `제비뽑기 (${reward})`);
-                            }, 2000);
+                            }, 3500);
                         });
                         board.appendChild(card);
                     });
                 });
             }
+
+
             else if (type === '주사위') {
                 document.querySelectorAll('.game-btn').forEach(btn => btn.style.display = 'none');
                 document.getElementById('btnCancelGame').style.display = 'none';

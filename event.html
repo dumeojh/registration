@@ -158,6 +158,12 @@
 
         .btn-idiom {
             background-color: #34495e;
+            margin-bottom: 5px;
+        }
+
+        /* 🌟 스피드 설명 버튼 색상 추가 */
+        .btn-challenge {
+            background-color: #d35400;
         }
 
         #diceContainer {
@@ -256,7 +262,6 @@
             }
         }
 
-        /* 🌟 꽝(폭탄) 당첨 시 화면 흔들림 효과 CSS */
         @keyframes shake {
             0% {
                 transform: translate(1px, 1px) rotate(0deg);
@@ -306,9 +311,7 @@
         .shake-animation {
             animation: shake 0.5s;
             animation-iteration-count: 2;
-            /* 흔들림 2번 반복 */
             background-color: #ffeaea !important;
-            /* 배경색 붉게 변경 */
             transition: background-color 0.3s;
         }
 
@@ -404,13 +407,15 @@
 
             <div id="diceRewardInfo" class="game-btn"
                 style="background:#fff; border:2px dashed #3498db; cursor:default; margin-bottom:15px; text-align:left; color:#2c3e50; font-weight:normal; display:none;">
-                상품 정보를 불러오는 중입니다...
-            </div>
+                상품 정보를 불러오는 중입니다...</div>
 
             <button class="game-btn btn-quiz" id="btnQuizGame" onclick="playGame('퀴즈')">🤔 넌센스 아재개그</button>
             <button class="game-btn btn-math" id="btnMathGame" onclick="playGame('수학')">📐 수학문제 도전</button>
             <button class="game-btn btn-common" id="btnCommonGame" onclick="playGame('상식')">🌍 상식에 도전</button>
             <button class="game-btn btn-idiom" id="btnIdiomGame" onclick="playGame('사자성어')">📜 사자성어 도전</button>
+
+            <button class="game-btn btn-challenge" id="btnChallengeGame" onclick="playGame('도전(스피드 설명)')">⏱️ 스피드 설명 (검색
+                찬스)</button>
 
             <div id="mathGridSection" style="display: none;">
                 <h4 style="margin: 10px 0; color: #2c3e50;">📚 도전할 단원을 선택하세요</h4>
@@ -467,7 +472,7 @@
         let diceRewardMap = {};
 
         let gameSettings = {
-            lottery: true, dice: true, quiz: true, math: true, common: true, idiom: true
+            lottery: true, dice: true, quiz: true, math: true, common: true, idiom: true, challenge: true
         };
         let isWholeClassEventEnabled = false;
         let isRegularEventEnabled = true;
@@ -504,10 +509,9 @@
                     let html = '<div style="font-weight:bold; color:#2980b9; margin-bottom:12px; text-align:center;">🎁 오늘의 주사위 상품</div>';
                     html += '<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px;">';
                     data.forEach(r => {
-                        // 🌟 단순 이름뿐만 아니라 타입(type)도 객체로 저장합니다.
                         diceRewardMap[r.dice_number] = {
                             name: r.reward_name,
-                            type: r.reward_type || 'normal' // 만약 DB에 타입이 없다면 기본값 normal 적용
+                            type: r.reward_type || 'normal'
                         };
                         html += `
                             <div style="background:#ecf0f1; padding:10px 5px; border-radius:6px; font-size:13px; text-align:center; word-break:keep-all; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:45px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); box-sizing:border-box;">
@@ -598,6 +602,7 @@
             if (gameSettings.math) document.getElementById('btnMathGame').style.display = 'block';
             if (gameSettings.common) document.getElementById('btnCommonGame').style.display = 'block';
             if (gameSettings.idiom) document.getElementById('btnIdiomGame').style.display = 'block';
+            if (gameSettings.challenge) document.getElementById('btnChallengeGame').style.display = 'block'; // 🌟 스피드 설명 버튼 노출
 
             document.getElementById('btnCancelGame').style.display = 'block';
             document.getElementById('diceContainer').style.display = 'none';
@@ -687,34 +692,23 @@
                 dice3D.style.transition = 'transform 2s cubic-bezier(0.1, 0.8, 0.2, 1)';
                 dice3D.style.transform = `rotateX(${finalRotateX}deg) rotateY(${finalRotateY}deg)`;
 
-                // 🌟 주사위 애니메이션 종료 후 처리 로직 (이펙트 추가)
                 setTimeout(() => {
                     const rewardInfo = diceRewardMap[num] || { name: "상품 미정", type: "normal" };
 
                     if (rewardInfo.type === 'jackpot') {
-                        // 🎉 대박 효과: 폭죽 터뜨리기
-                        confetti({
-                            particleCount: 150,
-                            spread: 80,
-                            origin: { y: 0.6 },
-                            zIndex: 9999
-                        });
-
+                        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 9999 });
                         setTimeout(() => {
                             saveEventResult('주사위', `🎉 대박 당첨!! 🎉\n\n나온 숫자: [ ${num} ]\n당첨 상품: ${rewardInfo.name}`, `주사위 ${num} (${rewardInfo.name} - 대박)`);
-                        }, 1000); // 폭죽 감상 후 1초 뒤 알림
+                        }, 1000);
 
                     } else if (rewardInfo.type === 'boom') {
-                        // 💣 꽝 효과: 화면 흔들림
                         document.body.classList.add('shake-animation');
-
                         setTimeout(() => {
-                            document.body.classList.remove('shake-animation'); // 흔들림 해제
+                            document.body.classList.remove('shake-animation');
                             saveEventResult('주사위', `💣 꽝입니다!! 💣\n\n나온 숫자: [ ${num} ]\n당첨 상품: ${rewardInfo.name}`, `주사위 ${num} (${rewardInfo.name} - 꽝)`);
-                        }, 1000); // 흔들림 종료 후 알림
+                        }, 1000);
 
                     } else {
-                        // 🎲 일반 상품
                         saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]\n당첨 상품: 🎉 ${rewardInfo.name} 🎉`, `주사위 ${num} (${rewardInfo.name})`);
                     }
                 }, 2500);
@@ -722,7 +716,8 @@
             else if (type === '수학') {
                 openMathGrid();
             }
-            else if (type === '퀴즈' || type === '상식' || type === '사자성어') {
+            // 🌟 스피드 설명 게임 분기 추가
+            else if (type === '퀴즈' || type === '상식' || type === '사자성어' || type === '도전(스피드 설명)') {
                 try {
                     const { data, error } = await db.from('quiz_bank').select('*').eq('category', type);
                     if (error) throw error;
@@ -734,7 +729,13 @@
                     }
 
                     const randomQuiz = data[Math.floor(Math.random() * data.length)];
-                    showGeneralQuizProblem(type, randomQuiz);
+
+                    if (type === '도전(스피드 설명)') {
+                        showChallengeProblem(randomQuiz); // 🌟 스피드 설명 전용 UI 함수 호출
+                    } else {
+                        showGeneralQuizProblem(type, randomQuiz); // 일반 퀴즈 함수 호출
+                    }
+
                 } catch (err) {
                     alert("문제를 불러오는 중 오류가 발생했습니다: " + err.message);
                     openGameModal(currentActiveMilestone);
@@ -848,6 +849,40 @@
         let currentGeneralQuiz = null;
         let currentGeneralQuizType = '';
 
+        // 🌟 스피드 설명 전용 화면 (문제와 정답 동시 노출, 설명 완료 버튼)
+        function showChallengeProblem(quiz) {
+            document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => btn.style.display = 'none');
+            document.getElementById('btnCancelGame').style.display = 'none';
+
+            const section = document.getElementById('quizProblemSection');
+            section.style.display = 'block';
+            section.style.borderColor = '#d35400';
+
+            // 질문과 정답을 동시에 보여주고 미션 텍스트 추가
+            document.getElementById('quizQuestionText').innerHTML = `
+                <div style="font-size:14px; color:#d35400; margin-bottom:8px;">[스피드 설명 도전]</div>
+                <div style="font-size:16px; margin-bottom:12px; line-height:1.4;"><b>Q.</b> ${quiz.question}</div>
+                <div style="font-size:16px; color:#128c46; background:#eafaf1; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #2ecc71;">
+                    <b>A. 정답:</b> ${quiz.answer}
+                </div>
+                <div style="font-size:13px; color:#7f8c8d; text-align:center; padding-top:10px; border-top:1px dashed #bdc3c7;">
+                    🔍 스마트폰이나 태블릿으로 검색해 보세요!<br><b>정답이 왜 저것인지 이유를 찾아</b><br>친구들에게 멋지게 설명해 주세요.
+                </div>
+            `;
+
+            // 입력창 없앰
+            document.getElementById('quizAnswerArea').innerHTML = '';
+
+            // 제출 버튼의 기능을 "설명 완료" 로 변경
+            const btnSubmit = document.getElementById('btnSubmitQuizAnswer');
+            btnSubmit.style.backgroundColor = '#d35400';
+            btnSubmit.innerText = "🎉 멋지게 설명 완료!";
+            btnSubmit.onclick = () => {
+                document.getElementById('quizProblemSection').style.display = 'none';
+                saveEventResult('도전(스피드 설명)', "선생님과 친구들에게 멋진 설명을 해냈습니다! 👏👏👏", `스피드 설명 성공`);
+            };
+        }
+
         function showGeneralQuizProblem(type, quiz) {
             document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => btn.style.display = 'none');
             document.getElementById('btnCancelGame').style.display = 'none';
@@ -862,11 +897,10 @@
             else if (type === '사자성어') themeColor = '#34495e';
 
             section.style.borderColor = themeColor;
-            document.getElementById('btnSubmitQuizAnswer').style.backgroundColor = themeColor;
 
             currentGeneralQuiz = quiz;
             currentGeneralQuizType = type;
-            document.getElementById('quizQuestionText').innerText = `[${type} 문제]\nQ. ${quiz.question}`;
+            document.getElementById('quizQuestionText').innerHTML = `[${type} 문제]<br>Q. ${quiz.question}`;
 
             const answerArea = document.getElementById('quizAnswerArea');
             answerArea.innerHTML = '';
@@ -887,6 +921,12 @@
                 optionsHtml += '</div>';
                 answerArea.innerHTML = optionsHtml;
             }
+
+            // 제출 버튼 기능 원래대로 복구
+            const btnSubmit = document.getElementById('btnSubmitQuizAnswer');
+            btnSubmit.style.backgroundColor = themeColor;
+            btnSubmit.innerText = "정답 제출";
+            btnSubmit.onclick = submitGeneralQuizAnswer;
         }
 
         function submitGeneralQuizAnswer() {

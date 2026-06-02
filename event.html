@@ -27,6 +27,7 @@
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             text-align: center;
+            box-sizing: border-box;
         }
 
         h2 {
@@ -55,6 +56,8 @@
             align-items: center;
             justify-content: center;
             gap: 5px;
+            box-sizing: border-box;
+            /* 패딩/테두리 포함 크기 계산 */
         }
 
         .milestone-btn.active {
@@ -91,6 +94,8 @@
             font-size: 16px;
             margin-top: 20px;
             cursor: pointer;
+            box-sizing: border-box;
+            /* 패딩/테두리 포함 크기 계산 */
         }
 
         .game-modal {
@@ -101,6 +106,7 @@
             border-radius: 12px;
             border: 1px solid #3498db;
             position: relative;
+            box-sizing: border-box;
         }
 
         .game-modal h3 {
@@ -120,6 +126,8 @@
             color: white;
             cursor: pointer;
             transition: 0.2s;
+            box-sizing: border-box;
+            /* 패딩/테두리 포함 크기 계산 (삐져나감 방지) */
         }
 
         .game-btn:active {
@@ -267,6 +275,7 @@
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.1s;
+            box-sizing: border-box;
         }
 
         .math-topic-btn:active {
@@ -280,6 +289,7 @@
             border: 2px solid #1abc9c;
             margin-top: 15px;
             text-align: left;
+            box-sizing: border-box;
         }
 
         .math-options {
@@ -297,6 +307,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            box-sizing: border-box;
         }
 
         .math-input {
@@ -306,6 +317,7 @@
             border: 1px solid #bdc3c7;
             border-radius: 6px;
             box-sizing: border-box;
+            /* 입력창도 패딩/테두리 포함 크기 계산 */
         }
     </style>
 </head>
@@ -359,10 +371,10 @@
                     style="font-size: 15px; font-weight: bold; color: #2c3e50; margin-bottom: 15px;"></div>
                 <div id="mathAnswerArea"></div>
                 <button onclick="submitMathAnswer()"
-                    style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; margin-top: 15px; cursor: pointer;">정답
+                    style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; margin-top: 15px; cursor: pointer; box-sizing: border-box;">정답
                     제출</button>
                 <button onclick="cancelMathGame()"
-                    style="width: 100%; padding: 10px; background: transparent; color: #7f8c8d; border: none; margin-top: 5px; cursor: pointer; text-decoration: underline;">포기하기</button>
+                    style="width: 100%; padding: 10px; background: transparent; color: #7f8c8d; border: none; margin-top: 5px; cursor: pointer; text-decoration: underline; box-sizing: border-box;">포기하기</button>
             </div>
 
             <div id="quizProblemSection" class="math-problem-container" style="display: none; border-color: #e67e22;">
@@ -370,14 +382,14 @@
                     style="font-size: 15px; font-weight: bold; color: #2c3e50; margin-bottom: 15px;"></div>
                 <div id="quizAnswerArea"></div>
                 <button id="btnSubmitQuizAnswer" onclick="submitGeneralQuizAnswer()"
-                    style="width: 100%; padding: 12px; background: #e67e22; color: white; border: none; border-radius: 6px; font-weight: bold; margin-top: 15px; cursor: pointer;">정답
+                    style="width: 100%; padding: 12px; background: #e67e22; color: white; border: none; border-radius: 6px; font-weight: bold; margin-top: 15px; cursor: pointer; box-sizing: border-box;">정답
                     제출</button>
                 <button onclick="cancelGeneralQuizGame()"
-                    style="width: 100%; padding: 10px; background: transparent; color: #7f8c8d; border: none; margin-top: 5px; cursor: pointer; text-decoration: underline;">포기하기</button>
+                    style="width: 100%; padding: 10px; background: transparent; color: #7f8c8d; border: none; margin-top: 5px; cursor: pointer; text-decoration: underline; box-sizing: border-box;">포기하기</button>
             </div>
 
             <button id="btnCancelGame"
-                style="width:100%; padding:10px; margin-top:10px; background:transparent; border:none; color:#7f8c8d; text-decoration:underline; cursor:pointer;"
+                style="width:100%; padding:10px; margin-top:10px; background:transparent; border:none; color:#7f8c8d; text-decoration:underline; cursor:pointer; box-sizing: border-box;"
                 onclick="closeGameModal()">취소</button>
         </div>
 
@@ -405,7 +417,7 @@
             lottery: true, dice: true, quiz: true, math: true, common: true, idiom: true
         };
         let isWholeClassEventEnabled = false;
-        let isRegularEventEnabled = true; // 🌟 5의 배수 변수 추가
+        let isRegularEventEnabled = true;
 
         async function loadGameSettings() {
             try {
@@ -421,7 +433,6 @@
                         if (s.key === 'whole_class_event_enabled') {
                             isWholeClassEventEnabled = (s.value === 'true');
                         }
-                        // 🌟 5의 배수 이벤트 상태 불러오기
                         if (s.key === 'regular_event_enabled') {
                             isRegularEventEnabled = (s.value === 'true');
                         }
@@ -442,7 +453,7 @@
                     data.forEach(r => {
                         diceRewardMap[r.dice_number] = r.reward_name;
                         html += `
-                            <div style="background:#ecf0f1; padding:10px 5px; border-radius:6px; font-size:13px; text-align:center; word-break:keep-all; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:45px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <div style="background:#ecf0f1; padding:10px 5px; border-radius:6px; font-size:13px; text-align:center; word-break:keep-all; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:45px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); box-sizing:border-box;">
                                 <b style="color:#e74c3c; margin-bottom:4px; font-size:14px;">[${r.dice_number}]</b> 
                                 <span style="color:#2c3e50;">${r.reward_name}</span>
                             </div>`;
@@ -466,10 +477,9 @@
 
             let html = '';
 
-            // 🌟 1. 특별 이벤트 영역 분리
             if (isWholeClassEventEnabled && eventTypeParam === 'special') {
                 html += `
-                <div style="background: #fdf5fe; padding: 15px; border-radius: 8px; border: 1px solid #d7bde2; margin-bottom: 20px; text-align: left;">
+                <div style="background: #fdf5fe; padding: 15px; border-radius: 8px; border: 1px solid #d7bde2; margin-bottom: 20px; text-align: left; box-sizing: border-box;">
                     <h3 style="margin-top: 0; margin-bottom: 15px; color: #8e44ad; font-size: 16px;">🌟 전체 학생 특별 이벤트</h3>
                 `;
                 const specialLog = logMap[0];
@@ -485,11 +495,9 @@
                 html += `</div>`;
             }
 
-            // 🎯 2. 정규 발표(5의 배수) 이벤트 영역 제어
-            // 관리자가 5의 배수 이벤트를 켜두었을 때만 렌더링되도록 isRegularEventEnabled 조건을 추가합니다.
             if (isRegularEventEnabled && maxMilestone >= 5 && eventTypeParam === 'regular') {
                 html += `
-                <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; border: 1px solid #bde0fe; text-align: left;">
+                <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; border: 1px solid #bde0fe; text-align: left; box-sizing: border-box;">
                     <h3 style="margin-top: 0; margin-bottom: 15px; color: #2980b9; font-size: 16px;">🎯 발표 달성 이벤트 (5회 단위)</h3>
                 `;
                 for (let i = 5; i <= maxMilestone; i += 5) {
@@ -507,7 +515,6 @@
                 html += `</div>`;
             }
 
-            // 활성화된 이벤트가 하나도 없을 때 보여줄 안내 문구 추가
             if (html === '') {
                 html += `<p style="color: #7f8c8d; text-align: center; padding: 20px;">현재 참여 가능한 이벤트가 없습니다.</p>`;
             }

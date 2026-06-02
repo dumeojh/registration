@@ -154,6 +154,7 @@
             background-color: #34495e;
         }
 
+        /* 주사위 애니메이션 스타일 */
         #diceContainer {
             display: none;
             margin: 40px auto 30px auto;
@@ -250,6 +251,7 @@
             }
         }
 
+        /* ✨ 수학 및 퀴즈 문제 영역 스타일 ✨ */
         .math-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -338,7 +340,7 @@
             <button class="game-btn btn-dice" id="btnDiceGame" onclick="playGame('주사위')">🎲 주사위 굴리기</button>
 
             <div id="diceRewardInfo" class="game-btn"
-                style="background:#fff; border:2px dashed #3498db; cursor:default; margin-bottom:15px; text-align:left; color:#2c3e50; font-weight:normal; display:none;">
+                style="background:#fff; border:2px dashed #3498db; cursor:default; margin-bottom:15px; text-align:left; color:#2c3e50; font-weight:normal;">
                 상품 정보를 불러오는 중입니다...
             </div>
 
@@ -365,6 +367,7 @@
                     style="width: 100%; padding: 10px; background: transparent; color: #7f8c8d; border: none; margin-top: 5px; cursor: pointer; text-decoration: underline;">포기하기</button>
             </div>
 
+            <!-- ✨ 상식 / 퀴즈 / 사자성어 모달 문제 영역 추가 ✨ -->
             <div id="quizProblemSection" class="math-problem-container" style="display: none; border-color: #e67e22;">
                 <div id="quizQuestionText"
                     style="font-size: 15px; font-weight: bold; color: #2c3e50; margin-bottom: 15px;"></div>
@@ -400,32 +403,6 @@
         const maxMilestone = Math.floor(totalCount / 5) * 5;
         let diceRewardMap = {};
 
-        let gameSettings = {
-            lottery: true, dice: true, quiz: true, math: true, common: true, idiom: true
-        };
-        let isWholeClassEventEnabled = false;
-
-        async function loadGameSettings() {
-            try {
-                const { data, error } = await db.from('system_settings').select('*');
-                if (data) {
-                    data.forEach(s => {
-                        if (s.key.startsWith('event_') && s.key.endsWith('_enabled')) {
-                            const type = s.key.split('_')[1];
-                            if (gameSettings[type] !== undefined) {
-                                gameSettings[type] = (s.value === 'true');
-                            }
-                        }
-                        if (s.key === 'whole_class_event_enabled') {
-                            isWholeClassEventEnabled = (s.value === 'true');
-                        }
-                    });
-                }
-            } catch (e) {
-                console.error('개별 게임 설정 로드 실패', e);
-            }
-        }
-
         async function loadDiceRewards() {
             try {
                 const { data, error } = await db.from('dice_rewards').select('*').order('dice_number', { ascending: true });
@@ -455,27 +432,13 @@
             if (logs) logs.forEach(l => logMap[l.milestone] = l);
 
             let html = '';
-
-            if (isWholeClassEventEnabled) {
-                const specialLog = logMap[0];
-                if (specialLog) {
-                    if (specialLog.is_rewarded) {
-                        html += `<button class="milestone-btn completed"><div>🎊 [ 특별 이벤트 ] 참여 완료</div><div style="font-size:12px; font-weight:normal;">✅ 상품 수령 완료 (${specialLog.result_text})</div></button>`;
-                    } else {
-                        html += `<button class="milestone-btn waiting"><div>🎊 [ 특별 이벤트 ] 참여 완료</div><div style="font-size:12px; font-weight:normal;">⏳ 선생님 확인(상품 지급) 대기중</div></button>`;
-                    }
-                } else {
-                    html += `<button class="milestone-btn active" style="background-color: #f5eef8; border-color: #8e44ad; color: #8e44ad;" onclick="openGameModal(0)"><div>🎊 [ 특별 이벤트 ] 진행하기!</div><div style="font-size:12px; font-weight:normal;">여기를 눌러 특별 게임을 진행하세요</div></button>`;
-                }
-            }
-
             for (let i = 5; i <= maxMilestone; i += 5) {
                 const log = logMap[i];
                 if (log) {
                     if (log.is_rewarded) {
                         html += `<button class="milestone-btn completed"><div>[ ${i}회차 ] 달성 이벤트</div><div style="font-size:12px; font-weight:normal;">✅ 상품 수령 완료 (${log.result_text})</div></button>`;
                     } else {
-                        html += `<button class="milestone-btn waiting"><div>[ ${i}회차 ] 달성 이벤트</div><div style="font-size:12px; font-weight:normal;">⏳ 선생님 확인 대기중</div></button>`;
+                        html += `<button class="milestone-btn waiting"><div>[ ${i}회차 ] 달성 이벤트</div><div style="font-size:12px; font-weight:normal;">⏳ 선생님 확인(상품 지급) 대기중</div></button>`;
                     }
                 } else {
                     html += `<button class="milestone-btn active" onclick="openGameModal(${i})"><div>🎉 [ ${i}회차 ] 이벤트 진행하기!</div><div style="font-size:12px; font-weight:normal;">여기를 눌러 게임을 선택하세요</div></button>`;
@@ -486,34 +449,20 @@
 
         function openGameModal(milestone) {
             currentActiveMilestone = milestone;
-
             document.querySelectorAll('.game-btn').forEach(btn => {
-                btn.style.display = 'none';
+                btn.style.display = 'block';
                 btn.disabled = false;
                 btn.style.opacity = '1';
                 btn.style.cursor = 'pointer';
             });
-
-            if (gameSettings.lottery) document.getElementById('btnLotteryGame').style.display = 'block';
-            if (gameSettings.dice) {
-                document.getElementById('btnDiceGame').style.display = 'block';
-                document.getElementById('diceRewardInfo').style.display = 'block';
-            }
-            if (gameSettings.quiz) document.getElementById('btnQuizGame').style.display = 'block';
-            if (gameSettings.math) document.getElementById('btnMathGame').style.display = 'block';
-            if (gameSettings.common) document.getElementById('btnCommonGame').style.display = 'block';
-            if (gameSettings.idiom) document.getElementById('btnIdiomGame').style.display = 'block';
-
             document.getElementById('btnCancelGame').style.display = 'block';
             document.getElementById('diceContainer').style.display = 'none';
             document.getElementById('diceRewardInfo').style.cursor = 'default';
             document.getElementById('mathGridSection').style.display = 'none';
             document.getElementById('mathProblemSection').style.display = 'none';
-            document.getElementById('quizProblemSection').style.display = 'none';
-
+            document.getElementById('quizProblemSection').style.display = 'none'; // 초기화 추가
             document.getElementById('gameSelection').style.display = 'block';
-            const titleText = milestone === 0 ? "⭐ 다함께 특별 이벤트 보상 선택 ⭐" : `⭐ ${milestone}회차 보상 선택 ⭐`;
-            document.getElementById('gameTitle').innerText = titleText;
+            document.getElementById('gameTitle').innerText = `⭐ ${milestone}회차 보상 선택 ⭐`;
             document.getElementById('gameSelection').scrollIntoView({ behavior: 'smooth' });
         }
 
@@ -537,12 +486,19 @@
                     is_rewarded: false
                 }]);
                 if (error) throw error;
-                alert(`${resultMsg}\n\n(선생님께 상품 지급 요청이 전송되었습니다!)`);
+                alert(`${resultMsg}
+
+(선생님께 상품 지급 요청이 전송되었습니다!)`);
                 closeGameModal();
                 loadMilestones();
             } catch (err) {
                 alert("기록 중 오류: " + err.message);
-                openGameModal(currentActiveMilestone);
+                document.querySelectorAll('.game-btn').forEach(btn => {
+                    btn.style.display = 'block';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                });
             }
         }
 
@@ -556,7 +512,9 @@
             if (type === '제비뽑기') {
                 const results = ["꽝! 다음 기회에...", "발표 1회 면제권?!", "선생님께 칭찬받기", "꽝! 아쉽네요."];
                 const res = results[Math.floor(Math.random() * results.length)];
-                saveEventResult('제비뽑기', `🎫 제비뽑기 결과:\n\n[ ${res} ]`, res);
+                saveEventResult('제비뽑기', `🎫 제비뽑기 결과:
+
+[ ${res} ]`, res);
             }
             else if (type === '주사위') {
                 document.querySelectorAll('.game-btn').forEach(btn => btn.style.display = 'none');
@@ -594,12 +552,16 @@
 
                 setTimeout(() => {
                     const rewardText = diceRewardMap[num] || "상품 미정";
-                    saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]\n당첨 상품: 🎉 ${rewardText} 🎉`, `주사위 ${num} (${rewardText})`);
+                    saveEventResult('주사위', `🎲 주사위를 굴렸습니다!
+
+나온 숫자: [ ${num} ]
+당첨 상품: 🎉 ${rewardText} 🎉`, `주사위 ${num} (${rewardText})`);
                 }, 2500);
             }
             else if (type === '수학') {
                 openMathGrid();
             }
+            // ✨ 퀴즈, 상식, 사자성어 모달 기반 문제 조회 연동 로직 ✨
             else if (type === '퀴즈' || type === '상식' || type === '사자성어') {
                 try {
                     const { data, error } = await db.from('quiz_bank').select('*').eq('category', type);
@@ -607,7 +569,11 @@
 
                     if (!data || data.length === 0) {
                         alert(`등록된 ${type} 문제가 없습니다! 선생님께 문의해주세요.`);
-                        openGameModal(currentActiveMilestone);
+                        document.querySelectorAll('.game-btn').forEach(btn => {
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.style.cursor = 'pointer';
+                        });
                         return;
                     }
 
@@ -615,11 +581,18 @@
                     showGeneralQuizProblem(type, randomQuiz);
                 } catch (err) {
                     alert("문제를 불러오는 중 오류가 발생했습니다: " + err.message);
-                    openGameModal(currentActiveMilestone);
+                    document.querySelectorAll('.game-btn').forEach(btn => {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    });
                 }
             }
         }
 
+        // ==========================================
+        // ✨ 수학 바둑판 DB 연동 로직 ✨
+        // ==========================================
         let currentMathQuiz = null;
 
         async function openMathGrid() {
@@ -671,7 +644,8 @@
             document.getElementById('mathProblemSection').style.display = 'block';
 
             currentMathQuiz = questions[Math.floor(Math.random() * questions.length)];
-            document.getElementById('mathQuestionText').innerText = `[${topic}]\nQ. ${currentMathQuiz.q}`;
+            document.getElementById('mathQuestionText').innerText = `[${topic}]
+Q. ${currentMathQuiz.q}`;
 
             const answerArea = document.getElementById('mathAnswerArea');
             answerArea.innerHTML = '';
@@ -706,52 +680,71 @@
             }
 
             const cleanUserAns = String(userAnswer).replace(/\s/g, '');
-            const correctAnswers = String(currentMathQuiz.a).split(',').map(a => a.replace(/\s/g, ''));
+            const cleanCorrectAns = String(currentMathQuiz.a).replace(/\s/g, '');
 
             document.getElementById('mathProblemSection').style.display = 'none';
 
-            if (correctAnswers.includes(cleanUserAns)) {
-                saveEventResult('수학', "정답입니다! 👏👏👏", `정답 맞춤 (${userAnswer})`);
+            if (cleanUserAns === cleanCorrectAns) {
+                saveEventResult('수학', "정답입니다! 👏👏👏", `정답 맞춤 (${currentMathQuiz.a})`);
             } else {
-                saveEventResult('수학', `틀렸습니다! 😝\n\n입력하신 답: ${userAnswer}\n정답은 '${currentMathQuiz.a}' 입니다.`, `오답 제출 (${userAnswer})`);
+                saveEventResult('수학', `틀렸습니다! 😝
+
+입력하신 답: ${userAnswer}
+정답은 '${currentMathQuiz.a}' 입니다.`, `오답 제출 (${userAnswer})`);
             }
         }
 
         function cancelMathGame() {
             document.getElementById('mathGridSection').style.display = 'none';
             document.getElementById('mathProblemSection').style.display = 'none';
-            openGameModal(currentActiveMilestone);
+
+            document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => {
+                btn.style.display = 'block';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            });
+            document.getElementById('btnCancelGame').style.display = 'block';
         }
 
+        // ==========================================
+        // ✨ [추가] 퀴즈 / 상식 / 사자성어 모달 처리 로직 ✨
+        // ==========================================
         let currentGeneralQuiz = null;
         let currentGeneralQuizType = '';
 
         function showGeneralQuizProblem(type, quiz) {
+            // 다른 게임 버튼들과 취소 버튼 감추기
             document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => btn.style.display = 'none');
             document.getElementById('btnCancelGame').style.display = 'none';
             document.getElementById('mathGridSection').style.display = 'none';
             document.getElementById('mathProblemSection').style.display = 'none';
 
+            // 퀴즈 전용 섹션 열기
             const section = document.getElementById('quizProblemSection');
             section.style.display = 'block';
 
-            let themeColor = '#9b59b6';
+            // 카테고리별 테마 디자인 설정
+            let themeColor = '#9b59b6'; // 퀴즈 기본값
             if (type === '상식') themeColor = '#e67e22';
             else if (type === '사자성어') themeColor = '#34495e';
-
+            
             section.style.borderColor = themeColor;
             document.getElementById('btnSubmitQuizAnswer').style.backgroundColor = themeColor;
 
             currentGeneralQuiz = quiz;
             currentGeneralQuizType = type;
-            document.getElementById('quizQuestionText').innerText = `[${type} 문제]\nQ. ${quiz.question}`;
+            document.getElementById('quizQuestionText').innerText = `[${type} 문제]
+Q. ${quiz.question}`;
 
             const answerArea = document.getElementById('quizAnswerArea');
             answerArea.innerHTML = '';
 
+            // 주관식 단답형 또는 보기가 없는 경우
             if (quiz.question_type === 'short' || !quiz.options || quiz.options.length === 0) {
                 answerArea.innerHTML = `<input type="text" id="quizShortAnswer" class="math-input" placeholder="정답을 입력하세요">`;
-            }
+            } 
+            // 객관식 사지선다형인 경우
             else if (quiz.question_type === 'multiple') {
                 let optionsHtml = '<div class="math-options">';
                 quiz.options.forEach((opt, idx) => {
@@ -780,25 +773,34 @@
             }
 
             const cleanUserAns = String(userAnswer).replace(/\s/g, '');
-            const correctAnswers = String(currentGeneralQuiz.answer).split(',').map(a => a.replace(/\s/g, ''));
+            const cleanCorrectAns = String(currentGeneralQuiz.answer).replace(/\s/g, '');
 
             document.getElementById('quizProblemSection').style.display = 'none';
 
-            if (correctAnswers.includes(cleanUserAns)) {
-                saveEventResult(currentGeneralQuizType, "정답입니다! 👏👏👏", `정답 맞춤 (${userAnswer})`);
+            if (cleanUserAns === cleanCorrectAns) {
+                saveEventResult(currentGeneralQuizType, "정답입니다! 👏👏👏", `정답 맞춤 (${currentGeneralQuiz.answer})`);
             } else {
-                saveEventResult(currentGeneralQuizType, `틀렸습니다! 😝\n\n입력하신 답: ${userAnswer}\n정답은 '${currentGeneralQuiz.answer.replace(/,/g, ' 또는 ')}' 입니다.`, `오답 제출 (${userAnswer})`);
+                saveEventResult(currentGeneralQuizType, `틀렸습니다! 😝
+
+입력하신 답: ${userAnswer}
+정답은 '${currentGeneralQuiz.answer}' 입니다.`, `오답 제출 (${userAnswer})`);
             }
         }
 
         function cancelGeneralQuizGame() {
             document.getElementById('quizProblemSection').style.display = 'none';
-            openGameModal(currentActiveMilestone);
+
+            document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => {
+                btn.style.display = 'block';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            });
+            document.getElementById('btnCancelGame').style.display = 'block';
         }
 
         loadDiceRewards();
         loadMilestones();
-        loadGameSettings();
     </script>
 </body>
 

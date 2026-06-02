@@ -7,15 +7,6 @@
     <title>Presentation Record</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="common.js"></script>
-
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#2980b9">
-
-    <link rel="apple-touch-icon" href="icon-192x192.png">
-    <link rel="manifest" href="manifest.json">
-
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -167,11 +158,13 @@
             margin: 0;
         }
 
+        /* 관리자 탭 (5개로 늘어남) */
         .admin-tabs {
             display: flex;
             gap: 5px;
             margin-bottom: 20px;
             flex-wrap: wrap;
+            /* 모바일 대응 줄바꿈 */
         }
 
         .admin-tabs button {
@@ -180,6 +173,7 @@
             font-size: 13px;
             flex: 1;
             min-width: 80px;
+            /* 탭이 너무 좁아지지 않게 */
         }
 
         .history-item {
@@ -200,19 +194,6 @@
             font-size: 15px;
             color: #2c3e50;
             white-space: pre-wrap;
-        }
-
-        .approve-btn-fixed {
-            position: fixed;
-            left: 10px;
-            bottom: 10px;
-            width: 30px;
-            height: 30px;
-            background-color: #000;
-            opacity: 0.1;
-            cursor: pointer;
-            z-index: 9999;
-            border-radius: 5px;
         }
 
         #secretBtn {
@@ -258,6 +239,30 @@
             text-align: center;
             font-size: 15px;
             border: 1px solid #7f8c8d;
+        }
+
+        .approve-btn-fixed {
+            position: fixed;
+            left: 15px;
+            bottom: 15px;
+            width: 45px;
+            height: 45px;
+            background-color: #e67e22;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 9999;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .approve-btn-fixed:hover {
+            transform: scale(1.1);
+            background-color: #d35400;
         }
 
         .submit-status-box {
@@ -363,6 +368,7 @@
             border-radius: 4px;
         }
 
+        /* 토글 스위치 스타일 (이벤트 온오프용) */
         .switch {
             position: relative;
             display: inline-block;
@@ -412,7 +418,7 @@
 
 <body>
 
-    <div id="btnApproveWait" class="approve-btn-fixed" title="미승인 기록 확인 (교사용)"></div>
+    <div id="btnApproveWait" class="approve-btn-fixed" title="미승인 기록 확인 (교사용)">📋</div>
 
     <div class="form-container" id="searchSection">
         <h2>🔍 대수 발표 입력</h2>
@@ -486,7 +492,6 @@
     </div>
 
     <div id="secretBtn" title="관리자"></div>
-
     <div id="adminModal" class="modal-overlay hidden">
         <div class="modal-content" style="max-width: 650px;">
             <div class="modal-header">
@@ -498,6 +503,7 @@
                 <button type="button" id="btnTabManual" style="background-color: #8e44ad;">✏️ 수동 입력</button>
                 <button type="button" id="btnTabQuiz" style="background-color: #27ae60;">📝 퀴즈 관리</button>
                 <button type="button" id="btnTabDice" style="background-color: #3498db;">🎲 주사위 상품</button>
+                <!-- ✨ 새롭게 추가된 설정 탭 ✨ -->
                 <button type="button" id="btnTabSettings" style="background-color: #e67e22;">⚙️ 이벤트 설정</button>
             </div>
 
@@ -550,6 +556,7 @@
 
                 <div
                     style="background: #fdf5fe; padding: 15px; border-radius: 8px; border: 1px solid #d7bde2; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;">
+
                     <div style="display: flex; gap: 10px;">
                         <div style="flex: 1;">
                             <label style="margin-top: 0; font-size: 13px;">카테고리</label>
@@ -648,65 +655,21 @@
                 </div>
             </div>
 
+            <!-- ✨ 새롭게 추가된 설정 섹션 ✨ -->
             <div id="adminSettingsSection" class="hidden">
-                <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 시스템 전체 및 개별 이벤트의 작동 여부를 설정합니다.</p>
+                <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 시스템 전체의 기능 작동 여부를 설정합니다.</p>
 
                 <div
-                    style="background: #fdf2e9; padding: 20px; border-radius: 8px; border: 1px solid #fad7a1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    style="background: #fdf2e9; padding: 20px; border-radius: 8px; border: 1px solid #fad7a1; display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <strong style="color: #e67e22; font-size: 16px;">🎉 이벤트 존 전체 활성화</strong>
-                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #d35400;">스위치를 끄면 이벤트 페이지 접근 자체가 차단됩니다.</p>
+                        <strong style="color: #e67e22; font-size: 16px;">🎉 이벤트 존 활성화</strong>
+                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #d35400;">스위치를 끄면 학생들이 5회를 달성해도 이벤트에 입장할 수
+                            없도록 잠깁니다.</p>
                     </div>
                     <label class="switch">
                         <input type="checkbox" id="toggleEventStatus">
                         <span class="slider"></span>
                     </label>
-                </div>
-
-                <div
-                    style="background: #fdf2e9; padding: 20px; border-radius: 8px; border: 1px solid #fad7a1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <div>
-                        <strong style="color: #8e44ad; font-size: 16px;">🎊 전체 학생 특별 이벤트 활성화</strong>
-                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #9b59b6;">스위치를 켜면 발표 횟수와 무관하게 모든 학생이 1회 참여할
-                            수 있습니다.</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="toggleWholeClassEvent">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; border: 1px solid #bde0fe;">
-                    <strong style="color: #2980b9; font-size: 15px; display: block; margin-bottom: 15px;">🎮 개별 이벤트 표시
-                        설정</strong>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
-                            <input type="checkbox" class="game-toggle" data-key="event_lottery_enabled"
-                                style="width:20px; margin:0;"> 🎫 제비뽑기
-                        </label>
-                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
-                            <input type="checkbox" class="game-toggle" data-key="event_dice_enabled"
-                                style="width:20px; margin:0;"> 🎲 주사위
-                        </label>
-                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
-                            <input type="checkbox" class="game-toggle" data-key="event_quiz_enabled"
-                                style="width:20px; margin:0;"> 🤔 아재개그
-                        </label>
-                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
-                            <input type="checkbox" class="game-toggle" data-key="event_math_enabled"
-                                style="width:20px; margin:0;"> 📐 수학
-                        </label>
-                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
-                            <input type="checkbox" class="game-toggle" data-key="event_common_enabled"
-                                style="width:20px; margin:0;"> 🌍 상식
-                        </label>
-                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
-                            <input type="checkbox" class="game-toggle" data-key="event_idiom_enabled"
-                                style="width:20px; margin:0;"> 📜 사자성어
-                        </label>
-                    </div>
-                    <button id="btnSaveGameSettings" style="background-color: #3498db; margin-top: 20px;">💾 개별 이벤트 설정
-                        저장</button>
                 </div>
             </div>
 
@@ -720,33 +683,31 @@
         let monitoredSubmissions = [];
         let statusCheckInterval = null;
 
+        // 시스템 설정값을 저장하는 전역 변수 (기본값 true)
         let isEventEnabled = true;
-        let isWholeClassEventEnabled = false;
 
+        // DB에서 현재 설정 상태를 불러오는 함수
         async function fetchSystemSettings() {
             try {
-                const { data, error } = await db.from('system_settings').select('*').in('key', ['event_enabled', 'whole_class_event_enabled']);
+                const { data, error } = await db.from('system_settings').select('*').eq('key', 'event_enabled').maybeSingle();
                 if (error && error.code !== 'PGRST116') throw error;
 
+                // DB에 값이 있으면 해당 값으로, 없으면 기본값 true 유지
                 if (data) {
-                    data.forEach(setting => {
-                        if (setting.key === 'event_enabled') {
-                            isEventEnabled = setting.value === 'true';
-                            const toggleBtn = document.getElementById('toggleEventStatus');
-                            if (toggleBtn) toggleBtn.checked = isEventEnabled;
-                        }
-                        if (setting.key === 'whole_class_event_enabled') {
-                            isWholeClassEventEnabled = setting.value === 'true';
-                            const toggleWholeBtn = document.getElementById('toggleWholeClassEvent');
-                            if (toggleWholeBtn) toggleWholeBtn.checked = isWholeClassEventEnabled;
-                        }
-                    });
+                    isEventEnabled = data.value === 'true';
+                }
+
+                // 관리자 탭 스위치 UI 동기화
+                const toggleBtn = document.getElementById('toggleEventStatus');
+                if (toggleBtn) {
+                    toggleBtn.checked = isEventEnabled;
                 }
             } catch (err) {
                 console.error('설정 불러오기 실패:', err);
             }
         }
 
+        // 페이지 로드 시 설정값을 가져옴
         window.addEventListener('DOMContentLoaded', fetchSystemSettings);
 
         document.getElementById('btnSearch').addEventListener('click', async function () {
@@ -768,6 +729,7 @@
                 currentStudentName = studentNameValue;
 
                 resetSubmissionStatus();
+                // 조회 시 항상 최신 이벤트 활성화 설정을 다시 가져옴
                 await fetchSystemSettings();
                 await refreshStats();
                 await loadPendingSubmissions();
@@ -800,56 +762,50 @@
                     });
                 }
                 const totalCount = autoTotal + manualCount;
+
                 const maxMilestone = Math.floor(totalCount / 5) * 5;
                 const btnGoEvent = document.getElementById('btnGoEvent');
 
-                const { data: eventLogs } = await db.from('event_logs').select('milestone').eq('student_id', currentStudentId);
-                const uniqueMilestones = new Set();
-                let hasParticipatedSpecial = false;
+                if (maxMilestone >= 5) {
+                    const { data: eventLogs } = await db.from('event_logs').select('milestone').eq('student_id', currentStudentId);
+                    const uniqueMilestones = new Set();
+                    if (eventLogs) eventLogs.forEach(log => uniqueMilestones.add(log.milestone));
 
-                if (eventLogs) {
-                    eventLogs.forEach(log => {
-                        if (log.milestone === 0) hasParticipatedSpecial = true;
-                        else uniqueMilestones.add(log.milestone);
-                    });
-                }
+                    const completedCount = uniqueMilestones.size;
+                    const availableCount = (maxMilestone / 5) - completedCount;
 
-                const completedCount = uniqueMilestones.size;
-                const availableCount = (maxMilestone >= 5) ? Math.floor(maxMilestone / 5) - completedCount : 0;
-
-                if (isEventEnabled) {
-                    if (isWholeClassEventEnabled && !hasParticipatedSpecial) {
-                        btnGoEvent.disabled = false;
-                        btnGoEvent.style.backgroundColor = '#8e44ad';
-                        btnGoEvent.style.color = 'white';
-                        btnGoEvent.style.cursor = 'pointer';
-                        btnGoEvent.innerText = `🎊 특별 이벤트 입장 가능!`;
-                        btnGoEvent.onclick = () => {
-                            window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
-                        };
-                    } else if (availableCount > 0) {
-                        btnGoEvent.disabled = false;
-                        btnGoEvent.style.backgroundColor = '#f1c40f';
-                        btnGoEvent.style.color = '#2c3e50';
-                        btnGoEvent.style.cursor = 'pointer';
-                        btnGoEvent.innerText = `🎉 달성 이벤트 입장 (${availableCount}개 가능)`;
-                        btnGoEvent.onclick = () => {
-                            window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
-                        };
+                    if (availableCount > 0) {
+                        // ✨ 이벤트 활성 상태에 따른 조건 분기 추가 ✨
+                        if (isEventEnabled) {
+                            btnGoEvent.disabled = false;
+                            btnGoEvent.style.backgroundColor = '#f1c40f';
+                            btnGoEvent.style.color = '#2c3e50';
+                            btnGoEvent.style.cursor = 'pointer';
+                            btnGoEvent.innerText = `🎉 이벤트 입장 (${availableCount}개 가능)`;
+                            btnGoEvent.onclick = () => {
+                                window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
+                            };
+                        } else {
+                            // 비활성화 상태일 때
+                            btnGoEvent.disabled = true;
+                            btnGoEvent.style.backgroundColor = '#95a5a6';
+                            btnGoEvent.style.color = 'white';
+                            btnGoEvent.style.cursor = 'not-allowed';
+                            btnGoEvent.innerText = `🔒 이벤트 준비중 (선생님 설정)`;
+                        }
                     } else {
                         btnGoEvent.disabled = true;
                         btnGoEvent.style.backgroundColor = '#bdc3c7';
                         btnGoEvent.style.color = 'white';
                         btnGoEvent.style.cursor = 'not-allowed';
-                        const nextTarget = Math.floor((totalCount / 5)) * 5 + 5;
-                        btnGoEvent.innerText = `🔒 이벤트 대기 (다음: ${nextTarget}회)`;
+                        btnGoEvent.innerText = `✅ 이벤트 완료 (다음: ${maxMilestone + 5}회)`;
                     }
                 } else {
                     btnGoEvent.disabled = true;
-                    btnGoEvent.style.backgroundColor = '#95a5a6';
+                    btnGoEvent.style.backgroundColor = '#bdc3c7';
                     btnGoEvent.style.color = 'white';
                     btnGoEvent.style.cursor = 'not-allowed';
-                    btnGoEvent.innerText = `🔒 이벤트 준비중 (선생님 설정)`;
+                    btnGoEvent.innerText = `🔒 이벤트 대기 (다음: 5회)`;
                 }
 
                 const gradePrefix = Math.floor(currentStudentId / 10000);
@@ -1043,36 +999,12 @@
 
         document.getElementById('btnCancel').addEventListener('click', () => location.reload());
 
-        let tapCountWait = 0;
-        let tapTimerWait;
-        const btnWait = document.getElementById('btnApproveWait');
-
-        btnWait.addEventListener('dblclick', async (e) => {
+        document.getElementById('btnApproveWait').addEventListener('dblclick', async (e) => {
             if (e.ctrlKey) {
                 document.getElementById('approvalModal').classList.remove('hidden');
                 await fetchPendingApprovals();
             }
         });
-
-        btnWait.addEventListener('click', async (e) => {
-            tapCountWait++;
-            if (tapCountWait === 1) {
-                tapTimerWait = setTimeout(() => { tapCountWait = 0; }, 1500);
-            }
-            if (tapCountWait >= 3) {
-                clearTimeout(tapTimerWait);
-                tapCountWait = 0;
-
-                const pwd = prompt("선생님 확인용 비밀번호를 입력하세요:");
-                if (pwd === "1") {
-                    document.getElementById('approvalModal').classList.remove('hidden');
-                    await fetchPendingApprovals();
-                } else if (pwd !== null) {
-                    alert("비밀번호가 틀렸습니다.");
-                }
-            }
-        });
-
         document.getElementById('btnCloseApproval').addEventListener('click', () => document.getElementById('approvalModal').classList.add('hidden'));
 
         async function fetchPendingApprovals() {
@@ -1096,7 +1028,7 @@
                             <div class="history-item" style="border-left: 4px solid #9b59b6; margin-bottom: 8px; padding: 10px; background: #fdf5fe; display: flex; justify-content: space-between; align-items: center;">
                                 <div style="flex: 1; padding-right: 10px;">
                                     <div style="margin-bottom: 3px;">
-                                        <strong style="font-size:14px; color:#8e44ad;">🎁 ${item.student_id} ${item.student_name} (${item.milestone === 0 ? '특별' : item.milestone + '회'})</strong>
+                                        <strong style="font-size:14px; color:#8e44ad;">🎁 ${item.student_id} ${item.student_name} (${item.milestone}회)</strong>
                                         <span style="font-size:11px; color:#7f8c8d; margin-left: 5px;">${new Date(item.created_at).toLocaleDateString()}</span>
                                     </div>
                                     <div style="font-size: 13px; color: #2c3e50;">
@@ -1152,6 +1084,7 @@
                     await db.from('event_logs').update({ is_rewarded: true }).eq('id', e.target.dataset.id);
                     await fetchPendingApprovals();
                 }));
+
                 document.querySelectorAll('.btn-event-cancel').forEach(b => b.addEventListener('click', async (e) => {
                     if (!confirm("해당 학생의 이벤트 기록을 삭제하고 다시 진행하게 하시겠습니까?")) return;
                     try {
@@ -1168,40 +1101,16 @@
             }
         }
 
-        let tapCountAdmin = 0;
-        let tapTimerAdmin;
-        const btnAdmin = document.getElementById('secretBtn');
-
-        btnAdmin.addEventListener('dblclick', function (e) {
+        document.getElementById('secretBtn').addEventListener('dblclick', function (e) {
             if (e.ctrlKey) {
                 document.getElementById('adminModal').classList.remove('hidden');
                 populateClassSelect('classSelect');
                 fetchQuizList();
             }
         });
-
-        btnAdmin.addEventListener('click', async (e) => {
-            tapCountAdmin++;
-            if (tapCountAdmin === 1) {
-                tapTimerAdmin = setTimeout(() => { tapCountAdmin = 0; }, 1500);
-            }
-            if (tapCountAdmin >= 3) {
-                clearTimeout(tapTimerAdmin);
-                tapCountAdmin = 0;
-
-                const pwd = prompt("관리자용 비밀번호를 입력하세요:");
-                if (pwd === "1") {
-                    document.getElementById('adminModal').classList.remove('hidden');
-                    populateClassSelect('classSelect');
-                    fetchQuizList();
-                } else if (pwd !== null) {
-                    alert("비밀번호가 틀렸습니다.");
-                }
-            }
-        });
-
         document.getElementById('btnCloseAdmin').addEventListener('click', () => document.getElementById('adminModal').classList.add('hidden'));
 
+        // 탭 메뉴 핸들링 함수
         function switchAdminTab(showSectionId) {
             const sections = ['adminViewSection', 'adminManualSection', 'adminQuizSection', 'adminDiceSection', 'adminSettingsSection'];
             sections.forEach(id => {
@@ -1233,15 +1142,17 @@
             fetchDiceRewards();
         });
 
+        // ✨ 설정 탭 클릭 이벤트 ✨
         document.getElementById('btnTabSettings').addEventListener('click', () => {
             switchAdminTab('adminSettingsSection');
-            fetchSystemSettings();
-            fetchGameSettings();
+            fetchSystemSettings(); // 최신 설정 불러오기
         });
 
+        // ✨ 이벤트 토글 스위치 이벤트 리스너 ✨
         document.getElementById('toggleEventStatus').addEventListener('change', async (e) => {
             const isChecked = e.target.checked;
             try {
+                // DB에 설정값 저장 (Upsert: 없으면 만들고 있으면 업데이트)
                 const { error } = await db.from('system_settings').upsert({
                     key: 'event_enabled',
                     value: isChecked ? 'true' : 'false'
@@ -1252,71 +1163,14 @@
                 isEventEnabled = isChecked;
                 alert(`이벤트가 성공적으로 ${isChecked ? '활성화' : '비활성화'} 되었습니다.`);
 
-                if (currentStudentId) refreshStats();
-            } catch (err) {
-                alert("설정 저장 실패: " + err.message);
-                e.target.checked = !isChecked;
-            }
-        });
-
-        document.getElementById('toggleWholeClassEvent').addEventListener('change', async (e) => {
-            const isChecked = e.target.checked;
-            try {
-                const { error } = await db.from('system_settings').upsert({
-                    key: 'whole_class_event_enabled',
-                    value: isChecked ? 'true' : 'false'
-                }, { onConflict: 'key' });
-
-                if (error) throw error;
-
-                isWholeClassEventEnabled = isChecked;
-                alert(`전체 학생 특별 이벤트가 성공적으로 ${isChecked ? '활성화' : '비활성화'} 되었습니다.`);
-
-                if (currentStudentId) refreshStats();
-            } catch (err) {
-                alert("설정 저장 실패: " + err.message);
-                e.target.checked = !isChecked;
-            }
-        });
-
-        async function fetchGameSettings() {
-            try {
-                const { data, error } = await db.from('system_settings').select('*').like('key', 'event_%_enabled');
-                if (error) throw error;
-
-                document.querySelectorAll('.game-toggle').forEach(cb => cb.checked = false);
-
-                if (data) {
-                    data.forEach(setting => {
-                        const cb = document.querySelector(`.game-toggle[data-key="${setting.key}"]`);
-                        if (cb) cb.checked = (setting.value === 'true');
-                    });
+                // 만약 현재 학생 통계가 띄워져 있다면 화면 즉시 갱신
+                if (currentStudentId) {
+                    refreshStats();
                 }
             } catch (err) {
-                console.error('게임 설정 불러오기 실패:', err);
-            }
-        }
-
-        document.getElementById('btnSaveGameSettings').addEventListener('click', async () => {
-            const btn = document.getElementById('btnSaveGameSettings');
-            btn.disabled = true;
-            btn.innerText = '저장 중...';
-
-            const toggles = document.querySelectorAll('.game-toggle');
-            const dataToUpsert = Array.from(toggles).map(t => ({
-                key: t.dataset.key,
-                value: t.checked ? 'true' : 'false'
-            }));
-
-            try {
-                const { error } = await db.from('system_settings').upsert(dataToUpsert, { onConflict: 'key' });
-                if (error) throw error;
-                alert('✅ 개별 이벤트 표시 설정이 성공적으로 저장되었습니다!');
-            } catch (err) {
-                alert('저장 중 오류 발생: ' + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = '💾 개별 이벤트 설정 저장';
+                alert("설정 저장 실패: " + err.message);
+                // 실패 시 스위치를 원래 상태로 되돌림
+                e.target.checked = !isChecked;
             }
         });
 
@@ -1385,6 +1239,7 @@
                 btn.innerText = '💾 주사위 상품 일괄 저장';
             }
         });
+
 
         let editingQuizId = null;
 

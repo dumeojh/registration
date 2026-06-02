@@ -10,10 +10,12 @@
 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#2980b9">
 
     <link rel="apple-touch-icon" href="icon-192x192.png">
+
     <link rel="manifest" href="manifest.json">
 
     <style>
@@ -202,6 +204,7 @@
             white-space: pre-wrap;
         }
 
+        /* 왼쪽 선생님 버튼 (투명화 처리) */
         .approve-btn-fixed {
             position: fixed;
             left: 10px;
@@ -215,6 +218,7 @@
             border-radius: 5px;
         }
 
+        /* 오른쪽 관리자 버튼 */
         #secretBtn {
             position: fixed;
             bottom: 10px;
@@ -408,6 +412,7 @@
             transform: translateX(26px);
         }
     </style>
+
 </head>
 
 <body>
@@ -550,6 +555,7 @@
 
                 <div
                     style="background: #fdf5fe; padding: 15px; border-radius: 8px; border: 1px solid #d7bde2; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;">
+
                     <div style="display: flex; gap: 10px;">
                         <div style="flex: 1;">
                             <label style="margin-top: 0; font-size: 13px;">카테고리</label>
@@ -663,19 +669,6 @@
                     </label>
                 </div>
 
-                <div
-                    style="background: #fdf2e9; padding: 20px; border-radius: 8px; border: 1px solid #fad7a1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <div>
-                        <strong style="color: #8e44ad; font-size: 16px;">🎊 전체 학생 특별 이벤트 활성화</strong>
-                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #9b59b6;">스위치를 켜면 발표 횟수와 무관하게 모든 학생이 1회 참여할
-                            수 있습니다.</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="toggleWholeClassEvent">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
                 <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; border: 1px solid #bde0fe;">
                     <strong style="color: #2980b9; font-size: 15px; display: block; margin-bottom: 15px;">🎮 개별 이벤트 표시
                         설정</strong>
@@ -721,27 +714,15 @@
         let statusCheckInterval = null;
 
         let isEventEnabled = true;
-        let isWholeClassEventEnabled = false;
 
         async function fetchSystemSettings() {
             try {
-                const { data, error } = await db.from('system_settings').select('*').in('key', ['event_enabled', 'whole_class_event_enabled']);
+                const { data, error } = await db.from('system_settings').select('*').eq('key', 'event_enabled').maybeSingle();
                 if (error && error.code !== 'PGRST116') throw error;
+                if (data) isEventEnabled = data.value === 'true';
 
-                if (data) {
-                    data.forEach(setting => {
-                        if (setting.key === 'event_enabled') {
-                            isEventEnabled = setting.value === 'true';
-                            const toggleBtn = document.getElementById('toggleEventStatus');
-                            if (toggleBtn) toggleBtn.checked = isEventEnabled;
-                        }
-                        if (setting.key === 'whole_class_event_enabled') {
-                            isWholeClassEventEnabled = setting.value === 'true';
-                            const toggleWholeBtn = document.getElementById('toggleWholeClassEvent');
-                            if (toggleWholeBtn) toggleWholeBtn.checked = isWholeClassEventEnabled;
-                        }
-                    });
-                }
+                const toggleBtn = document.getElementById('toggleEventStatus');
+                if (toggleBtn) toggleBtn.checked = isEventEnabled;
             } catch (err) {
                 console.error('설정 불러오기 실패:', err);
             }
@@ -800,56 +781,48 @@
                     });
                 }
                 const totalCount = autoTotal + manualCount;
+
                 const maxMilestone = Math.floor(totalCount / 5) * 5;
                 const btnGoEvent = document.getElementById('btnGoEvent');
 
-                const { data: eventLogs } = await db.from('event_logs').select('milestone').eq('student_id', currentStudentId);
-                const uniqueMilestones = new Set();
-                let hasParticipatedSpecial = false;
+                if (maxMilestone >= 5) {
+                    const { data: eventLogs } = await db.from('event_logs').select('milestone').eq('student_id', currentStudentId);
+                    const uniqueMilestones = new Set();
+                    if (eventLogs) eventLogs.forEach(log => uniqueMilestones.add(log.milestone));
 
-                if (eventLogs) {
-                    eventLogs.forEach(log => {
-                        if (log.milestone === 0) hasParticipatedSpecial = true;
-                        else uniqueMilestones.add(log.milestone);
-                    });
-                }
+                    const completedCount = uniqueMilestones.size;
+                    const availableCount = (maxMilestone / 5) - completedCount;
 
-                const completedCount = uniqueMilestones.size;
-                const availableCount = (maxMilestone >= 5) ? Math.floor(maxMilestone / 5) - completedCount : 0;
-
-                if (isEventEnabled) {
-                    if (isWholeClassEventEnabled && !hasParticipatedSpecial) {
-                        btnGoEvent.disabled = false;
-                        btnGoEvent.style.backgroundColor = '#8e44ad';
-                        btnGoEvent.style.color = 'white';
-                        btnGoEvent.style.cursor = 'pointer';
-                        btnGoEvent.innerText = `🎊 특별 이벤트 입장 가능!`;
-                        btnGoEvent.onclick = () => {
-                            window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
-                        };
-                    } else if (availableCount > 0) {
-                        btnGoEvent.disabled = false;
-                        btnGoEvent.style.backgroundColor = '#f1c40f';
-                        btnGoEvent.style.color = '#2c3e50';
-                        btnGoEvent.style.cursor = 'pointer';
-                        btnGoEvent.innerText = `🎉 달성 이벤트 입장 (${availableCount}개 가능)`;
-                        btnGoEvent.onclick = () => {
-                            window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
-                        };
+                    if (availableCount > 0) {
+                        if (isEventEnabled) {
+                            btnGoEvent.disabled = false;
+                            btnGoEvent.style.backgroundColor = '#f1c40f';
+                            btnGoEvent.style.color = '#2c3e50';
+                            btnGoEvent.style.cursor = 'pointer';
+                            btnGoEvent.innerText = `🎉 이벤트 입장 (${availableCount}개 가능)`;
+                            btnGoEvent.onclick = () => {
+                                window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
+                            };
+                        } else {
+                            btnGoEvent.disabled = true;
+                            btnGoEvent.style.backgroundColor = '#95a5a6';
+                            btnGoEvent.style.color = 'white';
+                            btnGoEvent.style.cursor = 'not-allowed';
+                            btnGoEvent.innerText = `🔒 이벤트 준비중 (선생님 설정)`;
+                        }
                     } else {
                         btnGoEvent.disabled = true;
                         btnGoEvent.style.backgroundColor = '#bdc3c7';
                         btnGoEvent.style.color = 'white';
                         btnGoEvent.style.cursor = 'not-allowed';
-                        const nextTarget = Math.floor((totalCount / 5)) * 5 + 5;
-                        btnGoEvent.innerText = `🔒 이벤트 대기 (다음: ${nextTarget}회)`;
+                        btnGoEvent.innerText = `✅ 이벤트 완료 (다음: ${maxMilestone + 5}회)`;
                     }
                 } else {
                     btnGoEvent.disabled = true;
-                    btnGoEvent.style.backgroundColor = '#95a5a6';
+                    btnGoEvent.style.backgroundColor = '#bdc3c7';
                     btnGoEvent.style.color = 'white';
                     btnGoEvent.style.cursor = 'not-allowed';
-                    btnGoEvent.innerText = `🔒 이벤트 준비중 (선생님 설정)`;
+                    btnGoEvent.innerText = `🔒 이벤트 대기 (다음: 5회)`;
                 }
 
                 const gradePrefix = Math.floor(currentStudentId / 10000);
@@ -1043,10 +1016,14 @@
 
         document.getElementById('btnCancel').addEventListener('click', () => location.reload());
 
+        // =====================================
+        // ✨ 왼쪽 미승인 기록 확인 버튼 (투명화 & 3번 터치 로직 추가)
+        // =====================================
         let tapCountWait = 0;
         let tapTimerWait;
         const btnWait = document.getElementById('btnApproveWait');
 
+        // PC 전용 로직
         btnWait.addEventListener('dblclick', async (e) => {
             if (e.ctrlKey) {
                 document.getElementById('approvalModal').classList.remove('hidden');
@@ -1054,6 +1031,7 @@
             }
         });
 
+        // 스마트폰 전용 로직 (빠르게 3번 터치)
         btnWait.addEventListener('click', async (e) => {
             tapCountWait++;
             if (tapCountWait === 1) {
@@ -1096,7 +1074,7 @@
                             <div class="history-item" style="border-left: 4px solid #9b59b6; margin-bottom: 8px; padding: 10px; background: #fdf5fe; display: flex; justify-content: space-between; align-items: center;">
                                 <div style="flex: 1; padding-right: 10px;">
                                     <div style="margin-bottom: 3px;">
-                                        <strong style="font-size:14px; color:#8e44ad;">🎁 ${item.student_id} ${item.student_name} (${item.milestone === 0 ? '특별' : item.milestone + '회'})</strong>
+                                        <strong style="font-size:14px; color:#8e44ad;">🎁 ${item.student_id} ${item.student_name} (${item.milestone}회)</strong>
                                         <span style="font-size:11px; color:#7f8c8d; margin-left: 5px;">${new Date(item.created_at).toLocaleDateString()}</span>
                                     </div>
                                     <div style="font-size: 13px; color: #2c3e50;">
@@ -1168,10 +1146,14 @@
             }
         }
 
+        // =====================================
+        // ✨ 오른쪽 관리자 메뉴 투명 버튼 (3번 터치 로직 추가)
+        // =====================================
         let tapCountAdmin = 0;
         let tapTimerAdmin;
         const btnAdmin = document.getElementById('secretBtn');
 
+        // PC 전용 로직
         btnAdmin.addEventListener('dblclick', function (e) {
             if (e.ctrlKey) {
                 document.getElementById('adminModal').classList.remove('hidden');
@@ -1180,6 +1162,7 @@
             }
         });
 
+        // 스마트폰 전용 로직 (빠르게 3번 터치)
         btnAdmin.addEventListener('click', async (e) => {
             tapCountAdmin++;
             if (tapCountAdmin === 1) {
@@ -1233,6 +1216,7 @@
             fetchDiceRewards();
         });
 
+        // 💡 탭 이동 시 개별 게임 설정도 함께 불러옵니다
         document.getElementById('btnTabSettings').addEventListener('click', () => {
             switchAdminTab('adminSettingsSection');
             fetchSystemSettings();
@@ -1259,33 +1243,16 @@
             }
         });
 
-        document.getElementById('toggleWholeClassEvent').addEventListener('change', async (e) => {
-            const isChecked = e.target.checked;
-            try {
-                const { error } = await db.from('system_settings').upsert({
-                    key: 'whole_class_event_enabled',
-                    value: isChecked ? 'true' : 'false'
-                }, { onConflict: 'key' });
-
-                if (error) throw error;
-
-                isWholeClassEventEnabled = isChecked;
-                alert(`전체 학생 특별 이벤트가 성공적으로 ${isChecked ? '활성화' : '비활성화'} 되었습니다.`);
-
-                if (currentStudentId) refreshStats();
-            } catch (err) {
-                alert("설정 저장 실패: " + err.message);
-                e.target.checked = !isChecked;
-            }
-        });
-
+        // 💡 개별 게임 설정 불러오기
         async function fetchGameSettings() {
             try {
                 const { data, error } = await db.from('system_settings').select('*').like('key', 'event_%_enabled');
                 if (error) throw error;
 
+                // 기본적으로 모든 체크박스를 체크 해제
                 document.querySelectorAll('.game-toggle').forEach(cb => cb.checked = false);
 
+                // DB에 저장된 값에 따라 체크
                 if (data) {
                     data.forEach(setting => {
                         const cb = document.querySelector(`.game-toggle[data-key="${setting.key}"]`);
@@ -1297,6 +1264,7 @@
             }
         }
 
+        // 💡 개별 게임 설정 저장하기 이벤트 리스너
         document.getElementById('btnSaveGameSettings').addEventListener('click', async () => {
             const btn = document.getElementById('btnSaveGameSettings');
             btn.disabled = true;

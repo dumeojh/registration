@@ -528,8 +528,8 @@
                 <button type="button" id="btnTabManual" style="background-color: #8e44ad;">✏️ 수동 입력</button>
                 <button type="button" id="btnTabQuiz" style="background-color: #27ae60;">📝 퀴즈 관리</button>
                 <button type="button" id="btnTabDice" style="background-color: #3498db;">🎲 주사위 상품</button>
-                <button type="button" id="btnTabLottery" style="background-color: #c0392b;">🎫 제비뽑기 관리</button> <button
-                    type="button" id="btnTabSettings" style="background-color: #e67e22;">⚙️ 이벤트 설정</button>
+                <button type="button" id="btnTabLottery" style="background-color: #c0392b;">🎫 제비뽑기 관리</button>
+                <button type="button" id="btnTabSettings" style="background-color: #e67e22;">⚙️ 이벤트 설정</button>
             </div>
 
             <div id="adminViewSection">
@@ -696,11 +696,13 @@
                 </div>
             </div>
 
+            <!-- 🎫 제비뽑기 관리 섹션 추가 -->
             <div id="adminLotterySection" class="hidden">
                 <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 제비뽑기 바둑판에 들어갈 문구와 개수를 설정합니다. 전체 합이
                     40개가 안 되면 나머지는 '꽝'으로 채워집니다.</p>
                 <div style="background: #fdf2e9; padding: 15px; border-radius: 8px; border: 1px solid #fad7a1;">
                     <div id="lotteryFormContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                        <!-- 항목들이 자바스크립트로 들어갑니다 -->
                     </div>
                     <button type="button" id="btnAddLotteryItem"
                         style="background-color: #f39c12; margin-top: 10px; padding: 10px;">+ 항목 추가</button>
@@ -1580,12 +1582,12 @@
             }
         });
 
-        // 🎫 제비뽑기 관련 자바스크립트 함수 추가
+        // 🎫 제비뽑기 관련 자바스크립트 함수 (단단한 저장 로직)
         async function fetchLotterySettings() {
             const container = document.getElementById('lotteryFormContainer');
-            container.innerHTML = '<p>불러오는 중...</p>';
+            container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">불러오는 중...</p>';
             try {
-                const { data, error } = await db.from('lottery_rewards').select('*');
+                const { data, error } = await db.from('lottery_rewards').select('*').order('id', { ascending: true });
                 if (error) throw error;
 
                 container.innerHTML = '';
@@ -1595,18 +1597,18 @@
                     addLotteryInputRow('', 1);
                 }
             } catch (e) {
-                container.innerHTML = `<p style="color:red;">오류: ${e.message}</p>`;
+                container.innerHTML = `<p style="color:red; text-align: center;">오류: ${e.message}</p>`;
             }
         }
 
         function addLotteryInputRow(name = '', qty = 1) {
             const container = document.getElementById('lotteryFormContainer');
             const row = document.createElement('div');
-            row.style.cssText = "display:flex; gap:10px; align-items:center;";
+            row.style.cssText = "display:flex; gap:10px; align-items:center; margin-bottom: 8px;";
             row.innerHTML = `
-                <input type="text" class="lottery-name" placeholder="문구 (예: 장한스티커)" value="${name}" style="flex:2; margin:0;">
-                <input type="number" class="lottery-qty" placeholder="개수" value="${qty}" min="1" style="flex:1; margin:0;">
-                <button type="button" onclick="this.parentElement.remove()" style="background:#e74c3c; width:auto; padding:10px; margin:0;">X</button>
+                <input type="text" class="lottery-name" placeholder="문구 (예: 장한스티커)" value="${name}" style="flex:2; margin:0; padding: 10px;">
+                <input type="number" class="lottery-qty" placeholder="개수" value="${qty}" min="1" style="flex:1; margin:0; padding: 10px;">
+                <button type="button" onclick="this.parentElement.remove()" style="background:#e74c3c; width:auto; padding:10px 15px; margin:0; border-radius: 6px;">X</button>
             `;
             container.appendChild(row);
         }
@@ -1614,30 +1616,44 @@
         document.getElementById('btnAddLotteryItem').addEventListener('click', () => addLotteryInputRow());
 
         document.getElementById('btnSaveLottery').addEventListener('click', async () => {
+            const btn = document.getElementById('btnSaveLottery');
+            btn.disabled = true;
+            btn.innerText = "저장 중...";
+
             const names = document.querySelectorAll('.lottery-name');
             const qtys = document.querySelectorAll('.lottery-qty');
             let dataToInsert = [];
 
             for (let i = 0; i < names.length; i++) {
-                if (names[i].value.trim() !== '') {
+                const nameVal = names[i].value.trim();
+                const qtyVal = parseInt(qtys[i].value, 10);
+                if (nameVal !== '' && !isNaN(qtyVal) && qtyVal > 0) {
                     dataToInsert.push({
-                        reward_name: names[i].value.trim(),
-                        quantity: parseInt(qtys[i].value) || 1
+                        reward_name: nameVal,
+                        quantity: qtyVal
                     });
                 }
             }
 
             try {
-                document.getElementById('btnSaveLottery').innerText = "저장 중...";
-                await db.from('lottery_rewards').delete().neq('id', 0); // 기존 데이터 초기화
+                // 1. 기존 데이터 모두 삭제
+                const { error: delErr } = await db.from('lottery_rewards').delete().neq('id', 0);
+                if (delErr) throw delErr;
+
+                // 2. 새 데이터 입력
                 if (dataToInsert.length > 0) {
-                    await db.from('lottery_rewards').insert(dataToInsert);
+                    const { error: insErr } = await db.from('lottery_rewards').insert(dataToInsert);
+                    if (insErr) throw insErr;
                 }
-                alert('제비뽑기 설정이 저장되었습니다!');
+                alert('🎉 제비뽑기 설정이 성공적으로 저장되었습니다!');
+
+                // 저장 후 다시 불러와서 화면 갱신
+                fetchLotterySettings();
             } catch (e) {
                 alert('저장 실패: ' + e.message);
             } finally {
-                document.getElementById('btnSaveLottery').innerText = "💾 제비뽑기 설정 저장";
+                btn.disabled = false;
+                btn.innerText = "💾 제비뽑기 설정 저장";
             }
         });
 

@@ -456,33 +456,50 @@
 
             let html = '';
 
+            // 🌟 1. 특별 이벤트 영역 분리
             if (isWholeClassEventEnabled) {
+                html += `
+                <div style="background: #fdf5fe; padding: 15px; border-radius: 8px; border: 1px solid #d7bde2; margin-bottom: 20px; text-align: left;">
+                    <h3 style="margin-top: 0; margin-bottom: 15px; color: #8e44ad; font-size: 16px;">🌟 전체 학생 특별 이벤트</h3>
+                `;
                 const specialLog = logMap[0];
                 if (specialLog) {
                     if (specialLog.is_rewarded) {
-                        html += `<button class="milestone-btn completed"><div>🎊 [ 특별 이벤트 ] 참여 완료</div><div style="font-size:12px; font-weight:normal;">✅ 상품 수령 완료 (${specialLog.result_text})</div></button>`;
+                        html += `<button class="milestone-btn completed" style="margin-bottom:0;"><div>🎊 [ 특별 이벤트 ] 참여 완료</div><div style="font-size:12px; font-weight:normal;">✅ 상품 수령 완료 (${specialLog.result_text})</div></button>`;
                     } else {
-                        html += `<button class="milestone-btn waiting"><div>🎊 [ 특별 이벤트 ] 참여 완료</div><div style="font-size:12px; font-weight:normal;">⏳ 선생님 확인(상품 지급) 대기중</div></button>`;
+                        html += `<button class="milestone-btn waiting" style="margin-bottom:0;"><div>🎊 [ 특별 이벤트 ] 참여 완료</div><div style="font-size:12px; font-weight:normal;">⏳ 선생님 확인(상품 지급) 대기중</div></button>`;
                     }
                 } else {
-                    html += `<button class="milestone-btn active" style="background-color: #f5eef8; border-color: #8e44ad; color: #8e44ad;" onclick="openGameModal(0)"><div>🎊 [ 특별 이벤트 ] 진행하기!</div><div style="font-size:12px; font-weight:normal;">여기를 눌러 특별 게임을 진행하세요</div></button>`;
+                    html += `<button class="milestone-btn active" style="background-color: #f5eef8; border-color: #8e44ad; color: #8e44ad; margin-bottom:0;" onclick="openGameModal(0)"><div>🎊 [ 특별 이벤트 ] 진행하기!</div><div style="font-size:12px; font-weight:normal;">여기를 눌러 특별 게임을 진행하세요</div></button>`;
                 }
+                html += `</div>`;
             }
 
-            for (let i = 5; i <= maxMilestone; i += 5) {
-                const log = logMap[i];
-                if (log) {
-                    if (log.is_rewarded) {
-                        html += `<button class="milestone-btn completed"><div>[ ${i}회차 ] 달성 이벤트</div><div style="font-size:12px; font-weight:normal;">✅ 상품 수령 완료 (${log.result_text})</div></button>`;
+            // 🎯 2. 정규 발표(5의 배수) 이벤트 영역 분리
+            if (maxMilestone >= 5) {
+                html += `
+                <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; border: 1px solid #bde0fe; text-align: left;">
+                    <h3 style="margin-top: 0; margin-bottom: 15px; color: #2980b9; font-size: 16px;">🎯 발표 달성 이벤트 (5회 단위)</h3>
+                `;
+                for (let i = 5; i <= maxMilestone; i += 5) {
+                    const log = logMap[i];
+                    if (log) {
+                        if (log.is_rewarded) {
+                            html += `<button class="milestone-btn completed"><div>[ ${i}회차 ] 달성 이벤트</div><div style="font-size:12px; font-weight:normal;">✅ 상품 수령 완료 (${log.result_text})</div></button>`;
+                        } else {
+                            html += `<button class="milestone-btn waiting"><div>[ ${i}회차 ] 달성 이벤트</div><div style="font-size:12px; font-weight:normal;">⏳ 선생님 확인 대기중</div></button>`;
+                        }
                     } else {
-                        html += `<button class="milestone-btn waiting"><div>[ ${i}회차 ] 달성 이벤트</div><div style="font-size:12px; font-weight:normal;">⏳ 선생님 확인 대기중</div></button>`;
+                        html += `<button class="milestone-btn active" onclick="openGameModal(${i})"><div>🎉 [ ${i}회차 ] 이벤트 진행하기!</div><div style="font-size:12px; font-weight:normal;">여기를 눌러 게임을 선택하세요</div></button>`;
                     }
-                } else {
-                    html += `<button class="milestone-btn active" onclick="openGameModal(${i})"><div>🎉 [ ${i}회차 ] 이벤트 진행하기!</div><div style="font-size:12px; font-weight:normal;">여기를 눌러 게임을 선택하세요</div></button>`;
                 }
+                html += `</div>`;
             }
+
             document.getElementById('milestoneList').innerHTML = html;
         }
+
+
 
         function openGameModal(milestone) {
             currentActiveMilestone = milestone;

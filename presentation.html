@@ -850,7 +850,7 @@
                             btnGoSpecialEvent.style.cursor = 'pointer';
                             btnGoSpecialEvent.innerText = `🎊 특별 이벤트 가능!`;
                             btnGoSpecialEvent.onclick = () => {
-                                window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
+                                window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}&event_type=special`;
                             };
                         } else {
                             btnGoSpecialEvent.disabled = true;
@@ -872,7 +872,7 @@
                             btnGoRegularEvent.style.cursor = 'pointer';
                             btnGoRegularEvent.innerText = `🎉 달성 이벤트 (${availableCount}개)`;
                             btnGoRegularEvent.onclick = () => {
-                                window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}`;
+                                window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}&event_type=regular`;
                             };
                         } else {
                             btnGoRegularEvent.disabled = true;
@@ -950,7 +950,7 @@
 
                 document.getElementById('statsBox').innerHTML = `
                     <p class="highlight" style="font-size: 1.2em;">${currentStudentId} ${currentStudentName}</p>
-                    <div style="font-size: 14px; background: #e8f4fd; padding: 10px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; justify-content: space-around; margin-top: 10px;">
+                    <div style="font-size: 14px; background: #e8f4fd; padding: 10px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px 시olid #bde0fe; display: flex; justify-content: space-around; margin-top: 10px;">
                         <span>🏆 반: <span style="color:#e74c3c; font-size: 16px;">${classRank}</span>등${classTieText}</span>
                         <span>🏅 학년: <span style="color:#e74c3c; font-size: 16px;">${gradeRank}</span>등${gradeTieText}</span>
                     </div>

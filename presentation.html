@@ -353,19 +353,16 @@
             border-radius: 6px;
             margin-bottom: 6px;
             gap: 10px;
-            /* 🌟 입력칸과 선택칸 사이 간격 */
         }
 
         .dice-reward-item input {
             flex: 1;
-            /* 🌟 남은 공간 차지 */
             padding: 8px;
             margin: 0;
             border: 1px solid #bdc3c7;
             border-radius: 4px;
         }
 
-        /* 🌟 상품 유형 선택 드롭다운 스타일 */
         .dice-reward-item select {
             width: auto;
             padding: 8px;
@@ -669,7 +666,19 @@
                         일괄 등록하기</button>
                 </div>
 
-                <h4 style="margin-bottom: 10px; color: #2c3e50;">📌 등록된 문제 목록</h4>
+                <!-- 🌟 카테고리 필터가 추가된 부분 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="margin: 0; color: #2c3e50;">📌 등록된 문제 목록</h4>
+                    <select id="filterQuizCategory" onchange="fetchQuizList()"
+                        style="width: auto; padding: 6px; font-size: 13px; border-radius: 6px; border: 1px solid #bdc3c7;">
+                        <option value="all">전체 보기</option>
+                        <option value="퀴즈">🤔 넌센스</option>
+                        <option value="수학">📐 수학</option>
+                        <option value="상식">🌍 상식</option>
+                        <option value="사자성어">📜 사자성어</option>
+                    </select>
+                </div>
+
                 <div id="quizListContainer"
                     style="max-height: 350px; overflow-y: auto; background: #ecf0f1; padding: 10px; border-radius: 8px;">
                     <p style="text-align: center; color: #7f8c8d; font-size: 13px;">불러오는 중...</p>
@@ -772,7 +781,7 @@
 
         let isEventEnabled = true;
         let isWholeClassEventEnabled = false;
-        let isRegularEventEnabled = true; // 5의 배수 이벤트 변수 추가
+        let isRegularEventEnabled = true;
 
         async function fetchSystemSettings() {
             try {
@@ -872,14 +881,12 @@
                 const completedCount = uniqueMilestones.size;
                 const availableCount = (maxMilestone >= 5) ? Math.floor(maxMilestone / 5) - completedCount : 0;
 
-                // 🌟 분리된 버튼 2개 제어
                 const btnGoSpecialEvent = document.getElementById('btnGoSpecialEvent');
                 const btnGoRegularEvent = document.getElementById('btnGoRegularEvent');
                 btnGoSpecialEvent.style.display = 'block';
                 btnGoRegularEvent.style.display = 'block';
 
                 if (isEventEnabled) {
-                    // 1. 특별 이벤트 버튼
                     if (isWholeClassEventEnabled) {
                         if (!hasParticipatedSpecial) {
                             btnGoSpecialEvent.disabled = false;
@@ -901,7 +908,6 @@
                         btnGoSpecialEvent.style.display = 'none';
                     }
 
-                    // 2. 5의 배수 달성 이벤트 버튼
                     if (isRegularEventEnabled) {
                         if (availableCount > 0) {
                             btnGoRegularEvent.disabled = false;
@@ -924,7 +930,6 @@
                         btnGoRegularEvent.style.display = 'none';
                     }
                 } else {
-                    // 전체 활성화 스위치가 꺼진 경우
                     btnGoSpecialEvent.style.display = 'block';
                     btnGoSpecialEvent.disabled = true;
                     btnGoSpecialEvent.style.backgroundColor = '#95a5a6';
@@ -1162,7 +1167,7 @@
             const container = document.getElementById('approvalListContainer');
             const bulkContainer = document.getElementById('bulkActionContainer');
             container.innerHTML = '<p style="text-align:center;">데이터를 불러오는 중...</p>';
-            bulkContainer.style.display = 'none'; // 기본적으로 숨김
+            bulkContainer.style.display = 'none';
 
             try {
                 const { data: presData } = await db.from('presentation').select('*').eq('is_approved', false).order('created_at', { ascending: false });
@@ -1173,7 +1178,7 @@
                     return;
                 }
 
-                bulkContainer.style.display = 'flex'; // 대기 목록이 있으면 일괄 처리 박스 표시
+                bulkContainer.style.display = 'flex';
                 let html = '';
 
                 if (eventData && eventData.length > 0) {
@@ -1222,7 +1227,6 @@
 
                 container.innerHTML = html;
 
-                // --- 기존 개별 처리 버튼 이벤트 ---
                 document.querySelectorAll('.btn-approve').forEach(b => b.addEventListener('click', async (e) => {
                     if (!confirm("발표를 승인하시겠습니까? (통계에 반영됩니다)")) return;
                     await db.from('presentation').update({ is_approved: true }).eq('id', e.target.dataset.id);
@@ -1250,7 +1254,6 @@
                     }
                 }));
 
-                // --- 일괄 처리 버튼 로직 ---
                 document.getElementById('btnBulkApprove').onclick = async () => {
                     if (!presData || presData.length === 0) return alert("대기 중인 발표 기록이 없습니다.");
                     if (!confirm(`총 ${presData.length}건의 발표를 모두 승인하시겠습니까?`)) return;
@@ -1474,7 +1477,6 @@
             }
         });
 
-        // 🌟 [수정됨] 주사위 상품 로드 (유형 포함)
         async function fetchDiceRewards() {
             const formContainer = document.getElementById('diceRewardForm');
             formContainer.innerHTML = '<p style="text-align: center; color: #7f8c8d;">불러오는 중...</p>';
@@ -1488,7 +1490,7 @@
                 if (data) {
                     data.forEach(item => {
                         rewardMap[item.dice_number] = item.reward_name;
-                        typeMap[item.dice_number] = item.reward_type || 'normal'; // DB에 없으면 기본 normal
+                        typeMap[item.dice_number] = item.reward_type || 'normal';
                     });
                 }
 
@@ -1516,7 +1518,6 @@
             }
         }
 
-        // 🌟 [수정됨] 주사위 상품 저장 (유형 포함)
         document.getElementById('btnSaveDiceRewards').addEventListener('click', async () => {
             const btn = document.getElementById('btnSaveDiceRewards');
             btn.disabled = true;
@@ -1526,13 +1527,13 @@
 
             for (let i = 1; i <= 6; i++) {
                 const rewardName = document.getElementById(`diceReward${i}`).value.trim();
-                const rewardType = document.getElementById(`diceType${i}`).value; // 선택된 유형 가져오기
+                const rewardType = document.getElementById(`diceType${i}`).value;
 
                 if (rewardName) {
                     dataToUpsert.push({
                         dice_number: i,
                         reward_name: rewardName,
-                        reward_type: rewardType // DB로 전송
+                        reward_type: rewardType
                     });
                 }
             }
@@ -1566,11 +1567,21 @@
 
         setTimeout(toggleQuizFields, 100);
 
+        // 🌟 [수정됨] 선택한 카테고리에 맞는 퀴즈만 불러오도록 필터링 로직 추가
         async function fetchQuizList() {
             const container = document.getElementById('quizListContainer');
+            const selectedCategory = document.getElementById('filterQuizCategory') ? document.getElementById('filterQuizCategory').value : 'all';
+
             container.innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">불러오는 중...</p>';
             try {
-                const { data, error } = await db.from('quiz_bank').select('*').order('created_at', { ascending: false });
+                let query = db.from('quiz_bank').select('*').order('created_at', { ascending: false });
+
+                // '전체 보기'가 아닐 때만 카테고리 필터 적용
+                if (selectedCategory !== 'all') {
+                    query = query.eq('category', selectedCategory);
+                }
+
+                const { data, error } = await query;
                 if (error) throw error;
 
                 if (!data || data.length === 0) {

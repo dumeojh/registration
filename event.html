@@ -161,11 +161,11 @@
             margin-bottom: 5px;
         }
 
-        /* 🌟 스피드 설명 버튼 색상 추가 */
         .btn-challenge {
             background-color: #d35400;
         }
 
+        /* 주사위 애니메이션 관련 CSS 생략 없이 유지 */
         #diceContainer {
             display: none;
             margin: 40px auto 30px auto;
@@ -315,6 +315,7 @@
             transition: background-color 0.3s;
         }
 
+        /* 수학 및 퀴즈 섹션 CSS 유지 */
         .math-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -375,6 +376,69 @@
             border-radius: 6px;
             box-sizing: border-box;
         }
+
+        /* 🎫 제비뽑기 보드 스타일 추가 */
+        #lotteryBoard {
+            display: none;
+            grid-template-columns: repeat(5, 1fr);
+            /* 5칸 x 8줄 = 40개 */
+            gap: 8px;
+            margin: 20px 0;
+            perspective: 1000px;
+        }
+
+        .lottery-card {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .lottery-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .lottery-card.flipped .lottery-inner {
+            transform: rotateY(180deg);
+        }
+
+        .lottery-front,
+        .lottery-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 13px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .lottery-front {
+            background-color: #e74c3c;
+            color: white;
+            font-size: 20px;
+        }
+
+        .lottery-back {
+            background-color: #f1c40f;
+            color: #2c3e50;
+            transform: rotateY(180deg);
+            border: 2px solid #f39c12;
+            padding: 2px;
+            word-break: keep-all;
+            font-size: 11px;
+        }
     </style>
 </head>
 
@@ -388,6 +452,10 @@
 
         <div id="gameSelection" class="game-modal">
             <h3 id="gameTitle"></h3>
+
+            <div id="lotteryBoard"></div>
+            <p id="lotteryLoading" style="display:none; text-align:center; color:#7f8c8d; margin: 20px 0;">바둑판을 섞는
+                중입니다... 🎲</p>
 
             <div id="diceContainer">
                 <div id="diceWrapper">
@@ -413,7 +481,6 @@
             <button class="game-btn btn-math" id="btnMathGame" onclick="playGame('수학')">📐 수학문제 도전</button>
             <button class="game-btn btn-common" id="btnCommonGame" onclick="playGame('상식')">🌍 상식에 도전</button>
             <button class="game-btn btn-idiom" id="btnIdiomGame" onclick="playGame('사자성어')">📜 사자성어 도전</button>
-
             <button class="game-btn btn-challenge" id="btnChallengeGame" onclick="playGame('도전(스피드 설명)')">⏱️ 스피드 설명 (검색
                 찬스)</button>
 
@@ -602,9 +669,10 @@
             if (gameSettings.math) document.getElementById('btnMathGame').style.display = 'block';
             if (gameSettings.common) document.getElementById('btnCommonGame').style.display = 'block';
             if (gameSettings.idiom) document.getElementById('btnIdiomGame').style.display = 'block';
-            if (gameSettings.challenge) document.getElementById('btnChallengeGame').style.display = 'block'; // 🌟 스피드 설명 버튼 노출
+            if (gameSettings.challenge) document.getElementById('btnChallengeGame').style.display = 'block';
 
             document.getElementById('btnCancelGame').style.display = 'block';
+            document.getElementById('lotteryBoard').style.display = 'none';
             document.getElementById('diceContainer').style.display = 'none';
             document.getElementById('diceRewardInfo').style.cursor = 'default';
             document.getElementById('mathGridSection').style.display = 'none';
@@ -653,10 +721,77 @@
                 btn.style.cursor = 'not-allowed';
             });
 
+            // 🎫 제비뽑기 게임 로직 완전히 수정
             if (type === '제비뽑기') {
-                const results = ["꽝! 다음 기회에...", "발표 1회 면제권?!", "선생님께 칭찬받기", "꽝! 아쉽네요."];
-                const res = results[Math.floor(Math.random() * results.length)];
-                saveEventResult('제비뽑기', `🎫 제비뽑기 결과:\n\n[ ${res} ]`, res);
+                document.querySelectorAll('.game-btn').forEach(btn => btn.style.display = 'none');
+                document.getElementById('btnCancelGame').style.display = 'none';
+
+                const board = document.getElementById('lotteryBoard');
+                const loading = document.getElementById('lotteryLoading');
+                loading.style.display = 'block';
+
+                // DB에서 보상 설정 불러오기
+                db.from('lottery_rewards').select('*').then(({ data, error }) => {
+                    loading.style.display = 'none';
+                    if (error) {
+                        alert('설정을 불러오지 못했습니다.');
+                        return openGameModal(currentActiveMilestone);
+                    }
+
+                    let pool = [];
+                    if (data) {
+                        data.forEach(item => {
+                            for (let i = 0; i < item.quantity; i++) pool.push(item.reward_name);
+                        });
+                    }
+
+                    // 전체 칸 수 40개, 부족하면 꽝으로 채움
+                    const TOTAL_TILES = 40;
+                    while (pool.length < TOTAL_TILES) {
+                        pool.push("꽝! 다음 기회에...");
+                    }
+
+                    // 배열 섞기 (Fisher-Yates)
+                    for (let i = pool.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [pool[i], pool[j]] = [pool[j], pool[i]];
+                    }
+
+                    // 바둑판 그리기
+                    board.innerHTML = '';
+                    board.style.display = 'grid';
+
+                    let isFlipping = false;
+
+                    pool.slice(0, TOTAL_TILES).forEach((reward, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'lottery-card';
+                        card.innerHTML = `
+                            <div class="lottery-inner">
+                                <div class="lottery-front">?</div>
+                                <div class="lottery-back">${reward}</div>
+                            </div>
+                        `;
+
+                        card.addEventListener('click', () => {
+                            if (isFlipping) return;
+                            isFlipping = true;
+                            card.classList.add('flipped');
+
+                            // 대박 효과 연출 (꽝이 아닌 경우)
+                            if (!reward.includes("꽝")) {
+                                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                            }
+
+                            // 2초 뒤에 결과 저장 및 창 닫기
+                            setTimeout(() => {
+                                board.style.display = 'none';
+                                saveEventResult('제비뽑기', `🎫 제비뽑기 결과:\n\n[ ${reward} ]`, `제비뽑기 (${reward})`);
+                            }, 2000);
+                        });
+                        board.appendChild(card);
+                    });
+                });
             }
             else if (type === '주사위') {
                 document.querySelectorAll('.game-btn').forEach(btn => btn.style.display = 'none');
@@ -716,7 +851,6 @@
             else if (type === '수학') {
                 openMathGrid();
             }
-            // 🌟 스피드 설명 게임 분기 추가
             else if (type === '퀴즈' || type === '상식' || type === '사자성어' || type === '도전(스피드 설명)') {
                 try {
                     const { data, error } = await db.from('quiz_bank').select('*').eq('category', type);
@@ -731,9 +865,9 @@
                     const randomQuiz = data[Math.floor(Math.random() * data.length)];
 
                     if (type === '도전(스피드 설명)') {
-                        showChallengeProblem(randomQuiz); // 🌟 스피드 설명 전용 UI 함수 호출
+                        showChallengeProblem(randomQuiz);
                     } else {
-                        showGeneralQuizProblem(type, randomQuiz); // 일반 퀴즈 함수 호출
+                        showGeneralQuizProblem(type, randomQuiz);
                     }
 
                 } catch (err) {
@@ -849,7 +983,6 @@
         let currentGeneralQuiz = null;
         let currentGeneralQuizType = '';
 
-        // 🌟 스피드 설명 전용 화면 (문제와 정답 동시 노출, 설명 완료 버튼)
         function showChallengeProblem(quiz) {
             document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => btn.style.display = 'none');
             document.getElementById('btnCancelGame').style.display = 'none';
@@ -858,7 +991,6 @@
             section.style.display = 'block';
             section.style.borderColor = '#d35400';
 
-            // 질문과 정답을 동시에 보여주고 미션 텍스트 추가
             document.getElementById('quizQuestionText').innerHTML = `
                 <div style="font-size:14px; color:#d35400; margin-bottom:8px;">[스피드 설명 도전]</div>
                 <div style="font-size:16px; margin-bottom:12px; line-height:1.4;"><b>Q.</b> ${quiz.question}</div>
@@ -870,10 +1002,8 @@
                 </div>
             `;
 
-            // 입력창 없앰
             document.getElementById('quizAnswerArea').innerHTML = '';
 
-            // 제출 버튼의 기능을 "설명 완료" 로 변경
             const btnSubmit = document.getElementById('btnSubmitQuizAnswer');
             btnSubmit.style.backgroundColor = '#d35400';
             btnSubmit.innerText = "🎉 멋지게 설명 완료!";
@@ -922,7 +1052,6 @@
                 answerArea.innerHTML = optionsHtml;
             }
 
-            // 제출 버튼 기능 원래대로 복구
             const btnSubmit = document.getElementById('btnSubmitQuizAnswer');
             btnSubmit.style.backgroundColor = themeColor;
             btnSubmit.innerText = "정답 제출";

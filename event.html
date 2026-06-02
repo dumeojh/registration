@@ -437,11 +437,15 @@
                 const { data, error } = await db.from('dice_rewards').select('*').order('dice_number', { ascending: true });
                 if (error) throw error;
                 if (data && data.length > 0) {
-                    let html = '<div style="font-weight:bold; color:#2980b9; margin-bottom:8px; text-align:center;">🎁 오늘의 주사위 상품</div>';
-                    html += '<div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">';
+                    let html = '<div style="font-weight:bold; color:#2980b9; margin-bottom:12px; text-align:center;">🎁 오늘의 주사위 상품</div>';
+                    html += '<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px;">';
                     data.forEach(r => {
                         diceRewardMap[r.dice_number] = r.reward_name;
-                        html += `<span style="background:#ecf0f1; padding:4px 8px; border-radius:4px; font-size:12px;"><b>[${r.dice_number}]</b> ${r.reward_name}</span>`;
+                        html += `
+                            <div style="background:#ecf0f1; padding:10px 5px; border-radius:6px; font-size:13px; text-align:center; word-break:keep-all; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:45px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                <b style="color:#e74c3c; margin-bottom:4px; font-size:14px;">[${r.dice_number}]</b> 
+                                <span style="color:#2c3e50;">${r.reward_name}</span>
+                            </div>`;
                     });
                     html += '</div>';
                     document.getElementById('diceRewardInfo').innerHTML = html;

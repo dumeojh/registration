@@ -383,7 +383,8 @@
             grid-template-columns: repeat(5, 1fr);
             gap: 8px;
             margin: 20px 0;
-            perspective: 1000px;
+            position: relative;
+            /* 중앙 팝업 계산을 위한 기준점 */
         }
 
         .lottery-card {
@@ -391,12 +392,7 @@
             aspect-ratio: 1 / 1;
             background-color: transparent;
             cursor: pointer;
-            position: relative;
-            z-index: 1;
-        }
-
-        .lottery-card.flipped {
-            z-index: 10;
+            perspective: 1000px;
         }
 
         .lottery-inner {
@@ -404,12 +400,42 @@
             width: 100%;
             height: 100%;
             text-align: center;
+            /* 기본 회전 속도 */
             transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transform-style: preserve-3d;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
+        /* 클릭된 카드가 중앙으로 날아오면서 뒤집히는 스타일 */
         .lottery-card.flipped .lottery-inner {
-            transform: rotateY(180deg) scale(2);
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            /* fixed 포지션에서 중앙 정렬 후 크기를 키우고 회전 */
+            transform: translate(-50%, -50%) rotateY(180deg) scale(3.5);
+            z-index: 9999;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            /* 크기가 커질 때 부드럽게 전환되도록 시간 조정 */
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            /* 모달창보다 무조건 위에 오도록 설정 */
+            margin: 0;
+            width: 60px;
+            /* 원래 카드 크기를 고정시켜 비율 유지 */
+            height: 60px;
+        }
+
+        /* 카드가 튀어나올 때 뒷배경을 살짝 어둡게 해주는 오버레이 효과 */
+        #lotteryOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            z-index: 9990;
+            transition: opacity 0.5s;
         }
 
         .lottery-front,
@@ -425,23 +451,28 @@
             box-sizing: border-box;
             font-size: 13px;
             font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         .lottery-front {
             background-color: #ff9a9e;
+            /* 파스텔 코랄 핑크 */
             color: white;
             font-size: 20px;
+            border: 1px solid #ff7eb3;
         }
 
         .lottery-back {
             background-color: #ffe5b4;
-            color: #5d4037;
+            /* 파스텔 피치/노랑 */
+            color: #d35400;
+            /* 글씨 색상을 좀 더 진하고 선명하게 */
             transform: rotateY(180deg);
-            border: 2px solid #ffcc80;
-            padding: 2px;
+            border: 2px solid #f39c12;
+            padding: 5px;
             word-break: keep-all;
-            font-size: 10px;
+            /* scale로 커지기 때문에 폰트 크기를 약간 작게 설정해야 깨지지 않음 */
+            font-size: 11px;
+            line-height: 1.2;
         }
     </style>
 </head>
@@ -457,6 +488,8 @@
         <div id="gameSelection" class="game-modal">
             <h3 id="gameTitle"></h3>
 
+            <!-- 🎫 제비뽑기 보드, 로딩, 오버레이 추가 -->
+            <div id="lotteryOverlay"></div>
             <div id="lotteryBoard"></div>
             <p id="lotteryLoading" style="display:none; text-align:center; color:#7f8c8d; margin: 20px 0;">바둑판을 섞는
                 중입니다... 🎲</p>
@@ -642,6 +675,7 @@
 
             document.getElementById('btnCancelGame').style.display = 'block';
             document.getElementById('lotteryBoard').style.display = 'none';
+            document.getElementById('lotteryOverlay').style.display = 'none';
             document.getElementById('diceContainer').style.display = 'none';
             document.getElementById('diceRewardInfo').style.cursor = 'default';
             document.getElementById('mathGridSection').style.display = 'none';
@@ -677,6 +711,7 @@
                 document.getElementById('btnCancelGame').style.display = 'none';
 
                 const board = document.getElementById('lotteryBoard');
+                const overlay = document.getElementById('lotteryOverlay');
                 const loading = document.getElementById('lotteryLoading');
                 loading.style.display = 'block';
 
@@ -687,7 +722,6 @@
                     let pool = [];
                     if (data && data.length > 0) {
                         data.forEach(item => {
-                            // 명시적으로 숫자로 변환하여 배열에 추가
                             const qty = parseInt(item.quantity, 10) || 1;
                             for (let i = 0; i < qty; i++) {
                                 pool.push(item.reward_name);
@@ -696,15 +730,11 @@
                     }
 
                     const TOTAL_TILES = 40;
-                    // 전체 칸 수 40개 중, 설정한 아이템 개수보다 모자라면 꽝으로 채움
                     while (pool.length < TOTAL_TILES) {
                         pool.push("꽝! 다음 기회에...");
                     }
-
-                    // 관리자가 실수로 40개 이상 설정했다면 정확히 40개까지만 유지
                     pool = pool.slice(0, TOTAL_TILES);
 
-                    // 배열 섞기 (Fisher-Yates Shuffle)
                     for (let i = pool.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
                         [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -723,12 +753,16 @@
                         card.addEventListener('click', () => {
                             if (isFlipping) return;
                             isFlipping = true;
+
+                            // 배경 오버레이 표시 및 카드 뒤집기 애니메이션 적용
+                            overlay.style.display = 'block';
                             card.classList.add('flipped');
 
-                            if (!reward.includes("꽝")) { confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); }
+                            if (!reward.includes("꽝")) { confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 }); }
 
                             setTimeout(() => {
                                 board.style.display = 'none';
+                                overlay.style.display = 'none';
                                 saveEventResult('제비뽑기', `🎫 제비뽑기 결과:\n\n[ ${reward} ]`, `제비뽑기 (${reward})`);
                             }, 3500);
                         });

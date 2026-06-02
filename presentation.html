@@ -792,8 +792,9 @@
         <div class="modal-content" style="max-width: 300px; text-align: center; padding: 30px;">
             <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; margin-bottom: 20px;" id="pwdModalTitle">비밀번호 입력
             </h3>
-            <input type="password" id="pwdInput"
-                style="text-align: center; letter-spacing: 8px; font-size: 24px; padding: 10px;" placeholder="****">
+            <input type="tel" id="pwdInput"
+                style="text-align: center; letter-spacing: 8px; font-size: 24px; padding: 10px; -webkit-text-security: disc;"
+                placeholder="****">
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button id="btnPwdCancel" class="btn-secondary"
                     style="margin-top: 0; flex: 1; padding: 12px; font-size: 15px;">취소</button>
@@ -2089,7 +2090,7 @@
 
             try {
                 const { error } = await db.from('manual_records').upsert(dataToUpsert, { onConflict: 'student_id' });
-                if (error) throw error;
+                if (error) <input type="password" id="pwdInput" throw error;
                 alert('✅ 전체 학생의 횟수가 일괄 저장되었습니다!');
             } catch (error) { alert('저장 중 에러 발생: ' + error.message); }
         });

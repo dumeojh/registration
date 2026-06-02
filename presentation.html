@@ -482,6 +482,27 @@
             <p style="font-size: 13px; color: #7f8c8d; margin-top: 0; margin-bottom: 15px;">
                 ※ 대기 중인 발표 기록과 이벤트 상품 지급 대상 목록이 모두 표시됩니다.
             </p>
+
+            <div id="bulkActionContainer"
+                style="display: none; flex-direction: column; gap: 8px; margin-bottom: 15px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px dashed #bdc3c7;">
+                <div style="display: flex; gap: 8px;">
+                    <button id="btnBulkReward"
+                        style="margin: 0; padding: 10px; font-size: 14px; background: #8e44ad; flex: 1;">🎁 전체 상품 지급
+                        완료</button>
+                    <button id="btnBulkApprove"
+                        style="margin: 0; padding: 10px; font-size: 14px; background: #27ae60; flex: 1;">✅ 전체 발표
+                        승인</button>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btnBulkCancelEvent"
+                        style="margin: 0; padding: 8px; font-size: 13px; background: #e74c3c; flex: 1; opacity: 0.8;">🗑️
+                        전체 이벤트 취소</button>
+                    <button id="btnBulkReject"
+                        style="margin: 0; padding: 8px; font-size: 13px; background: #c0392b; flex: 1; opacity: 0.8;">🗑️
+                        전체 발표 삭제</button>
+                </div>
+            </div>
+
             <div id="approvalListContainer" style="max-height: 500px; overflow-y: auto;">
                 <p style="text-align: center; color: #7f8c8d;">불러오는 중...</p>
             </div>
@@ -508,12 +529,12 @@
                 <select id="classSelect" style="width: auto; padding: 10px;"></select>
                 <button id="btnFetchClass" style="width: auto; padding: 10px;">조회</button>
                 <div style="overflow-x: auto; margin-top:10px;">
-                    <!-- 🌟 정렬 기능이 추가된 테이블 헤더 -->
                     <table id="classTable">
                         <thead>
                             <tr>
                                 <th onclick="sortClassTable('student_id')" style="cursor:pointer; user-select:none;">학번
-                                    <span id="sort_icon_student_id" style="font-size:12px; color:#95a5a6;">↕</span></th>
+                                    <span id="sort_icon_student_id" style="font-size:12px; color:#95a5a6;">↕</span>
+                                </th>
                                 <th onclick="sortClassTable('name')" style="cursor:pointer; user-select:none;">이름 <span
                                         id="sort_icon_name" style="font-size:12px; color:#95a5a6;">↕</span></th>
                                 <th onclick="sortClassTable('total')"
@@ -1127,7 +1148,9 @@
 
         async function fetchPendingApprovals() {
             const container = document.getElementById('approvalListContainer');
+            const bulkContainer = document.getElementById('bulkActionContainer');
             container.innerHTML = '<p style="text-align:center;">데이터를 불러오는 중...</p>';
+            bulkContainer.style.display = 'none'; // 기본적으로 숨김
 
             try {
                 const { data: presData } = await db.from('presentation').select('*').eq('is_approved', false).order('created_at', { ascending: false });
@@ -1138,9 +1161,10 @@
                     return;
                 }
 
+                bulkContainer.style.display = 'flex'; // 대기 목록이 있으면 일괄 처리 박스 표시
                 let html = '';
 
-                if (eventData) {
+                if (eventData && eventData.length > 0) {
                     eventData.forEach(item => {
                         html += `
                             <div class="history-item" style="border-left: 4px solid #9b59b6; margin-bottom: 8px; padding: 10px; background: #fdf5fe; display: flex; justify-content: space-between; align-items: center;">
@@ -1162,7 +1186,7 @@
                     });
                 }
 
-                if (presData) {
+                if (presData && presData.length > 0) {
                     presData.forEach(item => {
                         html += `
                             <div class="history-item" style="border-left: 4px solid #e67e22; margin-bottom: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
@@ -1186,6 +1210,7 @@
 
                 container.innerHTML = html;
 
+                // --- 기존 개별 처리 버튼 이벤트 ---
                 document.querySelectorAll('.btn-approve').forEach(b => b.addEventListener('click', async (e) => {
                     if (!confirm("발표를 승인하시겠습니까? (통계에 반영됩니다)")) return;
                     await db.from('presentation').update({ is_approved: true }).eq('id', e.target.dataset.id);
@@ -1213,8 +1238,55 @@
                     }
                 }));
 
+                // --- 🌟 일괄 처리 버튼 로직 ---
+                document.getElementById('btnBulkApprove').onclick = async () => {
+                    if (!presData || presData.length === 0) return alert("대기 중인 발표 기록이 없습니다.");
+                    if (!confirm(`총 ${presData.length}건의 발표를 모두 승인하시겠습니까?`)) return;
+                    try {
+                        const ids = presData.map(p => p.id);
+                        await db.from('presentation').update({ is_approved: true }).in('id', ids);
+                        alert("전체 발표가 승인되었습니다.");
+                        await fetchPendingApprovals();
+                        if (currentStudentId) await refreshStats();
+                    } catch (error) { alert("일괄 승인 실패: " + error.message); }
+                };
+
+                document.getElementById('btnBulkReject').onclick = async () => {
+                    if (!presData || presData.length === 0) return alert("대기 중인 발표 기록이 없습니다.");
+                    if (!confirm(`🚨 정말로 총 ${presData.length}건의 발표를 모두 삭제(반려)하시겠습니까?\n복구할 수 없습니다.`)) return;
+                    try {
+                        const ids = presData.map(p => p.id);
+                        await db.from('presentation').delete().in('id', ids);
+                        alert("전체 발표가 삭제되었습니다.");
+                        await fetchPendingApprovals();
+                    } catch (error) { alert("일괄 삭제 실패: " + error.message); }
+                };
+
+                document.getElementById('btnBulkReward').onclick = async () => {
+                    if (!eventData || eventData.length === 0) return alert("상품 지급 대기 중인 이벤트가 없습니다.");
+                    if (!confirm(`총 ${eventData.length}건의 이벤트 상품을 모두 지급 완료 처리하시겠습니까?`)) return;
+                    try {
+                        const ids = eventData.map(e => e.id);
+                        await db.from('event_logs').update({ is_rewarded: true }).in('id', ids);
+                        alert("전체 상품 지급 처리가 완료되었습니다.");
+                        await fetchPendingApprovals();
+                    } catch (error) { alert("일괄 지급 실패: " + error.message); }
+                };
+
+                document.getElementById('btnBulkCancelEvent').onclick = async () => {
+                    if (!eventData || eventData.length === 0) return alert("상품 지급 대기 중인 이벤트가 없습니다.");
+                    if (!confirm(`🚨 정말로 총 ${eventData.length}건의 이벤트 기록을 모두 취소 및 삭제하시겠습니까?\n학생들이 이벤트를 다시 진행해야 합니다.`)) return;
+                    try {
+                        const ids = eventData.map(e => e.id);
+                        await db.from('event_logs').delete().in('id', ids);
+                        alert("전체 이벤트 기록이 삭제되었습니다.");
+                        await fetchPendingApprovals();
+                        if (currentStudentId) await refreshStats();
+                    } catch (error) { alert("일괄 이벤트 취소 실패: " + error.message); }
+                };
+
             } catch (e) {
-                container.innerHTML = `<p style="color:red; text-align:center;">오류 발생</p>`;
+                container.innerHTML = `<p style="color:red; text-align:center;">오류 발생: ${e.message}</p>`;
             }
         }
 

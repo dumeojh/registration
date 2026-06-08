@@ -4,9 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>대수 발표 기록 시스템</title>
+    <title>Presentation Record</title>
 
+    <!--
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+-->
     <script src="supabase-js.js"></script>
+
+
+
     <script src="common.js"></script>
 
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -286,6 +292,44 @@
             background-color: #fcf3cf;
             color: #d35400;
             border: 1px solid #f1c40f;
+        }
+
+        .status-approved {
+            background-color: #d4efdf;
+            color: #27ae60;
+            border: 1px solid #2ecc71;
+        }
+
+        .status-rejected {
+            background-color: #fadbd8;
+            color: #c0392b;
+            border: 1px solid #e74c3c;
+        }
+
+        .month-btn {
+            width: 100%;
+            padding: 10px 0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+            border-style: solid;
+            border-width: 1px;
+            position: relative;
+            top: 0;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15);
+            transition: all 0.1s cubic-bezier(0.4, 0.0, 0.2, 1);
+            line-height: 1.2;
+            box-sizing: border-box;
+        }
+
+        .month-btn:hover {
+            filter: brightness(0.95);
+        }
+
+        .month-btn:active {
+            top: 4px;
+            box-shadow: 0 0px 0 rgba(0, 0, 0, 0.15);
         }
 
         .quiz-item {
@@ -665,7 +709,8 @@
                 <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 제비뽑기 바둑판에 들어갈 문구와 개수를 설정합니다. 전체 합이
                     40개가 안 되면 나머지는 '꽝'으로 채워집니다.</p>
                 <div style="background: #fdf2e9; padding: 15px; border-radius: 8px; border: 1px solid #fad7a1;">
-                    <div id="lotteryFormContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                    <div id="lotteryFormContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                    </div>
                     <button type="button" id="btnAddLotteryItem"
                         style="background-color: #f39c12; margin-top: 10px; padding: 10px;">+ 항목 추가</button>
                     <button type="button" id="btnSaveLottery" style="background-color: #d35400; margin-top: 15px;">💾
@@ -748,6 +793,7 @@
                         저장</button>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -768,18 +814,18 @@
     </div>
 
     <script>
+        // 전역 변수들
         let currentStudentId = null;
         let currentStudentName = '';
-        let monitoredSubmissions = { presentations: [], logs: [] };
-        let fetchedClassData = [];
-        let currentSortColumn = 'total';
-        let currentSortAsc = false;
-        let editingQuizId = null;
+        let studentPresentations = [];
+        let monitoredSubmissions = [];
+        let statusCheckInterval = null;
 
         let isEventEnabled = true;
         let isWholeClassEventEnabled = false;
         let isRegularEventEnabled = true;
 
+        // 🔒 커스텀 비밀번호 프롬프트 함수
         function askPassword(title) {
             return new Promise((resolve) => {
                 const modal = document.getElementById('passwordModal');
@@ -800,9 +846,21 @@
                     input.removeEventListener('keydown', onKeydown);
                 };
 
-                const onConfirm = () => { const pwd = input.value; cleanup(); resolve(pwd); };
-                const onCancel = () => { cleanup(); resolve(null); };
-                const onKeydown = (e) => { if (e.key === 'Enter') onConfirm(); if (e.key === 'Escape') onCancel(); };
+                const onConfirm = () => {
+                    const pwd = input.value;
+                    cleanup();
+                    resolve(pwd);
+                };
+
+                const onCancel = () => {
+                    cleanup();
+                    resolve(null);
+                };
+
+                const onKeydown = (e) => {
+                    if (e.key === 'Enter') onConfirm();
+                    if (e.key === 'Escape') onCancel();
+                };
 
                 btnConfirm.addEventListener('click', onConfirm);
                 btnCancel.addEventListener('click', onCancel);
@@ -812,601 +870,1266 @@
 
         async function fetchSystemSettings() {
             try {
-                const { data } = await db.from('system_settings').select('*').in('key', ['event_enabled', 'whole_class_event_enabled', 'regular_event_enabled']);
+                const { data, error } = await db.from('system_settings').select('*').in('key', ['event_enabled', 'whole_class_event_enabled', 'regular_event_enabled']);
+                if (error && error.code !== 'PGRST116') throw error;
+
                 if (data) {
                     data.forEach(setting => {
-                        if (setting.key === 'event_enabled') isEventEnabled = setting.value === 'true';
-                        if (setting.key === 'whole_class_event_enabled') isWholeClassEventEnabled = setting.value === 'true';
-                        if (setting.key === 'regular_event_enabled') isRegularEventEnabled = setting.value === 'true';
+                        if (setting.key === 'event_enabled') {
+                            isEventEnabled = setting.value === 'true';
+                            const toggleBtn = document.getElementById('toggleEventStatus');
+                            if (toggleBtn) toggleBtn.checked = isEventEnabled;
+                        }
+                        if (setting.key === 'whole_class_event_enabled') {
+                            isWholeClassEventEnabled = setting.value === 'true';
+                            const toggleWholeBtn = document.getElementById('toggleWholeClassEvent');
+                            if (toggleWholeBtn) toggleWholeBtn.checked = isWholeClassEventEnabled;
+                        }
+                        if (setting.key === 'regular_event_enabled') {
+                            isRegularEventEnabled = setting.value === 'true';
+                            const toggleRegBtn = document.getElementById('toggleRegularEvent');
+                            if (toggleRegBtn) toggleRegBtn.checked = isRegularEventEnabled;
+                        }
                     });
                 }
-            } catch (err) { console.error('설정 실패:', err); }
+            } catch (err) {
+                console.error('설정 불러오기 실패:', err);
+            }
         }
 
         window.addEventListener('DOMContentLoaded', fetchSystemSettings);
 
         document.getElementById('btnSearch').addEventListener('click', async function () {
-            const idVal = document.getElementById('searchId').value.trim();
-            const nameVal = document.getElementById('searchName').value.trim();
-            if (idVal.length !== 5 || !nameVal) return alert("학번 5자리와 이름을 정확히 입력하세요.");
+            const studentIdValue = document.getElementById('searchId').value.trim();
+            const studentNameValue = document.getElementById('searchName').value.trim();
+            const searchBtn = document.getElementById('btnSearch');
+
+            if (studentIdValue.length !== 5) return alert("학번은 5자리 숫자로 입력해주세요.");
+            if (!studentNameValue) return alert("이름을 입력해주세요.");
 
             try {
-                this.innerText = "조회 중..."; this.disabled = true;
-                const { data: st, error } = await db.from('student').select('name').eq('student_id', idVal).maybeSingle();
-                if (error) throw error;
-                if (!st) return alert("등록되지 않은 학번입니다.");
-                if (st.name !== nameVal) return alert("학번과 이름이 일치하지 않습니다.");
+                searchBtn.innerText = "조회 중..."; searchBtn.disabled = true;
+                const { data: studentCheck, error: checkError } = await db.from('student').select('name').eq('student_id', studentIdValue).maybeSingle();
+                if (checkError) throw checkError;
+                if (!studentCheck) return alert("등록되지 않은 학번입니다.");
+                if (studentCheck.name !== studentNameValue) return alert(`학번과 이름이 일치하지 않습니다.`);
 
-                currentStudentId = parseInt(idVal, 10);
-                currentStudentName = nameVal;
+                currentStudentId = parseInt(studentIdValue, 10);
+                currentStudentName = studentNameValue;
 
-                document.getElementById('submitStatusBox').innerHTML = '';
-                document.getElementById('submitStatusBox').style.display = 'none';
-
+                resetSubmissionStatus();
                 await fetchSystemSettings();
                 await refreshStats();
                 await loadPendingSubmissions();
 
                 document.getElementById('searchSection').classList.add('hidden');
                 document.getElementById('recordSection').classList.remove('hidden');
-            } catch (e) { alert(e.message); } finally { this.innerText = "조회하기"; this.disabled = false; }
+            } catch (error) {
+                alert('오류 발생: ' + error.message);
+            } finally {
+                searchBtn.innerText = "조회하기"; searchBtn.disabled = false;
+            }
         });
 
+        // 🌟 [핵심 변경사항] 통계 조회 및 날짜 기반 스케줄 확인 로직 적용
         async function refreshStats() {
             document.getElementById('statsBox').innerHTML = `<p class="highlight">${currentStudentId} ${currentStudentName}</p><p>통계를 계산하고 있습니다... ⏳</p>`;
-            try {
-                const { data: mData } = await db.from('manual_records').select('manual_count').eq('student_id', currentStudentId).maybeSingle();
-                const manualCount = mData ? mData.manual_count : 0;
-                const { data: aRecords } = await db.from('presentation').select('created_at').eq('student_id', currentStudentId).eq('is_approved', true);
 
-                let autoTotal = aRecords ? aRecords.length : 0;
+            try {
+                const { data: manualData } = await db.from('manual_records').select('manual_count').eq('student_id', currentStudentId).maybeSingle();
+                const manualCount = manualData ? manualData.manual_count : 0;
+
+                const { data: autoRecords } = await db.from('presentation').select('created_at').eq('student_id', currentStudentId).eq('is_approved', true);
+
+                let autoTotal = 0;
                 const monthlyCounts = {};
-                if (aRecords) {
-                    aRecords.forEach(r => {
-                        const m = new Date(r.created_at).getMonth() + 1;
-                        monthlyCounts[m] = (monthlyCounts[m] || 0) + 1;
+                if (autoRecords) {
+                    autoTotal = autoRecords.length;
+                    autoRecords.forEach(record => {
+                        const month = new Date(record.created_at).getMonth() + 1;
+                        monthlyCounts[month] = (monthlyCounts[month] || 0) + 1;
                     });
                 }
-
                 const totalCount = autoTotal + manualCount;
                 const maxMilestone = Math.floor(totalCount / 5) * 5;
 
+                // ========= 날짜 기반 이벤트 조회 로직 시작 =========
+                // 한국 시간 기준으로 오늘 날짜(YYYY-MM-DD) 구하기
                 const now = new Date();
-                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 
-                const { data: todayEvent } = await db.from('special_event_schedule').select('*').eq('event_date', todayStr).maybeSingle();
-                const { data: eLogs } = await db.from('event_logs').select('milestone, created_at').eq('student_id', currentStudentId);
+                // 1. 오늘 날짜로 등록된 전체 특별 이벤트 일정이 있는지 확인
+                const { data: todayEvent } = await db
+                    .from('special_event_schedule')
+                    .select('*')
+                    .eq('event_date', todayStr)
+                    .maybeSingle();
 
+                // 2. 학생의 이벤트 로그 가져오기
+                const { data: eventLogs } = await db.from('event_logs').select('milestone, created_at').eq('student_id', currentStudentId);
                 const uniqueMilestones = new Set();
                 let todayParticipated = false;
-                if (eLogs) {
-                    eLogs.forEach(l => {
-                        if (l.milestone === 0) { if (l.created_at.startsWith(todayStr)) todayParticipated = true; }
-                        else { uniqueMilestones.add(l.milestone); }
+
+                if (eventLogs) {
+                    eventLogs.forEach(log => {
+                        if (log.milestone === 0) {
+                            // milestone이 0(특별이벤트)이면서, 오늘 생성된 기록이면 오늘 참여한 것
+                            if (log.created_at.startsWith(todayStr)) {
+                                todayParticipated = true;
+                            }
+                        } else {
+                            uniqueMilestones.add(log.milestone);
+                        }
                     });
                 }
 
                 const completedCount = uniqueMilestones.size;
                 const availableCount = (maxMilestone >= 5) ? Math.floor(maxMilestone / 5) - completedCount : 0;
+                // ========= 날짜 기반 이벤트 조회 로직 끝 =========
 
-                const btnSpecial = document.getElementById('btnGoSpecialEvent');
-                const btnRegular = document.getElementById('btnGoRegularEvent');
+                const btnGoSpecialEvent = document.getElementById('btnGoSpecialEvent');
+                const btnGoRegularEvent = document.getElementById('btnGoRegularEvent');
+                btnGoSpecialEvent.style.display = 'block';
+                btnGoRegularEvent.style.display = 'block';
 
                 if (isEventEnabled) {
+                    // 마스터 스위치가 켜져 있을 때
                     if (isWholeClassEventEnabled) {
-                        btnSpecial.style.display = 'block';
                         if (!todayEvent) {
-                            btnSpecial.disabled = true; btnSpecial.style.backgroundColor = '#bdc3c7'; btnSpecial.innerText = '🔒 오늘 특별 이벤트 없음';
+                            // 오늘 일정이 없는 경우
+                            btnGoSpecialEvent.disabled = true;
+                            btnGoSpecialEvent.style.backgroundColor = '#bdc3c7';
+                            btnGoSpecialEvent.style.color = 'white';
+                            btnGoSpecialEvent.style.cursor = 'not-allowed';
+                            btnGoSpecialEvent.innerText = `🔒 오늘은 이벤트가 없습니다`;
                         } else if (todayParticipated) {
-                            btnSpecial.disabled = true; btnSpecial.style.backgroundColor = '#ecf0f1'; btnSpecial.style.color = '#7f8c8d'; btnSpecial.innerText = '✅ 특별 이벤트 참여 완료';
+                            // 일정이 있지만 오늘 참여를 마친 경우
+                            btnGoSpecialEvent.disabled = true;
+                            btnGoSpecialEvent.style.backgroundColor = '#d7bde2';
+                            btnGoSpecialEvent.style.color = 'white';
+                            btnGoSpecialEvent.style.cursor = 'not-allowed';
+                            btnGoSpecialEvent.innerText = `✅ 오늘 이벤트 참여 완료`;
                         } else {
-                            btnSpecial.disabled = false; btnSpecial.style.backgroundColor = '#9b59b6'; btnSpecial.style.color = 'white'; btnSpecial.innerText = '🌟 특별 이벤트 도전!';
-                            btnSpecial.onclick = () => location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}&event_type=special`;
+                            // 일정이 있고 참여하지 않은 경우
+                            btnGoSpecialEvent.disabled = false;
+                            btnGoSpecialEvent.style.backgroundColor = '#8e44ad';
+                            btnGoSpecialEvent.style.color = 'white';
+                            btnGoSpecialEvent.style.cursor = 'pointer';
+                            btnGoSpecialEvent.innerText = `🎊 ${todayEvent.event_name} 가능!`;
+                            btnGoSpecialEvent.onclick = () => {
+                                window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}&event_type=special`;
+                            };
                         }
-                    } else { btnSpecial.style.display = 'none'; }
+                    } else {
+                        btnGoSpecialEvent.style.display = 'none';
+                    }
 
                     if (isRegularEventEnabled) {
-                        btnRegular.style.display = 'block';
                         if (availableCount > 0) {
-                            btnRegular.disabled = false; btnRegular.style.backgroundColor = '#e67e22'; btnRegular.style.color = 'white'; btnRegular.innerText = `🎯 달성 이벤트 (${availableCount}개 가능)`;
-                            btnRegular.onclick = () => location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}&event_type=regular`;
+                            btnGoRegularEvent.disabled = false;
+                            btnGoRegularEvent.style.backgroundColor = '#f1c40f';
+                            btnGoRegularEvent.style.color = '#2c3e50';
+                            btnGoRegularEvent.style.cursor = 'pointer';
+                            btnGoRegularEvent.innerText = `🎉 달성 이벤트 (${availableCount}개)`;
+                            btnGoRegularEvent.onclick = () => {
+                                window.location.href = `event.html?student_id=${currentStudentId}&name=${encodeURIComponent(currentStudentName)}&total_count=${totalCount}&event_type=regular`;
+                            };
                         } else {
-                            btnRegular.disabled = true; btnRegular.style.backgroundColor = '#bdc3c7'; btnRegular.innerText = '🔒 달성 이벤트 없음';
+                            btnGoRegularEvent.disabled = true;
+                            btnGoRegularEvent.style.backgroundColor = '#bdc3c7';
+                            btnGoRegularEvent.style.color = 'white';
+                            btnGoRegularEvent.style.cursor = 'not-allowed';
+                            const nextTarget = Math.floor((totalCount / 5)) * 5 + 5;
+                            btnGoRegularEvent.innerText = `🔒 다음 이벤트 (${nextTarget}회)`;
                         }
-                    } else { btnRegular.style.display = 'none'; }
-                } else { btnSpecial.style.display = 'none'; btnRegular.style.display = 'none'; }
+                    } else {
+                        btnGoRegularEvent.style.display = 'none';
+                    }
+                } else {
+                    btnGoSpecialEvent.style.display = 'block';
+                    btnGoSpecialEvent.disabled = true;
+                    btnGoSpecialEvent.style.backgroundColor = '#95a5a6';
+                    btnGoSpecialEvent.style.color = 'white';
+                    btnGoSpecialEvent.style.cursor = 'not-allowed';
+                    btnGoSpecialEvent.innerText = `🔒 이벤트 전체 차단됨`;
 
-                // 등수 계산을 위한 데이터 조회 및 가공
-                const { data: allM } = await db.from('manual_records').select('student_id, manual_count');
-                const { data: allA } = await db.from('presentation').select('student_id').eq('is_approved', true);
+                    btnGoRegularEvent.style.display = 'none';
+                }
+
+                const gradePrefix = Math.floor(currentStudentId / 10000);
+                const classPrefix = Math.floor(currentStudentId / 100);
+                const startIdStr = String(gradePrefix * 10000);
+                const endIdStr = String(gradePrefix * 10000 + 9999);
+
+                const { data: gradeStudents } = await db.from('student').select('student_id').gte('student_id', startIdStr).lte('student_id', endIdStr);
+                const { data: gradeManuals } = await db.from('manual_records').select('student_id, manual_count').gte('student_id', startIdStr).lte('student_id', endIdStr);
+                const { data: gradeAutos } = await db.from('presentation').select('student_id').gte('student_id', startIdStr).lte('student_id', endIdStr).eq('is_approved', true);
 
                 const studentTotals = {};
-                if (allM) allM.forEach(m => studentTotals[m.student_id] = (studentTotals[m.student_id] || 0) + m.manual_count);
-                if (allA) allA.forEach(p => studentTotals[p.student_id] = (studentTotals[p.student_id] || 0) + 1);
-                if (studentTotals[currentStudentId] === undefined) studentTotals[currentStudentId] = totalCount;
+                if (gradeStudents) gradeStudents.forEach(s => studentTotals[s.student_id] = 0);
+                if (gradeManuals) gradeManuals.forEach(m => { if (studentTotals[m.student_id] !== undefined) studentTotals[m.student_id] += m.manual_count; });
+                if (gradeAutos) gradeAutos.forEach(a => { if (studentTotals[a.student_id] !== undefined) studentTotals[a.student_id] += 1; });
 
-                const classPrefix = Math.floor(currentStudentId / 100);
-                let classRank = 1, classTotal = 0, gradeRank = 1, gradeTotal = 0;
+                let gradeRank = 1, gradeTotalStudents = 0, classRank = 1, classTotalStudents = 0;
+                let gradeTieCount = 0, classTieCount = 0;
 
                 for (const [sIdStr, total] of Object.entries(studentTotals)) {
                     const sId = parseInt(sIdStr, 10);
-                    if (Math.floor(sId / 10000) === Math.floor(currentStudentId / 10000)) { gradeTotal++; if (total > totalCount) gradeRank++; }
-                    if (Math.floor(sId / 100) === classPrefix) { classTotal++; if (total > totalCount) classRank++; }
+                    const sClassPrefix = Math.floor(sId / 100);
+
+                    gradeTotalStudents++;
+                    if (total > totalCount) gradeRank++;
+                    else if (total === totalCount) gradeTieCount++;
+
+                    if (sClassPrefix === classPrefix) {
+                        classTotalStudents++;
+                        if (total > totalCount) classRank++;
+                        else if (total === totalCount) classTieCount++;
+                    }
                 }
+
+                const classTieText = classTieCount > 1 ? `<span style="font-size:13px; color:#7f8c8d; font-weight:normal;"> (공동 ${classTieCount}명)</span>` : '';
+                const gradeTieText = gradeTieCount > 1 ? `<span style="font-size:13px; color:#7f8c8d; font-weight:normal;"> (공동 ${gradeTieCount}명)</span>` : '';
+
+                let buttonsHtml = `<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 15px; padding-bottom: 4px;">`;
+                buttonsHtml += `<button class="month-btn" style="background-color: #fdebd0; color: #d35400; border-color: #f39c12;" onclick="alert('수동 부여 횟수는 상세 기록이 없습니다.\\n(교사 일괄 입력)')"><span style="font-size:12px; font-weight:normal;">수동</span><br><b style="font-size:15px;">${manualCount}</b><span style="font-size:12px;">회</span></button>`;
+
+                const displayMonths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+                displayMonths.forEach(m => {
+                    const count = monthlyCounts[m] || 0;
+                    const btnStyle = count > 0
+                        ? "background-color: #d4efdf; color: #27ae60; border-color: #2ecc71;"
+                        : "background-color: #ecf0f1; color: #7f8c8d; border-color: #bdc3c7;";
+
+                    buttonsHtml += `<button class="month-btn" style="${btnStyle}" onclick="openHistoryModal(${m})"><span style="font-size:12px; font-weight:normal;">${m}월</span><br><b style="font-size:15px;">${count}</b><span style="font-size:12px;">회</span></button>`;
+                });
+
+                buttonsHtml += `<button class="month-btn" style="background-color: #e8f4fd; color: #2980b9; border-color: #3498db;" onclick="alert('총 누적 발표 횟수입니다.\\n(수동 횟수 + 자동 승인 횟수)')"><span style="font-size:12px; font-weight:bold;">합계</span><br><b style="font-size:15px;">${totalCount}</b><span style="font-size:12px;">회</span></button>`;
+                buttonsHtml += `</div>`;
 
                 document.getElementById('statsBox').innerHTML = `
-                    <p class="highlight" style="font-size: 19px; margin-bottom: 12px;">📊 발표 현황 대시보드</p>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: left;">
-                        <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #dcdde1;">
-                            <span style="color:#7f8c8d; font-size:12px;">총 발표 횟수</span><br>
-                            <b style="font-size:16px; color:#2980b9;">${totalCount}회</b> <span style="font-size:11px; color:#95a5a6;">(자동${autoTotal}/수동${manualCount})</span>
-                        </div>
-                        <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #dcdde1;">
-                            <span style="color:#7f8c8d; font-size:12px;">학급 등수</span><br>
-                            <b style="font-size:16px; color:#e67e22;">${classRank}등</b> <span style="font-size:11px; color:#95a5a6;">/ ${classTotal}명</span>
-                        </div>
+                    <p class="highlight" style="font-size: 1.2em;">${currentStudentId} ${currentStudentName}</p>
+                    <div style="font-size: 14px; background: #e8f4fd; padding: 10px; border-radius: 8px; color: #2c3e50; font-weight: bold; border: 1px solid #bde0fe; display: flex; justify-content: space-around; margin-top: 10px;">
+                        <span>🏆 반: <span style="color:#e74c3c; font-size: 16px;">${classRank}</span>등${classTieText}</span>
+                        <span>🏅 학년: <span style="color:#e74c3c; font-size: 16px;">${gradeRank}</span>등${gradeTieText}</span>
                     </div>
-                    <button type="button" id="btnOpenHistory" style="margin-top:12px; padding:8px; font-size:14px; background-color:#34495e;">📜 상세 발표 이력 확인</button>
+                    ${buttonsHtml}
                 `;
-
-                document.getElementById('btnOpenHistory').onclick = () => {
-                    document.getElementById('historyModal').classList.remove('hidden'); loadHistory();
-                };
-            } catch (e) { document.getElementById('statsBox').innerHTML = `<p style="color:red;">계산 오류: ${e.message}</p>`; }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('statsBox').innerHTML = `<p style="color:red;">통계를 불러오지 못했습니다.</p>`;
+            }
         }
 
-        async function loadHistory() {
-            const mSelect = document.getElementById('historyMonth');
+        window.openHistoryModal = async function (selectedMonth) {
+            if (!currentStudentId) return;
+            document.getElementById('historyModal').classList.remove('hidden');
+            document.getElementById('historyTitle').innerText = `📜 ${currentStudentName}님의 기록`;
+
+            document.getElementById('historyMonth').value = selectedMonth;
+            document.getElementById('historyContainer').innerHTML = '<p style="text-align: center; color: #7f8c8d;">불러오는 중...</p>';
+
+            try {
+                const { data } = await db.from('presentation').select('content, created_at, is_approved').eq('student_id', currentStudentId).order('created_at', { ascending: false });
+                studentPresentations = data || [];
+                renderHistoryByMonth(selectedMonth);
+            } catch (e) {
+                alert("기록을 불러오지 못했습니다: " + e.message);
+            }
+        };
+
+        document.getElementById('historyMonth').addEventListener('change', function () { renderHistoryByMonth(parseInt(this.value)); });
+        document.getElementById('btnCloseHistory').addEventListener('click', () => document.getElementById('historyModal').classList.add('hidden'));
+
+        function renderHistoryByMonth(month) {
             const container = document.getElementById('historyContainer');
-            container.innerHTML = '<p style="text-align:center;">조회 중...</p>';
-            try {
-                const { data, error } = await db.from('presentation').select('*').eq('student_id', currentStudentId).order('created_at', { ascending: false });
-                if (error) throw error;
-                const filtered = data.filter(r => (new Date(r.created_at).getMonth() + 1) === parseInt(mSelect.value, 10));
-                if (filtered.length === 0) { container.innerHTML = '<p style="text-align:center; color:#7f8c8d; padding:15px;">해당 월의 기록이 없습니다.</p>'; return; }
-
-                container.innerHTML = filtered.map(r => `
-                    <div class="history-item" style="border-left-color: ${r.is_approved ? '#27ae60' : '#e67e22'}">
-                        <div class="history-date">${new Date(r.created_at).toLocaleString()} - ${r.is_approved ? '<span style="color:#27ae60;font-weight:bold;">승인</span>' : '<span style="color:#e67e22;font-weight:bold;">대기</span>'}</div>
-                        <div class="history-content">${r.content}</div>
-                    </div>
-                `).join('');
-            } catch (e) { container.innerHTML = `<p style="color:red;">오류: ${e.message}</p>`; }
+            const filtered = studentPresentations.filter(p => (new Date(p.created_at).getMonth() + 1) === month);
+            if (filtered.length === 0) return container.innerHTML = `<p style="text-align: center; color: #7f8c8d; margin-top:30px;">${month}월에 등록된 기록이 없습니다.</p>`;
+            let html = '';
+            filtered.forEach(p => {
+                const isApproved = p.is_approved ? '<span style="color:#27ae60; font-size:12px; font-weight:bold;">[승인됨]</span>' : '<span style="color:#e67e22; font-size:12px; font-weight:bold;">[승인 대기중]</span>';
+                html += `<div class="history-item"><div class="history-date">📅 ${new Date(p.created_at).toLocaleString()} ${isApproved}</div><div class="history-content">${p.content}</div></div>`;
+            });
+            container.innerHTML = html;
         }
 
-        document.getElementById('historyMonth').onchange = loadHistory;
-        document.getElementById('btnCloseHistory').onclick = () => document.getElementById('historyModal').classList.add('hidden');
-
-        document.getElementById('btnSubmit').addEventListener('click', async function () {
-            const textEl = document.getElementById('content');
-            const val = textEl.value.trim();
-            if (!val) return alert("내용을 입력하세요.");
-
-            try {
-                this.disabled = true; this.innerText = "제출 중...";
-                const { error } = await db.from('presentation').insert([{ student_id: currentStudentId, name: currentStudentName, content: val, is_approved: false }]);
-                if (error) throw error;
-                alert("기록이 제출되었습니다. 선생님 승인 후 최종 통계에 반영됩니다.");
-                textEl.value = ''; await loadPendingSubmissions();
-            } catch (e) { alert(e.message); } finally { this.disabled = false; this.innerText = "제출하기"; }
-        });
+        function resetSubmissionStatus() {
+            monitoredSubmissions = [];
+            document.getElementById('submitStatusBox').style.display = 'none';
+        }
 
         async function loadPendingSubmissions() {
-            const box = document.getElementById('submitStatusBox');
-            try {
-                const { data } = await db.from('presentation').select('*').eq('student_id', currentStudentId).eq('is_approved', false).order('created_at', { ascending: false });
-                if (data && data.length > 0) {
-                    box.style.display = 'block';
-                    box.innerHTML = `<div class="status-list-container"><p style="margin:5px 0; font-size:14px; font-weight:bold; color:#34495e;">⏳ 승인 대기 목록</p>` +
-                        data.map(p => `<div class="status-item status-waiting"><div style="font-size:11px; color:#7f8c8d; margin-bottom:3px;">${new Date(p.created_at).toLocaleString()}</div><div>${p.content}</div></div>`).join('') + `</div>`;
-                } else { box.style.display = 'none'; }
-            } catch (e) { console.error(e); }
+            const { data } = await db.from('presentation').select('id, created_at, content').eq('student_id', currentStudentId).eq('is_approved', false).order('created_at', { ascending: true });
+            if (data && data.length > 0) {
+                monitoredSubmissions = data.map(item => ({ id: item.id, time: new Date(item.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }), status: 'waiting', content: item.content }));
+                renderSubmissionsStatus();
+            }
         }
 
-        document.getElementById('btnCancel').onclick = () => {
-            document.getElementById('recordSection').classList.add('hidden');
-            document.getElementById('searchSection').classList.remove('hidden');
-        };
+        function renderSubmissionsStatus() {
+            const container = document.getElementById('submitStatusBox');
+            if (monitoredSubmissions.length === 0) return container.style.display = 'none';
+            container.style.display = 'block';
+            let html = '<div class="status-list-container">';
+            [...monitoredSubmissions].reverse().forEach(sub => {
+                const cssClass = sub.status === 'waiting' ? 'status-waiting' : (sub.status === 'approved' ? 'status-approved' : 'status-rejected');
+                const icon = sub.status === 'waiting' ? '⏳ 승인 대기 중' : (sub.status === 'approved' ? '✅ 승인됨' : '❌ 반려됨');
+                html += `<div class="status-item ${cssClass}"><div style="display:flex; justify-content:space-between;"><span>${icon}</span><span style="font-size:12px;">(${sub.time})</span></div><div style="font-size:12px; margin-top:5px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sub.content}</div></div>`;
+            });
+            html += '</div>';
 
-        // 교사 승인 및 대기 목록 관리 기능
-        document.getElementById('btnApproveWait').onclick = async () => {
-            const pwd = await askPassword("교사용 인증 패스워드를 입력하세요.");
-            if (!pwd) return; if (pwd !== '1234' && pwd !== 'asgh') return alert("인증 실패!");
-            document.getElementById('approvalModal').classList.remove('hidden'); loadApprovalList();
-        };
+            const hasWaiting = monitoredSubmissions.some(s => s.status === 'waiting');
+            if (hasWaiting) {
+                html += `<button id="btnManualRefresh" onclick="manualRefreshStatus()" style="width: 100%; padding: 12px; margin-top: 10px; background-color: #f39c12; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.2s;">🔄 승인 여부 확인하기</button>`;
+            }
 
-        document.getElementById('btnCloseApproval').onclick = () => document.getElementById('approvalModal').classList.add('hidden');
+            container.innerHTML = html;
+        }
 
-        async function loadApprovalList() {
+        document.getElementById('btnSubmit').addEventListener('click', async function () {
+            const content = document.getElementById('content').value.trim();
+            if (!content) return alert("발표 내용을 입력해주세요.");
+            if (!confirm(`제출하시겠습니까?`)) return;
+            const { data } = await db.from('presentation').insert([{ student_id: currentStudentId, student_name: currentStudentName, content: content, is_approved: false }]).select();
+            monitoredSubmissions.push({ id: data[0].id, time: new Date(data[0].created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }), status: 'waiting', content: data[0].content });
+            document.getElementById('content').value = '';
+            renderSubmissionsStatus();
+        });
+
+        async function manualRefreshStatus() {
+            const btn = document.getElementById('btnManualRefresh');
+            if (!btn || btn.disabled) return;
+
+            btn.disabled = true;
+            btn.style.backgroundColor = '#bdc3c7';
+            btn.style.cursor = 'not-allowed';
+            let timeLeft = 10;
+            btn.innerText = `⏳ 확인 중... (${timeLeft}초 후 다시 클릭 가능)`;
+
+            const timer = setInterval(() => {
+                timeLeft--;
+                const currentBtn = document.getElementById('btnManualRefresh');
+                if (timeLeft > 0 && currentBtn) {
+                    currentBtn.innerText = `⏳ 확인 중... (${timeLeft}초 후 다시 클릭 가능)`;
+                } else {
+                    clearInterval(timer);
+                    if (currentBtn) {
+                        currentBtn.disabled = false;
+                        currentBtn.style.backgroundColor = '#f39c12';
+                        currentBtn.style.cursor = 'pointer';
+                        currentBtn.innerText = `🔄 승인 여부 확인하기`;
+                    }
+                }
+            }, 1000);
+
+            const waitingIds = monitoredSubmissions.filter(s => s.status === 'waiting').map(s => s.id);
+            if (waitingIds.length === 0) return;
+
+            try {
+                const { data } = await db.from('presentation').select('id, is_approved').in('id', waitingIds);
+                let changed = false, refresh = false;
+                const dbMap = {};
+                if (data) data.forEach(r => dbMap[r.id] = r.is_approved);
+
+                monitoredSubmissions.forEach(sub => {
+                    if (sub.status === 'waiting') {
+                        if (dbMap[sub.id] === undefined) { sub.status = 'rejected'; changed = true; }
+                        else if (dbMap[sub.id] === true) { sub.status = 'approved'; changed = true; refresh = true; }
+                    }
+                });
+
+                if (changed) renderSubmissionsStatus();
+                if (refresh) await refreshStats();
+            } catch (error) {
+                console.error("새로고침 중 오류 발생:", error);
+            }
+        }
+
+        document.getElementById('btnCancel').addEventListener('click', () => location.reload());
+
+        let tapCountWait = 0;
+        let tapTimerWait;
+        const btnWait = document.getElementById('btnApproveWait');
+
+        btnWait.addEventListener('dblclick', async (e) => {
+            if (e.ctrlKey) {
+                document.getElementById('approvalModal').classList.remove('hidden');
+                await fetchPendingApprovals();
+            }
+        });
+
+        btnWait.addEventListener('click', async (e) => {
+            tapCountWait++;
+            if (tapCountWait === 1) {
+                tapTimerWait = setTimeout(() => { tapCountWait = 0; }, 1500);
+            }
+            if (tapCountWait >= 3) {
+                clearTimeout(tapTimerWait);
+                tapCountWait = 0;
+
+                const pwd = await askPassword("선생님 확인용 비밀번호를 입력하세요");
+                if (pwd === "1") {
+                    document.getElementById('approvalModal').classList.remove('hidden');
+                    await fetchPendingApprovals();
+                } else if (pwd !== null) {
+                    alert("비밀번호가 틀렸습니다.");
+                }
+            }
+        });
+
+        document.getElementById('btnCloseApproval').addEventListener('click', () => document.getElementById('approvalModal').classList.add('hidden'));
+
+        async function fetchPendingApprovals() {
             const container = document.getElementById('approvalListContainer');
-            const bulkBox = document.getElementById('bulkActionContainer');
-            container.innerHTML = '<p style="text-align:center;">로드 중...</p>'; bulkBox.style.display = 'none';
+            const bulkContainer = document.getElementById('bulkActionContainer');
+            container.innerHTML = '<p style="text-align:center;">데이터를 불러오는 중...</p>';
+            bulkContainer.style.display = 'none';
 
             try {
-                const { data: pPres } = await db.from('presentation').select('*').eq('is_approved', false).order('created_at', { ascending: true });
-                const { data: pLogs } = await db.from('event_logs').select('*').eq('is_rewarded', false).order('created_at', { ascending: true });
+                const { data: presData } = await db.from('presentation').select('*').eq('is_approved', false).order('created_at', { ascending: false });
+                const { data: eventData } = await db.from('event_logs').select('*').eq('is_rewarded', false).order('created_at', { ascending: false });
 
-                monitoredSubmissions.presentations = pPres || [];
-                monitoredSubmissions.logs = pLogs || [];
-
-                if (monitoredSubmissions.presentations.length > 0 || monitoredSubmissions.logs.length > 0) bulkBox.style.display = 'flex';
-                if (monitoredSubmissions.presentations.length === 0 && monitoredSubmissions.logs.length === 0) {
-                    container.innerHTML = '<p style="text-align:center; padding:20px; color:#7f8c8d;">대기 중인 요청이 없습니다. 🎉</p>'; return;
+                if ((!presData || presData.length === 0) && (!eventData || eventData.length === 0)) {
+                    container.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 20px;">대기 중인 요청이 없습니다.</p>';
+                    return;
                 }
 
+                bulkContainer.style.display = 'flex';
                 let html = '';
-                if (monitoredSubmissions.presentations.length > 0) {
-                    html += '<h4 style="color:#2980b9; margin: 10px 0;">🎤 발표 승인 요청</h4>' + monitoredSubmissions.presentations.map(p => `
-                        <div class="history-item" style="border-left-color:#2980b9; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                            <div style="flex:1;"><b>${p.student_id} ${p.name}</b><div style="font-size:13px;">${p.content}</div></div>
-                            <div style="display:flex; gap:4px;"><button onclick="processPres('${p.id}', true)" style="background:#27ae60; padding:6px 12px; font-size:13px; width:auto; margin:0;">승인</button>
-                            <button onclick="processPres('${p.id}', false)" style="background:#e74c3c; padding:6px 12px; font-size:13px; width:auto; margin:0;">삭제</button></div>
-                        </div>`).join('');
-                }
-                if (monitoredSubmissions.logs.length > 0) {
-                    html += '<h4 style="color:#8e44ad; margin: 15px 0 5px 0;">🎁 기프티콘/상품 지급 대기</h4>' + monitoredSubmissions.logs.map(l => `
-                        <div class="history-item" style="border-left-color:#8e44ad; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                            <div style="flex:1;"><b>${l.student_id} ${l.student_name}</b> <span style="font-size:11px; background:#f5eef8; padding:2px 4px; border-radius:4px; color:#8e44ad;">${l.milestone === 0 ? '특별' : '정기'}</span><div style="color:#d35400; font-weight:bold;">결과: ${l.result_text}</div></div>
-                            <div style="display:flex; gap:4px;"><button onclick="processLog('${l.id}', true)" style="background:#8e44ad; padding:6px 12px; font-size:13px; width:auto; margin:0;">지급완료</button>
-                            <button onclick="processLog('${l.id}', false)" style="background:#7f8c8d; padding:6px 12px; font-size:13px; width:auto; margin:0;">취소</button></div>
-                        </div>`).join('');
-                }
-                container.innerHTML = html;
-            } catch (e) { container.innerHTML = `<p style="color:red;">에러: ${e.message}</p>`; }
-        }
 
-        async function processPres(id, isApprove) {
-            if (!confirm(isApprove ? "승인하시겠습니까?" : "삭제하시겠습니까?")) return;
-            try {
-                if (isApprove) await db.from('presentation').update({ is_approved: true }).eq('id', id);
-                else await db.from('presentation').delete().eq('id', id);
-                loadApprovalList(); if (currentStudentId) refreshStats();
-            } catch (e) { alert(e.message); }
-        }
-
-        async function processLog(id, isReward) {
-            if (!confirm(isReward ? "지급 완료 처리합니까?" : "이벤트를 철회합니까?")) return;
-            try {
-                if (isReward) await db.from('event_logs').update({ is_rewarded: true }).eq('id', id);
-                else await db.from('event_logs').delete().eq('id', id);
-                loadApprovalList();
-            } catch (e) { alert(e.message); }
-        }
-
-        document.getElementById('btnBulkApprove').onclick = async () => {
-            const ids = monitoredSubmissions.presentations.map(p => p.id); if (ids.length === 0) return;
-            if (confirm("대기 중인 발표를 모두 일괄 승인합니까?")) {
-                await db.from('presentation').update({ is_approved: true }).in('id', ids); loadApprovalList(); if (currentStudentId) refreshStats();
-            }
-        };
-        document.getElementById('btnBulkReward').onclick = async () => {
-            const ids = monitoredSubmissions.logs.map(l => l.id); if (ids.length === 0) return;
-            if (confirm("대기 중인 상품 배송을 모두 지급 완료 처리합니까?")) {
-                await db.from('event_logs').update({ is_rewarded: true }).in('id', ids); loadApprovalList();
-            }
-        };
-        document.getElementById('btnBulkReject').onclick = async () => {
-            const ids = monitoredSubmissions.presentations.map(p => p.id); if (ids.length === 0) return;
-            if (confirm("대기 중인 모든 요청을 반려 및 삭제합니까?")) {
-                await db.from('presentation').delete().in('id', ids); loadApprovalList(); if (currentStudentId) refreshStats();
-            }
-        };
-        document.getElementById('btnBulkCancelEvent').onclick = async () => {
-            const ids = monitoredSubmissions.logs.map(l => l.id); if (ids.length === 0) return;
-            if (confirm("대기 중인 모든 상품 배치를 일괄 취소 및 삭제합니까?")) {
-                await db.from('event_logs').delete().in('id', ids); loadApprovalList();
-            }
-        };
-
-        // 관리자 패널 메인 제어 로직
-        document.getElementById('secretBtn').onclick = async () => {
-            const pwd = await askPassword("최상위 관리자 권한 키를 입력하세요.");
-            if (!pwd) return; if (pwd !== '1234' && pwd !== 'asghadmin') return alert("비밀번호 위반!");
-            document.getElementById('adminModal').classList.remove('hidden'); initAdminPanel();
-        };
-
-        document.getElementById('btnCloseAdmin').onclick = () => document.getElementById('adminModal').classList.add('hidden');
-
-        function initAdminPanel() {
-            const selects = [document.getElementById('classSelect'), document.getElementById('manualClassSelect')];
-            selects.forEach(sel => {
-                sel.innerHTML = '';
-                for (let i = 1; i <= 10; i++) {
-                    const opt = document.createElement('option'); opt.value = i; opt.innerText = `2학년 ${i}반`; sel.appendChild(opt);
-                }
-            });
-            switchTab('class');
-        }
-
-        const tabs = {
-            class: { btn: 'btnTabClass', sec: 'adminViewSection' },
-            manual: { btn: 'btnTabManual', sec: 'adminManualSection' },
-            quiz: { btn: 'btnTabQuiz', sec: 'adminQuizSection' },
-            dice: { btn: 'btnTabDice', sec: 'adminDiceSection' },
-            lottery: { btn: 'btnTabLottery', sec: 'adminLotterySection' },
-            settings: { btn: 'btnTabSettings', sec: 'adminSettingsSection' }
-        };
-
-        function switchTab(target) {
-            Object.keys(tabs).forEach(k => {
-                const btn = document.getElementById(tabs[k].btn);
-                const sec = document.getElementById(tabs[k].sec);
-                if (k === target) { btn.style.opacity = '1'; btn.style.fontWeight = 'bold'; sec.classList.remove('hidden'); }
-                else { btn.style.opacity = '0.6'; btn.style.fontWeight = 'normal'; sec.classList.add('hidden'); }
-            });
-            if (target === 'quiz') toggleQuizFields();
-            if (target === 'dice') loadAdminDice();
-            if (target === 'lottery') loadAdminLottery();
-            if (target === 'settings') loadAdminSettings();
-        }
-
-        Object.keys(tabs).forEach(k => document.getElementById(tabs[k].btn).onclick = () => switchTab(k));
-
-        // 반별 통계 기능
-        document.getElementById('btnFetchClass').onclick = async () => {
-            const cNum = parseInt(document.getElementById('classSelect').value, 10);
-            const tbody = document.getElementById('classTableBody'); tbody.innerHTML = '<tr><td colspan="3">집계 중...</td></tr>';
-            try {
-                const prefix = 200 + cNum;
-                const { data: students } = await db.from('student').select('*').gte('student_id', prefix * 100).lte('student_id', (prefix * 100) + 99);
-                const { data: allM } = await db.from('manual_records').select('*');
-                const { data: allA } = await db.from('presentation').select('*').eq('is_approved', true);
-
-                const totals = {};
-                if (allM) allM.forEach(m => totals[m.student_id] = (totals[m.student_id] || 0) + m.manual_count);
-                if (allA) allA.forEach(a => totals[a.student_id] = (totals[a.student_id] || 0) + 1);
-
-                fetchedClassData = (students || []).map(s => ({ student_id: s.student_id, name: s.name, total: totals[s.student_id] || 0 }));
-                renderClassTable();
-            } catch (e) { tbody.innerHTML = `<tr><td colspan="3">에러: ${e.message}</td></tr>`; }
-        };
-
-        function renderClassTable() {
-            fetchedClassData.sort((a, b) => currentSortAsc ? (a[currentSortColumn] > b[currentSortColumn] ? 1 : -1) : (a[currentSortColumn] < b[currentSortColumn] ? 1 : -1));
-            ['student_id', 'name', 'total'].forEach(col => {
-                const icon = document.getElementById(`sort_icon_${col}`);
-                if (col === currentSortColumn) { icon.innerText = currentSortAsc ? '▲' : '▼'; icon.style.color = '#2980b9'; }
-                else { icon.innerText = '↕'; icon.style.color = '#95a5a6'; }
-            });
-            document.getElementById('classTableBody').innerHTML = fetchedClassData.map(r => `<tr><td>${r.student_id}</td><td>${r.name}</td><td style="font-weight:bold;color:#2980b9;">${r.total}회</td></tr>`).join('');
-        }
-
-        function sortClassTable(column) {
-            if (currentSortColumn === column) currentSortAsc = !currentSortAsc;
-            else { currentSortColumn = column; currentSortAsc = (column !== 'total'); }
-            renderClassTable();
-        }
-
-        // 수동 발표 기록 입력 제어
-        document.getElementById('btnFetchManualClass').onclick = async () => {
-            const cNum = parseInt(document.getElementById('manualClassSelect').value, 10);
-            const tbody = document.getElementById('manualTableBody'); tbody.innerHTML = '<tr><td colspan="3">조회 중...</td></tr>';
-            try {
-                const prefix = 200 + cNum;
-                const { data: students } = await db.from('student').select('*').gte('student_id', prefix * 100).lte('student_id', (prefix * 100) + 99).order('student_id', { ascending: true });
-                const { data: manuals } = await db.from('manual_records').select('*');
-                const mMap = {}; if (manuals) manuals.forEach(m => mMap[m.student_id] = m.manual_count);
-
-                tbody.innerHTML = (students || []).map(s => `<tr><td>${s.student_id}</td><td>${s.name}</td><td><input type="number" class="table-input manual-input-field" data-sid="${s.student_id}" value="${mMap[s.student_id] || 0}"></td></tr>`).join('');
-                document.getElementById('btnBatchSaveManual').style.display = 'block';
-            } catch (e) { tbody.innerHTML = `<tr><td colspan="3">오류: ${e.message}</td></tr>`; }
-        };
-
-        document.getElementById('btnBatchSaveManual').onclick = async () => {
-            if (!confirm("반 전체 학생의 수동 가산 수치를 일괄 갱신합니까?")) return;
-            const fields = document.querySelectorAll('.manual-input-field');
-            const rows = Array.from(fields).map(f => ({ student_id: parseInt(f.getAttribute('data-sid'), 10), manual_count: parseInt(f.value, 10) || 0 }));
-            try {
-                const { error } = await db.from('manual_records').upsert(rows, { onConflict: 'student_id' });
-                if (error) throw error; alert("수동 발표 횟수가 통합 갱신되었습니다.");
-                if (currentStudentId) refreshStats();
-            } catch (e) { alert(e.message); }
-        };
-
-        // 퀴즈 문제 은행 조작 컨텍스트
-        function toggleQuizFields() {
-            const cat = document.getElementById('newQuizCategory').value;
-            const type = document.getElementById('newQuizType').value;
-            document.getElementById('topicFieldContainer').style.display = (cat === '수학') ? 'block' : 'none';
-            document.getElementById('multipleOptionsContainer').style.display = (type === 'multiple') ? 'block' : 'none';
-        }
-
-        async function fetchQuizList() {
-            const cat = document.getElementById('filterQuizCategory').value;
-            const container = document.getElementById('quizListContainer');
-            if (cat === 'none') { container.innerHTML = '<p style="text-align:center;font-size:13px;color:#7f8c8d;">카테고리를 조회하세요.</p>'; return; }
-            container.innerHTML = '<p style="text-align:center;">로드 중...</p>';
-            try {
-                const { data } = await db.from('quiz_bank').select('*').eq('category', cat).order('id', { ascending: false });
-                if (!data || data.length === 0) { container.innerHTML = '<p style="text-align:center;font-size:13px;color:#7f8c8d;">문제가 비어 있습니다.</p>'; return; }
-
-                container.innerHTML = data.map(q => `
-                    <div class="quiz-item" style="flex-direction:column; align-items:start; gap:4px;">
-                        <div style="width:100%; display:flex; justify-content:space-between; font-weight:bold;">
-                            <span>${q.question_type === 'multiple' ? '객관식' : '단답'}${q.topic ? ` [${q.topic}]` : ''}</span>
-                            <div style="display:flex; gap:4px;">
-                                <button onclick="editQuizSetup('${q.id}', '${q.category}', '${q.question_type}', '${escapeHtml(q.topic || '')}', '${escapeHtml(q.question)}', '${escapeHtml(q.answer)}', ${JSON.stringify(q.options || []).replace(/"/g, '&quot;')})" style="padding:2px 6px; font-size:12px; background:#e67e22; width:auto; margin:0;">수정</button>
-                                <button onclick="deleteQuizItem('${q.id}')" style="padding:2px 6px; font-size:12px; background:#e74c3c; width:auto; margin:0;">삭제</button>
+                if (eventData && eventData.length > 0) {
+                    eventData.forEach(item => {
+                        html += `
+                            <div class="history-item" style="border-left: 4px solid #9b59b6; margin-bottom: 8px; padding: 10px; background: #fdf5fe; display: flex; justify-content: space-between; align-items: center;">
+                                <div style="flex: 1; padding-right: 10px;">
+                                    <div style="margin-bottom: 3px;">
+                                        <strong style="font-size:14px; color:#8e44ad;">🎁 ${item.student_id} ${item.student_name} (${item.milestone === 0 ? '특별' : item.milestone + '회'})</strong>
+                                        <span style="font-size:11px; color:#7f8c8d; margin-left: 5px;">${new Date(item.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                    <div style="font-size: 13px; color: #2c3e50;">
+                                        [${item.event_type}] <span style="color:#e74c3c; font-weight:bold;">${item.result_text}</span>
+                                    </div>
+                                </div>
+                                <div style="display:flex; flex-direction: column; gap:5px; flex-shrink: 0;">
+                                    <button class="btn-event-reward" data-id="${item.id}" style="width:auto; padding:5px 10px; margin:0; font-size:12px; background-color:#8e44ad;">🎁 완료</button>
+                                    <button class="btn-event-cancel" data-id="${item.id}" style="width:auto; padding:5px 10px; margin:0; font-size:12px; background-color:#e74c3c;">❌ 취소</button>
+                                </div>
                             </div>
-                        </div>
-                        <div><b>Q.</b> ${q.question}</div>
-                        <div style="color:#27ae60;"><b>A.</b> ${q.answer}</div>
-                        ${q.options && q.options.length > 0 ? `<div style="font-size:12px;color:#7f8c8d;">선택지: ${q.options.join(' / ')}</div>` : ''}
-                    </div>`).join('');
-            } catch (e) { container.innerHTML = `<p style="color:red;">오류: ${e.message}</p>`; }
-        }
+                        `;
+                    });
+                }
 
-        function escapeHtml(str) { return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/'/g, "&#39;").replace(/"/g, "&quot;"); }
+                if (presData && presData.length > 0) {
+                    presData.forEach(item => {
+                        html += `
+                            <div class="history-item" style="border-left: 4px solid #e67e22; margin-bottom: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+                                <div style="flex: 1; padding-right: 10px;">
+                                    <div style="margin-bottom: 3px;">
+                                        <strong style="font-size:14px;">🎤 ${item.student_id} ${item.student_name}</strong>
+                                        <span style="font-size:11px; color:#7f8c8d; margin-left: 5px;">${new Date(item.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                    <div style="font-size: 13px; color: #2c3e50; line-height: 1.4;">
+                                        ${item.content}
+                                    </div>
+                                </div>
+                                <div style="display:flex; flex-direction: column; gap:5px; flex-shrink: 0;">
+                                    <button class="btn-approve" data-id="${item.id}" style="width:auto; padding:5px 10px; margin:0; font-size:12px; background-color:#27ae60;">✅ 승인</button>
+                                    <button class="btn-reject" data-id="${item.id}" style="width:auto; padding:5px 10px; margin:0; font-size:12px; background-color:#e74c3c;">❌ 삭제</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
 
-        document.getElementById('btnAddQuiz').onclick = async () => {
-            const cat = document.getElementById('newQuizCategory').value;
-            const type = document.getElementById('newQuizType').value;
-            const topic = document.getElementById('newQuizTopic').value.trim();
-            const q = document.getElementById('newQuizQuestion').value.trim();
-            const a = document.getElementById('newQuizAnswer').value.trim();
-            if (!q || !a) return alert("발문과 정답을 입력해 주세요.");
+                container.innerHTML = html;
 
-            let opts = null;
-            if (type === 'multiple') {
-                opts = [document.getElementById('opt1').value.trim(), document.getElementById('opt2').value.trim(), document.getElementById('opt3').value.trim(), document.getElementById('opt4').value.trim()];
-                if (opts.some(o => !o)) return alert("4지선다 옵션을 다 기입하세요.");
+                document.querySelectorAll('.btn-approve').forEach(b => b.addEventListener('click', async (e) => {
+                    if (!confirm("발표를 승인하시겠습니까? (통계에 반영됩니다)")) return;
+                    await db.from('presentation').update({ is_approved: true }).eq('id', e.target.dataset.id);
+                    await fetchPendingApprovals();
+                    if (currentStudentId) await refreshStats();
+                }));
+                document.querySelectorAll('.btn-reject').forEach(b => b.addEventListener('click', async (e) => {
+                    if (!confirm("삭제(반려)하시겠습니까?")) return;
+                    await db.from('presentation').delete().eq('id', e.target.dataset.id);
+                    await fetchPendingApprovals();
+                }));
+                document.querySelectorAll('.btn-event-reward').forEach(b => b.addEventListener('click', async (e) => {
+                    if (!confirm("해당 학생에게 상품을 지급 완료하셨습니까?")) return;
+                    await db.from('event_logs').update({ is_rewarded: true }).eq('id', e.target.dataset.id);
+                    await fetchPendingApprovals();
+                }));
+                document.querySelectorAll('.btn-event-cancel').forEach(b => b.addEventListener('click', async (e) => {
+                    if (!confirm("해당 학생의 이벤트 기록을 삭제하고 다시 진행하게 하시겠습니까?")) return;
+                    try {
+                        await db.from('event_logs').delete().eq('id', e.target.dataset.id);
+                        await fetchPendingApprovals();
+                        if (currentStudentId) await refreshStats();
+                    } catch (error) {
+                        console.error("취소 처리 중 오류 발생: " + error.message);
+                    }
+                }));
+
+                document.getElementById('btnBulkApprove').onclick = async () => {
+                    if (!presData || presData.length === 0) return alert("대기 중인 발표 기록이 없습니다.");
+                    if (!confirm(`총 ${presData.length}건의 발표를 모두 승인하시겠습니까?`)) return;
+                    try {
+                        const ids = presData.map(p => p.id);
+                        await db.from('presentation').update({ is_approved: true }).in('id', ids);
+                        alert("전체 발표가 승인되었습니다.");
+                        await fetchPendingApprovals();
+                        if (currentStudentId) await refreshStats();
+                    } catch (error) { alert("일괄 승인 실패: " + error.message); }
+                };
+
+                document.getElementById('btnBulkReject').onclick = async () => {
+                    if (!presData || presData.length === 0) return alert("대기 중인 발표 기록이 없습니다.");
+                    if (!confirm(`🚨 정말로 총 ${presData.length}건의 발표를 모두 삭제(반려)하시겠습니까?\n복구할 수 복구할 수 없습니다.`)) return;
+                    try {
+                        const ids = presData.map(p => p.id);
+                        await db.from('presentation').delete().in('id', ids);
+                        alert("전체 발표가 삭제되었습니다.");
+                        await fetchPendingApprovals();
+                    } catch (error) { alert("일괄 삭제 실패: " + error.message); }
+                };
+
+                document.getElementById('btnBulkReward').onclick = async () => {
+                    if (!eventData || eventData.length === 0) return alert("상품 지급 대기 중인 이벤트가 없습니다.");
+                    if (!confirm(`총 ${eventData.length}건의 이벤트 상품을 모두 지급 완료 처리하시겠습니까?`)) return;
+                    try {
+                        const ids = eventData.map(e => e.id);
+                        await db.from('event_logs').update({ is_rewarded: true }).in('id', ids);
+                        alert("전체 상품 지급 처리가 완료되었습니다.");
+                        await fetchPendingApprovals();
+                    } catch (error) { alert("일괄 지급 실패: " + error.message); }
+                };
+
+                document.getElementById('btnBulkCancelEvent').onclick = async () => {
+                    if (!eventData || eventData.length === 0) return alert("상품 지급 대기 중인 이벤트가 없습니다.");
+                    if (!confirm(`🚨 정말로 총 ${eventData.length}건의 이벤트 기록을 모두 취소 및 삭제하시겠습니까?\n학생들이 이벤트를 다시 진행해야 합니다.`)) return;
+                    try {
+                        const ids = eventData.map(e => e.id);
+                        await db.from('event_logs').delete().in('id', ids);
+                        alert("전체 이벤트 기록이 삭제되었습니다.");
+                        await fetchPendingApprovals();
+                        if (currentStudentId) await refreshStats();
+                    } catch (error) { alert("일괄 이벤트 취소 실패: " + error.message); }
+                };
+
+            } catch (e) {
+                container.innerHTML = `<p style="color:red; text-align:center;">오류 발생: ${e.message}</p>`;
             }
+        }
 
-            await db.from('quiz_bank').insert([{ category: cat, question_type: type, topic: cat === '수학' ? topic : null, question: q, answer: a, options: opts }]);
-            alert("질문서 등록 완료"); clearQuizForm(); fetchQuizList();
-        };
+        let tapCountAdmin = 0;
+        let tapTimerAdmin;
+        const btnAdmin = document.getElementById('secretBtn');
 
-        function editQuizSetup(id, cat, type, topic, q, a, opts) {
-            editingQuizId = id;
-            document.getElementById('newQuizCategory').value = cat;
-            document.getElementById('newQuizType').value = type;
-            document.getElementById('newQuizTopic').value = topic;
-            document.getElementById('newQuizQuestion').value = q;
-            document.getElementById('newQuizAnswer').value = a;
-            if (opts && opts.length >= 4) {
-                document.getElementById('opt1').value = opts[0]; document.getElementById('opt2').value = opts[1];
-                document.getElementById('opt3').value = opts[2]; document.getElementById('opt4').value = opts[3];
+        btnAdmin.addEventListener('dblclick', function (e) {
+            if (e.ctrlKey) {
+                document.getElementById('adminModal').classList.remove('hidden');
+                populateClassSelect('classSelect');
+                document.getElementById('filterQuizCategory').value = 'none';
+                document.getElementById('quizListContainer').innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">카테고리를 선택하면 문제가 표시됩니다.</p>';
             }
-            toggleQuizFields();
-            document.getElementById('btnAddQuiz').classList.add('hidden');
-            document.getElementById('btnUpdateQuiz').classList.remove('hidden');
-            document.getElementById('btnCancelEditQuiz').classList.remove('hidden');
+        });
+
+        btnAdmin.addEventListener('click', async (e) => {
+            tapCountAdmin++;
+            if (tapCountAdmin === 1) {
+                tapTimerAdmin = setTimeout(() => { tapCountAdmin = 0; }, 1500);
+            }
+            if (tapCountAdmin >= 3) {
+                clearTimeout(tapTimerAdmin);
+                tapCountAdmin = 0;
+
+                const pwd = await askPassword("관리자용 비밀번호를 입력하세요");
+                if (pwd === "1") {
+                    document.getElementById('adminModal').classList.remove('hidden');
+                    populateClassSelect('classSelect');
+                    document.getElementById('filterQuizCategory').value = 'none';
+                    document.getElementById('quizListContainer').innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">카테고리를 선택하면 문제가 표시됩니다.</p>';
+                } else if (pwd !== null) {
+                    alert("비밀번호가 틀렸습니다.");
+                }
+            }
+        });
+
+        document.getElementById('btnCloseAdmin').addEventListener('click', () => document.getElementById('adminModal').classList.add('hidden'));
+
+        function switchAdminTab(showSectionId) {
+            const sections = ['adminViewSection', 'adminManualSection', 'adminQuizSection', 'adminDiceSection', 'adminLotterySection', 'adminSettingsSection'];
+            sections.forEach(id => {
+                if (id === showSectionId) {
+                    document.getElementById(id).classList.remove('hidden');
+                } else {
+                    document.getElementById(id).classList.add('hidden');
+                }
+            });
         }
 
-        document.getElementById('btnCancelEditQuiz').onclick = clearQuizForm;
+        document.getElementById('btnTabClass').addEventListener('click', () => {
+            switchAdminTab('adminViewSection');
+            populateClassSelect('classSelect');
+        });
 
-        function clearQuizForm() {
-            editingQuizId = null;
-            document.getElementById('newQuizQuestion').value = ''; document.getElementById('newQuizAnswer').value = ''; document.getElementById('newQuizTopic').value = '';
-            for (let i = 1; i <= 4; i++) document.getElementById(`opt${i}`).value = '';
-            document.getElementById('btnAddQuiz').classList.remove('hidden');
-            document.getElementById('btnUpdateQuiz').classList.add('hidden');
-            document.getElementById('btnCancelEditQuiz').classList.add('hidden');
-            toggleQuizFields();
-        }
+        document.getElementById('btnTabManual').addEventListener('click', () => {
+            switchAdminTab('adminManualSection');
+            populateClassSelect('manualClassSelect');
+        });
 
-        document.getElementById('btnUpdateQuiz').onclick = async () => {
-            const cat = document.getElementById('newQuizCategory').value;
-            const type = document.getElementById('newQuizType').value;
-            const topic = document.getElementById('newQuizTopic').value.trim();
-            const q = document.getElementById('newQuizQuestion').value.trim();
-            const a = document.getElementById('newQuizAnswer').value.trim();
+        document.getElementById('btnTabQuiz').addEventListener('click', () => {
+            switchAdminTab('adminQuizSection');
+        });
 
-            let opts = null;
-            if (type === 'multiple') opts = [document.getElementById('opt1').value.trim(), document.getElementById('opt2').value.trim(), document.getElementById('opt3').value.trim(), document.getElementById('opt4').value.trim()];
+        document.getElementById('btnTabDice').addEventListener('click', () => {
+            switchAdminTab('adminDiceSection');
+            fetchDiceRewards();
+        });
 
-            await db.from('quiz_bank').update({ category: cat, question_type: type, topic: cat === '수학' ? topic : null, question: q, answer: a, options: opts }).eq('id', editingQuizId);
-            alert("정정 완료"); clearQuizForm(); fetchQuizList();
-        };
+        document.getElementById('btnTabLottery').addEventListener('click', () => {
+            switchAdminTab('adminLotterySection');
+            fetchLotterySettings();
+        });
 
-        async function deleteQuizItem(id) {
-            if (confirm("삭제합니까?")) { await db.from('quiz_bank').delete().eq('id', id); fetchQuizList(); }
-        }
+        document.getElementById('btnTabSettings').addEventListener('click', () => {
+            switchAdminTab('adminSettingsSection');
+            fetchSystemSettings();
+            fetchGameSettings();
+        });
 
-        document.getElementById('btnBulkAddQuiz').onclick = async () => {
-            const jsonStr = document.getElementById('bulkJsonInput').value.trim();
-            if (!jsonStr) return alert("데이터가 누락되었습니다.");
+        document.getElementById('toggleEventStatus').addEventListener('change', async (e) => {
+            const isChecked = e.target.checked;
             try {
-                const arr = JSON.parse(jsonStr);
-                const { error } = await db.from('quiz_bank').insert(arr);
-                if (error) throw error; alert("대량 등록 세팅 완료.");
-                document.getElementById('bulkJsonInput').value = ''; fetchQuizList();
-            } catch (e) { alert("JSON 검증 실패: " + e.message); }
-        };
+                const { error } = await db.from('system_settings').upsert({
+                    key: 'event_enabled',
+                    value: isChecked ? 'true' : 'false'
+                }, { onConflict: 'key' });
 
-        // 주사위 매핑 어드민 제어 구조
-        async function loadAdminDice() {
-            const form = document.getElementById('diceRewardForm'); form.innerHTML = '<p>조회 중...</p>';
+                if (error) throw error;
+
+                isEventEnabled = isChecked;
+                alert(`이벤트가 성공적으로 ${isChecked ? '활성화' : '비활성화'} 되었습니다.`);
+
+                if (currentStudentId) refreshStats();
+            } catch (err) {
+                alert("설정 저장 실패: " + err.message);
+                e.target.checked = !isChecked;
+            }
+        });
+
+        document.getElementById('toggleWholeClassEvent').addEventListener('change', async (e) => {
+            const isChecked = e.target.checked;
             try {
-                const { data } = await db.from('dice_rewards').select('*').order('dice_number', { ascending: true });
-                const map = {}; if (data) data.forEach(d => map[d.dice_number] = d);
+                const { error } = await db.from('system_settings').upsert({
+                    key: 'whole_class_event_enabled',
+                    value: isChecked ? 'true' : 'false'
+                }, { onConflict: 'key' });
+
+                if (error) throw error;
+
+                isWholeClassEventEnabled = isChecked;
+                alert(`전체 학생 특별 이벤트가 성공적으로 ${isChecked ? '활성화' : '비활성화'} 되었습니다.`);
+
+                if (currentStudentId) refreshStats();
+            } catch (err) {
+                alert("설정 저장 실패: " + err.message);
+                e.target.checked = !isChecked;
+            }
+        });
+
+        document.getElementById('toggleRegularEvent').addEventListener('change', async (e) => {
+            const isChecked = e.target.checked;
+            try {
+                const { error } = await db.from('system_settings').upsert({
+                    key: 'regular_event_enabled',
+                    value: isChecked ? 'true' : 'false'
+                }, { onConflict: 'key' });
+
+                if (error) throw error;
+
+                isRegularEventEnabled = isChecked;
+                alert(`5의 배수 이벤트가 성공적으로 ${isChecked ? '활성화' : '비활성화'} 되었습니다.`);
+
+                if (currentStudentId) refreshStats();
+            } catch (err) {
+                alert("설정 저장 실패: " + err.message);
+                e.target.checked = !isChecked;
+            }
+        });
+
+        async function fetchGameSettings() {
+            try {
+                const { data, error } = await db.from('system_settings').select('*').like('key', 'event_%_enabled');
+                if (error) throw error;
+
+                document.querySelectorAll('.game-toggle').forEach(cb => cb.checked = false);
+
+                if (data) {
+                    data.forEach(setting => {
+                        const cb = document.querySelector(`.game-toggle[data-key="${setting.key}"]`);
+                        if (cb) cb.checked = (setting.value === 'true');
+                    });
+                }
+            } catch (err) {
+                console.error('게임 설정 불러오기 실패:', err);
+            }
+        }
+
+        document.getElementById('btnSaveGameSettings').addEventListener('click', async () => {
+            const btn = document.getElementById('btnSaveGameSettings');
+            btn.disabled = true;
+            btn.innerText = '저장 중...';
+
+            const toggles = document.querySelectorAll('.game-toggle');
+            const dataToUpsert = Array.from(toggles).map(t => ({
+                key: t.dataset.key,
+                value: t.checked ? 'true' : 'false'
+            }));
+
+            try {
+                const { error } = await db.from('system_settings').upsert(dataToUpsert, { onConflict: 'key' });
+                if (error) throw error;
+                alert('✅ 개별 이벤트 표시 설정이 성공적으로 저장되었습니다!');
+            } catch (err) {
+                alert('저장 중 오류 발생: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '💾 개별 이벤트 설정 저장';
+            }
+        });
+
+        async function fetchDiceRewards() {
+            const formContainer = document.getElementById('diceRewardForm');
+            formContainer.innerHTML = '<p style="text-align: center; color: #7f8c8d;">불러오는 중...</p>';
+
+            try {
+                const { data, error } = await db.from('dice_rewards').select('*').order('dice_number', { ascending: true });
+                if (error) throw error;
+
+                const rewardMap = {};
+                const typeMap = {};
+                if (data) {
+                    data.forEach(item => {
+                        rewardMap[item.dice_number] = item.reward_name;
+                        typeMap[item.dice_number] = item.reward_type || 'normal';
+                    });
+                }
 
                 let html = '';
                 for (let i = 1; i <= 6; i++) {
-                    const row = map[i] || { reward_name: '', reward_type: 'normal' };
-                    html += `<div class="dice-reward-item"><b>[${i}번]</b>
-                        <input type="text" class="dice-name-field" data-num="${i}" value="${escapeHtml(row.reward_name)}">
-                        <select class="dice-type-field" data-num="${i}">
-                            <option value="normal" ${row.reward_type === 'normal' ? 'selected' : ''}>보통 상품</option>
-                            <option value="jackpot" ${row.reward_type === 'jackpot' ? 'selected' : ''}>🎉 대박</option>
-                            <option value="boom" ${row.reward_type === 'boom' ? 'selected' : ''}>💣 꽝</option>
-                        </select></div>`;
+                    const currentReward = rewardMap[i] || '';
+                    const currentType = typeMap[i] || 'normal';
+
+                    html += `
+                        <div class="dice-reward-item">
+                            <label style="margin: 0; font-size: 15px;"><b>⚀ ${i}번</b></label>
+                            <input type="text" id="diceReward${i}" value="${currentReward}" placeholder="상품명 입력 (예: 마이쭈)">
+                            <select id="diceType${i}">
+                                <option value="normal" ${currentType === 'normal' ? 'selected' : ''}>🎲 보통</option>
+                                <option value="jackpot" ${currentType === 'jackpot' ? 'selected' : ''}>🎉 대박</option>
+                                <option value="boom" ${currentType === 'boom' ? 'selected' : ''}>💣 꽝</option>
+                            </select>
+                        </div>
+                    `;
                 }
-                form.innerHTML = html;
-            } catch (e) { form.innerHTML = e.message; }
-        }
+                formContainer.innerHTML = html;
 
-        document.getElementById('btnSaveDiceRewards').onclick = async () => {
-            const names = document.querySelectorAll('.dice-name-field');
-            const types = document.querySelectorAll('.dice-type-field');
-            const rows = Array.from(names).map((n, i) => ({
-                dice_number: parseInt(n.getAttribute('data-num'), 10), reward_name: n.value.trim() || '상품 미지정', reward_type: types[i].value
-            }));
-            await db.from('dice_rewards').upsert(rows, { onConflict: 'dice_number' }); alert("주사위 구조가 일괄 배치되었습니다.");
-        };
-
-        // 제비뽑기 유닛 제어 레이아웃
-        async function loadAdminLottery() {
-            const cont = document.getElementById('lotteryFormContainer'); cont.innerHTML = '<p>불러오는 중...</p>';
-            try {
-                const { data } = await db.from('lottery_rewards').select('*').order('id', { ascending: true });
-                cont.innerHTML = '';
-                if (!data || data.length === 0) { addLotteryRow('', 1); return; }
-                data.forEach(d => addLotteryRow(d.reward_name, d.quantity));
-            } catch (e) { cont.innerHTML = e.message; }
-        }
-
-        function addLotteryRow(name, qty) {
-            const div = document.createElement('div'); div.style.display = 'flex'; div.style.gap = '6px'; div.className = 'lottery-row-item';
-            div.innerHTML = `<input type="text" class="lottery-name-input" style="flex:2;" value="${escapeHtml(name)}" placeholder="상품명">
-                <input type="number" class="lottery-qty-input" style="flex:1; text-align:center;" value="${qty}">
-                <button onclick="this.parentElement.remove()" style="background:#e74c3c; width:auto; margin:0; padding:4px 8px;">삭제</button>`;
-            document.getElementById('lotteryFormContainer').appendChild(div);
-        }
-
-        document.getElementById('btnAddLotteryItem').onclick = () => addLotteryRow('', 1);
-
-        document.getElementById('btnSaveLottery').onclick = async () => {
-            const names = document.querySelectorAll('.lottery-name-input');
-            const qtys = document.querySelectorAll('.lottery-qty-input');
-            const rows = []; let totalSum = 0;
-
-            names.forEach((n, i) => {
-                const nv = n.value.trim(); const qv = parseInt(qtys[i].value, 10) || 0;
-                if (nv && qv > 0) { rows.push({ reward_name: nv, quantity: qv }); totalSum += qv; }
-            });
-            if (totalSum > 40) return alert(`현재 총 수량이 ${totalSum}개입니다. 40개 이하로 맞추세요.`);
-
-            await db.from('lottery_rewards').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            if (rows.length > 0) await db.from('lottery_rewards').insert(rows);
-            alert("제비뽑기 배치 저장 완료"); loadAdminLottery();
-        };
-
-        // 토글 활성화 마스터 컨트롤
-        async function loadAdminSettings() {
-            const { data } = await db.from('system_settings').select('*');
-            if (data) {
-                data.forEach(s => {
-                    if (s.key === 'event_enabled') document.getElementById('toggleEventStatus').checked = (s.value === 'true');
-                    if (s.key === 'whole_class_event_enabled') document.getElementById('toggleWholeClassEvent').checked = (s.value === 'true');
-                    if (s.key === 'regular_event_enabled') document.getElementById('toggleRegularEvent').checked = (s.value === 'true');
-
-                    document.querySelectorAll('.game-toggle').forEach(cb => {
-                        if (cb.getAttribute('data-key') === s.key) cb.checked = (s.value === 'true');
-                    });
-                });
+            } catch (err) {
+                formContainer.innerHTML = `<p style="color:red; text-align:center;">오류: ${err.message}</p>`;
             }
         }
 
-        async function saveGlobalSetting(key, val) { await db.from('system_settings').upsert({ key: key, value: String(val) }, { onConflict: 'key' }); }
-        document.getElementById('toggleEventStatus').onchange = (e) => saveGlobalSetting('event_enabled', e.target.checked);
-        document.getElementById('toggleWholeClassEvent').onchange = (e) => saveGlobalSetting('whole_class_event_enabled', e.target.checked);
-        document.getElementById('toggleRegularEvent').onchange = (e) => saveGlobalSetting('regular_event_enabled', e.target.checked);
+        document.getElementById('btnSaveDiceRewards').addEventListener('click', async () => {
+            const btn = document.getElementById('btnSaveDiceRewards');
+            btn.disabled = true;
+            btn.innerText = '저장 중...';
 
-        document.getElementById('btnSaveGameSettings').onclick = async () => {
-            const rows = Array.from(document.querySelectorAll('.game-toggle')).map(cb => ({ key: cb.getAttribute('data-key'), value: String(cb.checked) }));
-            await db.from('system_settings').upsert(rows, { onConflict: 'key' }); alert("개별 게임 모듈 조건이 업데이트되었습니다.");
+            const dataToUpsert = [];
+
+            for (let i = 1; i <= 6; i++) {
+                const rewardName = document.getElementById(`diceReward${i}`).value.trim();
+                const rewardType = document.getElementById(`diceType${i}`).value;
+
+                if (rewardName) {
+                    dataToUpsert.push({
+                        dice_number: i,
+                        reward_name: rewardName,
+                        reward_type: rewardType
+                    });
+                }
+            }
+
+            try {
+                await db.from('dice_rewards').delete().neq('dice_number', 0);
+
+                if (dataToUpsert.length > 0) {
+                    const { error } = await db.from('dice_rewards').insert(dataToUpsert);
+                    if (error) throw error;
+                }
+
+                alert('🎉 주사위 상품 설정이 성공적으로 저장되었습니다!');
+            } catch (err) {
+                alert('저장 중 오류 발생: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = '💾 주사위 상품 일괄 저장';
+            }
+        });
+
+        async function fetchLotterySettings() {
+            const container = document.getElementById('lotteryFormContainer');
+            container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">불러오는 중...</p>';
+            try {
+                const { data, error } = await db.from('lottery_rewards').select('*').order('id', { ascending: true });
+                if (error) throw error;
+
+                container.innerHTML = '';
+                if (data && data.length > 0) {
+                    data.forEach(item => addLotteryInputRow(item.reward_name, item.quantity));
+                } else {
+                    addLotteryInputRow('', 1);
+                }
+            } catch (e) {
+                container.innerHTML = `<p style="color:red; text-align: center;">오류: ${e.message}</p>`;
+            }
+        }
+
+        function addLotteryInputRow(name = '', qty = 1) {
+            const container = document.getElementById('lotteryFormContainer');
+            const row = document.createElement('div');
+            row.style.cssText = "display:flex; gap:10px; align-items:center; margin-bottom: 8px;";
+            row.innerHTML = `
+                <input type="text" class="lottery-name" placeholder="문구 (예: 장한스티커)" value="${name}" style="flex:2; margin:0; padding: 10px;">
+                <input type="number" class="lottery-qty" placeholder="개수" value="${qty}" min="1" style="flex:1; margin:0; padding: 10px;">
+                <button type="button" onclick="this.parentElement.remove()" style="background:#e74c3c; width:auto; padding:10px 15px; margin:0; border-radius: 6px;">X</button>
+            `;
+            container.appendChild(row);
+        }
+
+        document.getElementById('btnAddLotteryItem').addEventListener('click', () => addLotteryInputRow());
+
+        document.getElementById('btnSaveLottery').addEventListener('click', async () => {
+            const btn = document.getElementById('btnSaveLottery');
+            btn.disabled = true;
+            btn.innerText = "저장 중...";
+
+            const names = document.querySelectorAll('.lottery-name');
+            const qtys = document.querySelectorAll('.lottery-qty');
+            let dataToInsert = [];
+
+            for (let i = 0; i < names.length; i++) {
+                const nameVal = names[i].value.trim();
+                const qtyVal = parseInt(qtys[i].value, 10);
+                if (nameVal !== '' && !isNaN(qtyVal) && qtyVal > 0) {
+                    dataToInsert.push({
+                        reward_name: nameVal,
+                        quantity: qtyVal
+                    });
+                }
+            }
+
+            try {
+                const { error: delErr } = await db.from('lottery_rewards').delete().neq('id', 0);
+                if (delErr) throw delErr;
+
+                if (dataToInsert.length > 0) {
+                    const { error: insErr } = await db.from('lottery_rewards').insert(dataToInsert);
+                    if (insErr) throw insErr;
+                }
+                alert('🎉 제비뽑기 설정이 성공적으로 저장되었습니다!');
+
+                fetchLotterySettings();
+            } catch (e) {
+                alert('저장 실패: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "💾 제비뽑기 설정 저장";
+            }
+        });
+
+        let editingQuizId = null;
+
+        window.toggleQuizFields = function () {
+            const category = document.getElementById('newQuizCategory').value;
+            const qType = document.getElementById('newQuizType').value;
+
+            document.getElementById('topicFieldContainer').style.display = (category === '수학') ? 'block' : 'none';
+            document.getElementById('multipleOptionsContainer').style.display = (qType === 'multiple') ? 'block' : 'none';
+        }
+
+        setTimeout(toggleQuizFields, 100);
+
+        async function fetchQuizList() {
+            const container = document.getElementById('quizListContainer');
+            const selectedCategory = document.getElementById('filterQuizCategory') ? document.getElementById('filterQuizCategory').value : 'none';
+
+            if (selectedCategory === 'none') {
+                container.innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">카테고리를 선택하면 문제가 표시됩니다.</p>';
+                return;
+            }
+
+            container.innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">불러오는 중...</p>';
+            try {
+                const { data, error } = await db.from('quiz_bank')
+                    .select('*')
+                    .eq('category', selectedCategory)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">해당 카테고리에 등록된 문제가 없습니다.</p>';
+                    return;
+                }
+
+                renderQuizItems(data);
+            } catch (err) {
+                container.innerHTML = `<p style="color:red;">오류: ${err.message}</p>`;
+            }
+        }
+
+        function renderQuizItems(data) {
+            const container = document.getElementById('quizListContainer');
+            let html = '';
+            data.forEach(q => {
+                let badgeColor = '#9b59b6';
+                if (q.category === '수학') badgeColor = '#1abc9c';
+                else if (q.category === '상식') badgeColor = '#e67e22';
+                else if (q.category === '사자성어') badgeColor = '#34495e';
+                else if (q.category === '도전(스피드 설명)') badgeColor = '#d35400';
+
+                const topicHtml = q.topic ? `<span style="color:#7f8c8d; font-size:12px;">[${q.topic}]</span>` : '';
+                const typeHtml = q.question_type === 'multiple' ? '<span style="font-size:11px; color:#3498db; border:1px solid #3498db; padding:2px 4px; border-radius:4px;">객관식</span>' : '<span style="font-size:11px; color:#e67e22; border:1px solid #e67e22; padding:2px 4px; border-radius:4px;">단답형</span>';
+
+                html += `
+                    <div class="quiz-item" style="align-items: flex-start;">
+                        <div style="flex: 1; padding-right: 10px;">
+                            <div style="margin-bottom: 5px;">
+                                <span style="background:${badgeColor}; color:white; padding:3px 6px; border-radius:4px; font-size:11px; font-weight:bold;">${q.category}</span>
+                                ${topicHtml} ${typeHtml}
+                            </div>
+                            <div style="line-height: 1.4;">
+                                <span style="color:#2c3e50; font-weight:bold;">Q.</span> ${q.question}<br>
+                                <span style="color:#27ae60; font-weight:bold;">A.</span> ${q.answer}
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <button class="btn-edit-quiz" data-id="${q.id}" data-quiz='${JSON.stringify(q).replace(/'/g, "&#39;")}' style="width:auto; padding:6px 12px; margin:0; background:#f39c12; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">수정</button>
+                            <button class="btn-del-quiz" data-id="${q.id}" style="width:auto; padding:6px 12px; margin:0; background:#e74c3c; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">삭제</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+
+            document.querySelectorAll('.btn-del-quiz').forEach(btn => btn.addEventListener('click', async (e) => {
+                if (!confirm("이 문제를 삭제하시겠습니까?")) return;
+                await db.from('quiz_bank').delete().eq('id', e.target.dataset.id);
+                fetchQuizList();
+            }));
+
+            document.querySelectorAll('.btn-edit-quiz').forEach(btn => btn.addEventListener('click', (e) => {
+                const quizData = JSON.parse(e.target.dataset.quiz);
+                loadQuizForEditing(quizData);
+            }));
+        }
+
+        function loadQuizForEditing(quiz) {
+            editingQuizId = quiz.id;
+
+            document.getElementById('newQuizCategory').value = quiz.category;
+            document.getElementById('newQuizType').value = quiz.question_type;
+
+            if (quiz.category === '수학') {
+                document.getElementById('newQuizTopic').value = quiz.topic || '';
+            }
+
+            document.getElementById('newQuizQuestion').value = quiz.question;
+            document.getElementById('newQuizAnswer').value = quiz.answer;
+
+            if (quiz.question_type === 'multiple' && quiz.options) {
+                document.getElementById('opt1').value = quiz.options[0] || '';
+                document.getElementById('opt2').value = quiz.options[1] || '';
+                document.getElementById('opt3').value = quiz.options[2] || '';
+                document.getElementById('opt4').value = quiz.options[3] || '';
+            }
+
+            toggleQuizFields();
+
+            document.getElementById('btnAddQuiz').classList.add('hidden');
+            document.getElementById('btnUpdateQuiz').classList.remove('hidden');
+            document.getElementById('btnCancelEditQuiz').classList.remove('hidden');
+
+            document.getElementById('newQuizCategory').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function resetQuizForm() {
+            editingQuizId = null;
+
+            document.getElementById('newQuizQuestion').value = '';
+            document.getElementById('newQuizAnswer').value = '';
+            document.getElementById('opt1').value = '';
+            document.getElementById('opt2').value = '';
+            document.getElementById('opt3').value = '';
+            document.getElementById('opt4').value = '';
+
+            document.getElementById('btnAddQuiz').classList.remove('hidden');
+            document.getElementById('btnUpdateQuiz').classList.add('hidden');
+            document.getElementById('btnCancelEditQuiz').classList.add('hidden');
+        }
+
+        document.getElementById('btnCancelEditQuiz').addEventListener('click', resetQuizForm);
+
+        function buildQuizData() {
+            const category = document.getElementById('newQuizCategory').value;
+            const topic = document.getElementById('newQuizTopic').value.trim();
+            const qType = document.getElementById('newQuizType').value;
+            const q = document.getElementById('newQuizQuestion').value.trim();
+            const a = document.getElementById('newQuizAnswer').value.trim();
+
+            if (!q || !a) {
+                alert("문제와 정답을 모두 입력해주세요!");
+                return null;
+            }
+            if (category === '수학' && !topic) {
+                alert("수학 문제는 단원명을 반드시 입력해야 합니다!");
+                return null;
+            }
+
+            let optionsArr = null;
+            if (qType === 'multiple') {
+                const opt1 = document.getElementById('opt1').value.trim();
+                const opt2 = document.getElementById('opt2').value.trim();
+                const opt3 = document.getElementById('opt3').value.trim();
+                const opt4 = document.getElementById('opt4').value.trim();
+
+                if (!opt1 || !opt2 || !opt3 || !opt4) {
+                    alert("객관식 보기를 모두 입력해주세요!");
+                    return null;
+                }
+                optionsArr = [opt1, opt2, opt3, opt4];
+
+                if (!optionsArr.includes(a)) {
+                    alert("객관식 정답은 4개의 보기 중 하나와 정확히 일치해야 합니다!");
+                    return null;
+                }
+            }
+
+            return {
+                category: category,
+                topic: category === '수학' ? topic : null,
+                question_type: qType,
+                question: q,
+                answer: a,
+                options: optionsArr
+            };
+        }
+
+        document.getElementById('btnAddQuiz').addEventListener('click', async () => {
+            const insertData = buildQuizData();
+            if (!insertData) return;
+
+            try {
+                const { data, error } = await db.from('quiz_bank').insert([insertData]).select();
+                if (error) throw error;
+
+                alert("문제가 DB에 성공적으로 추가되었습니다!");
+                resetQuizForm();
+
+                document.getElementById('filterQuizCategory').value = 'none';
+                renderQuizItems(data);
+
+            } catch (err) {
+                alert("문제 추가 실패: " + err.message);
+            }
+        });
+
+        document.getElementById('btnUpdateQuiz').addEventListener('click', async () => {
+            if (!editingQuizId) return;
+
+            const updateData = buildQuizData();
+            if (!updateData) return;
+
+            try {
+                const { data, error } = await db.from('quiz_bank').update(updateData).eq('id', editingQuizId).select();
+                if (error) throw error;
+
+                alert("문제가 성공적으로 수정되었습니다!");
+                resetQuizForm();
+
+                document.getElementById('filterQuizCategory').value = 'none';
+                renderQuizItems(data);
+
+            } catch (err) {
+                alert("문제 수정 실패: " + err.message);
+            }
+        });
+
+        document.getElementById('btnBulkAddQuiz').addEventListener('click', async () => {
+            const jsonText = document.getElementById('bulkJsonInput').value.trim();
+
+            if (!jsonText) return alert("입력창에 JSON 데이터를 붙여넣어 주세요.");
+
+            try {
+                const dataToInsert = JSON.parse(jsonText);
+
+                if (!Array.isArray(dataToInsert)) {
+                    return alert("JSON 형식이 올바르지 않습니다. 배열(Array) 형태여야 합니다.");
+                }
+
+                if (!confirm(`총 ${dataToInsert.length}개의 문제를 일괄 등록하시겠습니까?`)) return;
+
+                const { error } = await db.from('quiz_bank').insert(dataToInsert);
+                if (error) throw error;
+
+                alert(`🎉 성공적으로 ${dataToInsert.length}개의 문제가 등록되었습니다!\n\n(대량 등록 후에는 카테고리를 선택하여 확인하세요)`);
+                document.getElementById('bulkJsonInput').value = '';
+
+                document.getElementById('filterQuizCategory').value = 'none';
+                document.getElementById('quizListContainer').innerHTML = '<p style="text-align: center; color: #7f8c8d; font-size: 13px;">카테고리를 선택하면 문제가 표시됩니다.</p>';
+
+            } catch (err) {
+                alert("등록 실패! JSON 형식을 다시 확인해 주세요.\n\n에러 메시지: " + err.message);
+            }
+        });
+
+        async function populateClassSelect(elementId) {
+            const { data } = await db.from('student').select('student_id');
+            let classes = new Set();
+            data.forEach(r => { if (r.student_id) classes.add(Math.floor(parseInt(r.student_id, 10) / 100)); });
+            let html = '<option value="">반 선택</option>';
+            [...classes].sort().forEach(c => html += `<option value="${c}">${Math.floor(c / 100)}학년 ${c % 100}반</option>`);
+            document.getElementById(elementId).innerHTML = html;
+        }
+
+        let currentClassData = [];
+        let currentSortCol = 'total';
+        let currentSortDesc = true;
+
+        document.getElementById('btnFetchClass').addEventListener('click', async () => {
+            const classPrefix = document.getElementById('classSelect').value;
+            if (!classPrefix) return alert('조회할 반을 선택해주세요.');
+
+            const tbody = document.getElementById('classTableBody');
+            tbody.innerHTML = '<tr><td colspan="3">데이터를 불러오는 중입니다...</td></tr>';
+
+            try {
+                const startIdStr = String(parseInt(classPrefix) * 100);
+                const endIdStr = String(parseInt(classPrefix) * 100 + 99);
+
+                const { data: studentsList } = await db.from('student').select('student_id, name').gte('student_id', startIdStr).lte('student_id', endIdStr).order('student_id', { ascending: true });
+                if (!studentsList || studentsList.length === 0) return tbody.innerHTML = '<tr><td colspan="3">해당 반에 등록된 학생이 없습니다.</td></tr>';
+
+                const studentIds = studentsList.map(s => parseInt(s.student_id, 10));
+                const { data: manualRecords } = await db.from('manual_records').select('student_id, manual_count').in('student_id', studentIds);
+                const manualMap = {}; if (manualRecords) manualRecords.forEach(r => manualMap[r.student_id] = r.manual_count);
+
+                const { data: presRecords } = await db.from('presentation').select('student_id').in('student_id', studentIds).eq('is_approved', true);
+                const presMap = {}; if (presRecords) presRecords.forEach(r => presMap[r.student_id] = (presMap[r.student_id] || 0) + 1);
+
+                currentClassData = studentsList.map(s => {
+                    return {
+                        student_id: s.student_id,
+                        name: s.name,
+                        total: (manualMap[parseInt(s.student_id, 10)] || 0) + (presMap[parseInt(s.student_id, 10)] || 0)
+                    };
+                });
+
+                currentSortCol = 'total';
+                currentSortDesc = true;
+                renderClassTable();
+
+            } catch (error) { alert('목록 조회 중 에러: ' + error.message); }
+        });
+
+        window.sortClassTable = function (column) {
+            if (currentSortCol === column) {
+                currentSortDesc = !currentSortDesc;
+            } else {
+                currentSortCol = column;
+                currentSortDesc = (column === 'total') ? true : false;
+            }
+            renderClassTable();
         };
+
+        function renderClassTable() {
+            const tbody = document.getElementById('classTableBody');
+
+            currentClassData.sort((a, b) => {
+                let valA = a[currentSortCol];
+                let valB = b[currentSortCol];
+
+                if (currentSortCol === 'total') {
+                    return currentSortDesc ? valB - valA : valA - valB;
+                } else {
+                    return currentSortDesc ? String(valB).localeCompare(String(valA)) : String(valA).localeCompare(String(valB));
+                }
+            });
+
+            document.getElementById('sort_icon_student_id').innerText = currentSortCol === 'student_id' ? (currentSortDesc ? '▼' : '▲') : '↕';
+            document.getElementById('sort_icon_name').innerText = currentSortCol === 'name' ? (currentSortDesc ? '▼' : '▲') : '↕';
+            document.getElementById('sort_icon_total').innerText = currentSortCol === 'total' ? (currentSortDesc ? '▼' : '▲') : '↕';
+
+            let html = '';
+            currentClassData.forEach(s => {
+                html += `<tr><td>${s.student_id}</td><td>${s.name}</td><td style="font-weight:bold; color:#2980b9; font-size:1.1em;">${s.total}</td></tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        document.getElementById('btnFetchManualClass').addEventListener('click', async () => {
+            const classPrefix = document.getElementById('manualClassSelect').value;
+            if (!classPrefix) return alert('조회할 반을 선택해주세요.');
+
+            const tbody = document.getElementById('manualTableBody');
+            tbody.innerHTML = '<tr><td colspan="3">데이터를 불러오는 중입니다...</td></tr>';
+            document.getElementById('btnBatchSaveManual').style.display = 'none';
+
+            try {
+                const startIdStr = String(parseInt(classPrefix) * 100);
+                const endIdStr = String(parseInt(classPrefix) * 100 + 99);
+
+                const { data: studentsList } = await db.from('student').select('student_id, name').gte('student_id', startIdStr).lte('student_id', endIdStr).order('student_id', { ascending: true });
+                if (!studentsList || studentsList.length === 0) return tbody.innerHTML = '<tr><td colspan="3">해당 반에 등록된 학생이 없습니다.</td></tr>';
+
+                const studentIds = studentsList.map(s => parseInt(s.student_id, 10));
+                const { data: records } = await db.from('manual_records').select('student_id, manual_count').in('student_id', studentIds);
+                const recordMap = {}; if (records) records.forEach(r => recordMap[r.student_id] = r.manual_count);
+
+                let html = '';
+                studentsList.forEach(s => {
+                    const currentCount = recordMap[parseInt(s.student_id, 10)] || 0;
+                    html += `<tr><td>${s.student_id}</td><td>${s.name}</td><td><input type="number" class="table-input manual-input" data-id="${s.student_id}" data-name="${s.name}" value="${currentCount}"></td></tr>`;
+                });
+
+                tbody.innerHTML = html;
+                document.getElementById('btnBatchSaveManual').style.display = 'block';
+            } catch (error) { alert('조회 중 에러: ' + error.message); }
+        });
+
+        document.getElementById('btnBatchSaveManual').addEventListener('click', async () => {
+            const inputs = document.querySelectorAll('.manual-input');
+            const dataToUpsert = [];
+            inputs.forEach(input => {
+                dataToUpsert.push({
+                    student_id: parseInt(input.getAttribute('data-id'), 10),
+                    student_name: input.getAttribute('data-name'),
+                    manual_count: parseInt(input.value, 10) || 0
+                });
+            });
+
+            if (dataToUpsert.length === 0) return;
+            if (!confirm(`조회된 ${dataToUpsert.length}명 학생의 수동 횟수를 일괄 저장하시겠습니까?`)) return;
+
+            try {
+                const { error } = await db.from('manual_records').upsert(dataToUpsert, { onConflict: 'student_id' });
+                if (error) throw error;
+                alert('✅ 전체 학생의 횟수가 일괄 저장되었습니다!');
+            } catch (error) { alert('저장 중 에러 발생: ' + error.message); }
+        });
+
+
     </script>
 </body>
 

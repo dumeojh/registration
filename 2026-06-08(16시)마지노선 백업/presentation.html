@@ -8,8 +8,11 @@
 
     <!--
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    -->
+-->
     <script src="supabase-js.js"></script>
+
+
+
     <script src="common.js"></script>
 
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -83,8 +86,6 @@
             margin-top: 15px;
             cursor: pointer;
             transition: background-color 0.3s;
-            user-select: none;
-            -webkit-user-select: none;
         }
 
         button:hover {
@@ -151,7 +152,6 @@
             border-radius: 12px;
             padding: 25px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            -webkit-overflow-scrolling: touch;
         }
 
         .modal-header {
@@ -321,8 +321,6 @@
             transition: all 0.1s cubic-bezier(0.4, 0.0, 0.2, 1);
             line-height: 1.2;
             box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
         }
 
         .month-btn:hover {
@@ -546,20 +544,18 @@
             <div id="adminViewSection">
                 <select id="classSelect" style="width: auto; padding: 10px;"></select>
                 <button id="btnFetchClass" style="width: auto; padding: 10px;">조회</button>
-                <div style="overflow-x: auto; margin-top:10px; -webkit-overflow-scrolling: touch;">
+                <div style="overflow-x: auto; margin-top:10px;">
                     <table id="classTable">
                         <thead>
                             <tr>
-                                <th onclick="sortClassTable('student_id')"
-                                    style="cursor:pointer; user-select:none; -webkit-user-select:none;">학번
+                                <th onclick="sortClassTable('student_id')" style="cursor:pointer; user-select:none;">학번
                                     <span id="sort_icon_student_id" style="font-size:12px; color:#95a5a6;">↕</span>
                                 </th>
-                                <th onclick="sortClassTable('name')"
-                                    style="cursor:pointer; user-select:none; -webkit-user-select:none;">이름 <span
+                                <th onclick="sortClassTable('name')" style="cursor:pointer; user-select:none;">이름 <span
                                         id="sort_icon_name" style="font-size:12px; color:#95a5a6;">↕</span></th>
                                 <th onclick="sortClassTable('total')"
-                                    style="cursor:pointer; user-select:none; -webkit-user-select:none; color:#2980b9;">
-                                    합계 <span id="sort_icon_total" style="font-size:12px;">▼</span></th>
+                                    style="cursor:pointer; user-select:none; color:#2980b9;">합계 <span
+                                        id="sort_icon_total" style="font-size:12px;">▼</span></th>
                             </tr>
                         </thead>
                         <tbody id="classTableBody"></tbody>
@@ -573,7 +569,7 @@
                     <select id="manualClassSelect" style="width: auto; padding: 10px;"></select>
                     <button id="btnFetchManualClass" style="width: auto; padding: 10px;">조회</button>
                 </div>
-                <div style="overflow-y: auto; max-height: 400px; -webkit-overflow-scrolling: touch;">
+                <div style="overflow-y: auto; max-height: 400px;">
                     <table id="manualTable">
                         <thead>
                             <tr>
@@ -692,7 +688,7 @@
                 </div>
 
                 <div id="quizListContainer"
-                    style="max-height: 350px; overflow-y: auto; background: #ecf0f1; padding: 10px; border-radius: 8px; -webkit-overflow-scrolling: touch;">
+                    style="max-height: 350px; overflow-y: auto; background: #ecf0f1; padding: 10px; border-radius: 8px;">
                     <p style="text-align: center; color: #7f8c8d; font-size: 13px;">카테고리를 선택하면 문제가 표시됩니다.</p>
                 </div>
             </div>
@@ -713,7 +709,8 @@
                 <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 15px;">※ 제비뽑기 바둑판에 들어갈 문구와 개수를 설정합니다. 전체 합이
                     40개가 안 되면 나머지는 '꽝'으로 채워집니다.</p>
                 <div style="background: #fdf2e9; padding: 15px; border-radius: 8px; border: 1px solid #fad7a1;">
-                    <div id="lotteryFormContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                    <div id="lotteryFormContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                    </div>
                     <button type="button" id="btnAddLotteryItem"
                         style="background-color: #f39c12; margin-top: 10px; padding: 10px;">+ 항목 추가</button>
                     <button type="button" id="btnSaveLottery" style="background-color: #d35400; margin-top: 15px;">💾
@@ -762,38 +759,32 @@
                     <strong style="color: #2980b9; font-size: 15px; display: block; margin-bottom: 15px;">🎮 개별 이벤트 표시
                         설정</strong>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <label
-                            style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; -webkit-user-select:none;">
+                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
                             <input type="checkbox" class="game-toggle" data-key="event_lottery_enabled"
                                 style="width:20px; margin:0;"> 🎫 제비뽑기
                         </label>
-                        <label
-                            style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; -webkit-user-select:none;">
+                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
                             <input type="checkbox" class="game-toggle" data-key="event_dice_enabled"
                                 style="width:20px; margin:0;"> 🎲 주사위
                         </label>
-                        <label
-                            style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; -webkit-user-select:none;">
+                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
                             <input type="checkbox" class="game-toggle" data-key="event_quiz_enabled"
                                 style="width:20px; margin:0;"> 🤔 아재개그
                         </label>
-                        <label
-                            style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; -webkit-user-select:none;">
+                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
                             <input type="checkbox" class="game-toggle" data-key="event_math_enabled"
                                 style="width:20px; margin:0;"> 📐 수학
                         </label>
-                        <label
-                            style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; -webkit-user-select:none;">
+                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
                             <input type="checkbox" class="game-toggle" data-key="event_common_enabled"
                                 style="width:20px; margin:0;"> 🌍 상식
                         </label>
-                        <label
-                            style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; -webkit-user-select:none;">
+                        <label style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer;">
                             <input type="checkbox" class="game-toggle" data-key="event_idiom_enabled"
                                 style="width:20px; margin:0;"> 📜 사자성어
                         </label>
                         <label
-                            style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; -webkit-user-select:none; grid-column: span 2;">
+                            style="margin:0; display:flex; align-items:center; gap:10px; cursor:pointer; grid-column: span 2;">
                             <input type="checkbox" class="game-toggle" data-key="event_challenge_enabled"
                                 style="width:20px; margin:0;"> ⏱️ 스피드 설명 (검색)
                         </label>
@@ -940,6 +931,7 @@
             }
         });
 
+        // 🌟 [핵심 변경사항] 통계 조회 및 날짜 기반 스케줄 확인 로직 적용
         async function refreshStats() {
             document.getElementById('statsBox').innerHTML = `<p class="highlight">${currentStudentId} ${currentStudentName}</p><p>통계를 계산하고 있습니다... ⏳</p>`;
 
@@ -961,15 +953,19 @@
                 const totalCount = autoTotal + manualCount;
                 const maxMilestone = Math.floor(totalCount / 5) * 5;
 
+                // ========= 날짜 기반 이벤트 조회 로직 시작 =========
+                // 한국 시간 기준으로 오늘 날짜(YYYY-MM-DD) 구하기
                 const now = new Date();
                 const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
 
+                // 1. 오늘 날짜로 등록된 전체 특별 이벤트 일정이 있는지 확인
                 const { data: todayEvent } = await db
                     .from('special_event_schedule')
                     .select('*')
                     .eq('event_date', todayStr)
                     .maybeSingle();
 
+                // 2. 학생의 이벤트 로그 가져오기
                 const { data: eventLogs } = await db.from('event_logs').select('milestone, created_at').eq('student_id', currentStudentId);
                 const uniqueMilestones = new Set();
                 let todayParticipated = false;
@@ -977,6 +973,7 @@
                 if (eventLogs) {
                     eventLogs.forEach(log => {
                         if (log.milestone === 0) {
+                            // milestone이 0(특별이벤트)이면서, 오늘 생성된 기록이면 오늘 참여한 것
                             if (log.created_at.startsWith(todayStr)) {
                                 todayParticipated = true;
                             }
@@ -988,6 +985,7 @@
 
                 const completedCount = uniqueMilestones.size;
                 const availableCount = (maxMilestone >= 5) ? Math.floor(maxMilestone / 5) - completedCount : 0;
+                // ========= 날짜 기반 이벤트 조회 로직 끝 =========
 
                 const btnGoSpecialEvent = document.getElementById('btnGoSpecialEvent');
                 const btnGoRegularEvent = document.getElementById('btnGoRegularEvent');
@@ -995,20 +993,24 @@
                 btnGoRegularEvent.style.display = 'block';
 
                 if (isEventEnabled) {
+                    // 마스터 스위치가 켜져 있을 때
                     if (isWholeClassEventEnabled) {
                         if (!todayEvent) {
+                            // 오늘 일정이 없는 경우
                             btnGoSpecialEvent.disabled = true;
                             btnGoSpecialEvent.style.backgroundColor = '#bdc3c7';
                             btnGoSpecialEvent.style.color = 'white';
                             btnGoSpecialEvent.style.cursor = 'not-allowed';
                             btnGoSpecialEvent.innerText = `🔒 오늘은 이벤트가 없습니다`;
                         } else if (todayParticipated) {
+                            // 일정이 있지만 오늘 참여를 마친 경우
                             btnGoSpecialEvent.disabled = true;
                             btnGoSpecialEvent.style.backgroundColor = '#d7bde2';
                             btnGoSpecialEvent.style.color = 'white';
                             btnGoSpecialEvent.style.cursor = 'not-allowed';
                             btnGoSpecialEvent.innerText = `✅ 오늘 이벤트 참여 완료`;
                         } else {
+                            // 일정이 있고 참여하지 않은 경우
                             btnGoSpecialEvent.disabled = false;
                             btnGoSpecialEvent.style.backgroundColor = '#8e44ad';
                             btnGoSpecialEvent.style.color = 'white';
@@ -2126,6 +2128,8 @@
                 alert('✅ 전체 학생의 횟수가 일괄 저장되었습니다!');
             } catch (error) { alert('저장 중 에러 발생: ' + error.message); }
         });
+
+
     </script>
 </body>
 

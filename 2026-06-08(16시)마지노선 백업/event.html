@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>이벤트 존</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <script src="supabase-js.js"></script>
+    <script src="common.js"></script>
+    <link rel="icon"
+        href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAOxAAADsQBlSsOGwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ2CheckM==">
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .event-container {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        p.desc {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+
+        .milestone-btn {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            box-sizing: border-box;
+        }
+
+        .milestone-btn.active {
+            background-color: #f1c40f;
+            color: #2c3e50;
+            border: 2px solid #f39c12;
+        }
+
+        .milestone-btn.active:hover {
+            background-color: #f39c12;
+        }
+
+        .milestone-btn.waiting {
+            background-color: #fcf3cf;
+            color: #e67e22;
+            border: 1px solid #f39c12;
+            cursor: default;
+        }
+
+        .milestone-btn.completed {
+            background-color: #ecf0f1;
+            color: #7f8c8d;
+            border: 1px solid #bdc3c7;
+            cursor: default;
+        }
+
+        .btn-back {
+            width: 100%;
+            padding: 14px;
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .game-modal {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #e8f4fd;
+            border-radius: 12px;
+            border: 1px solid #3498db;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .game-modal h3 {
+            margin-top: 0;
+            color: #2980b9;
+            font-size: 16px;
+        }
+
+        .game-btn {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            box-sizing: border-box;
+        }
+
+        .game-btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-lottery {
+            background-color: #e74c3c;
+        }
+
+        .btn-dice {
+            background-color: #3498db;
+            margin-bottom: 5px;
+        }
+
+        .btn-quiz {
+            background-color: #9b59b6;
+            margin-bottom: 5px;
+        }
+
+        .btn-math {
+            background-color: #1abc9c;
+            margin-bottom: 5px;
+        }
+
+        .btn-common {
+            background-color: #e67e22;
+            margin-bottom: 5px;
+        }
+
+        .btn-idiom {
+            background-color: #34495e;
+            margin-bottom: 5px;
+        }
+
+        .btn-challenge {
+            background-color: #d35400;
+        }
+
+        #diceContainer {
+            display: none;
+            margin: 40px auto 30px auto;
+            width: 80px;
+            height: 80px;
+            perspective: 800px;
+        }
+
+        #diceWrapper {
+            width: 100%;
+            height: 100%;
+        }
+
+        .dice-3d {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(-15deg) rotateY(15deg);
+        }
+
+        .face {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: #ffffff;
+            border: 2px solid #bdc3c7;
+            border-radius: 12px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.15);
+            font-size: 70px;
+            line-height: 80px;
+            text-align: center;
+            color: #2c3e50;
+            backface-visibility: hidden;
+            box-sizing: border-box;
+        }
+
+        .face.front {
+            transform: rotateY(0deg) translateZ(40px);
+            color: #e74c3c;
+        }
+
+        .face.top {
+            transform: rotateX(90deg) translateZ(40px);
+        }
+
+        .face.right {
+            transform: rotateY(90deg) translateZ(40px);
+        }
+
+        .face.left {
+            transform: rotateY(-90deg) translateZ(40px);
+        }
+
+        .face.bottom {
+            transform: rotateX(-90deg) translateZ(40px);
+        }
+
+        .face.back {
+            transform: rotateY(180deg) translateZ(40px);
+        }
+
+        .jump-anim {
+            animation: diceJump 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        @keyframes diceJump {
+            0% {
+                transform: translateY(0) scale(1);
+            }
+
+            20% {
+                transform: translateY(-120px) scale(1.1);
+            }
+
+            40% {
+                transform: translateY(0) scale(1);
+            }
+
+            60% {
+                transform: translateY(-50px) scale(1.05);
+            }
+
+            80% {
+                transform: translateY(0) scale(1);
+            }
+
+            90% {
+                transform: translateY(-15px) scale(1.02);
+            }
+
+            100% {
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translate(-2px, 1px) rotate(-1deg);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translate(2px, -1px) rotate(1deg);
+            }
+        }
+
+        .shake-animation {
+            animation: shake 0.5s;
+            animation-iteration-count: 2;
+            background-color: #ffeaea !important;
+            transition: background-color 0.3s;
+        }
+
+        .math-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .math-topic-btn {
+            background-color: #1abc9c;
+            color: white;
+            padding: 15px 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s;
+            box-sizing: border-box;
+        }
+
+        .math-topic-btn:active {
+            transform: scale(0.95);
+        }
+
+        .math-problem-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #1abc9c;
+            margin-top: 15px;
+            text-align: left;
+            box-sizing: border-box;
+        }
+
+        .math-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .math-option-label {
+            background: #ecf0f1;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-sizing: border-box;
+        }
+
+        .math-input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        #lotteryBoard {
+            display: none;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .lottery-card {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: transparent;
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+            perspective: 1000px;
+        }
+
+        .lottery-card.flipped {
+            z-index: 9999;
+        }
+
+        .lottery-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-style: preserve-3d;
+        }
+
+        .lottery-card.flipped .lottery-inner {
+            transform: rotateY(180deg) scale(2);
+        }
+
+        #lotteryOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.75);
+            z-index: 9990;
+            transition: opacity 0.5s;
+        }
+
+        .lottery-front,
+        .lottery-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        .lottery-front {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 26px;
+            font-weight: bold;
+            border: 2px solid #a372f5;
+            box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.2), 0 3px 6px rgba(0, 0, 0, 0.1);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            transform: rotateY(0deg) translateZ(1px);
+        }
+
+        .lottery-back {
+            background: linear-gradient(135deg, #ffffff 0%, #fff8e1 100%);
+            color: #d35400;
+            border: 3px solid #f1c40f;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+            padding: 5px;
+            word-break: keep-all;
+            font-size: 11px;
+            font-weight: 900;
+            line-height: 1.3;
+            transform: rotateY(180deg) translateZ(1px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="event-container">
+        <h2 id="eventTitle">🎉 이벤트 존</h2>
+        <p class="desc" id="eventDesc">진행할 이벤트를 선택해 주세요.</p>
+
+        <div id="milestoneList"></div>
+
+        <div id="gameSelection" class="game-modal">
+            <h3 id="gameTitle"></h3>
+
+            <div id="lotteryOverlay"></div>
+            <div id="lotteryBoard"></div>
+            <p id="lotteryLoading" style="display:none; text-align:center; color:#7f8c8d; margin: 20px 0;">바둑판을 섞는
+                중입니다... 🎲</p>
+
+            <div id="diceContainer">
+                <div id="diceWrapper">
+                    <div id="dice3D" class="dice-3d">
+                        <div class="face front">⚀</div>
+                        <div class="face top">⚁</div>
+                        <div class="face right">⚂</div>
+                        <div class="face left">⚃</div>
+                        <div class="face bottom">⚄</div>
+                        <div class="face back">⚅</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="game-btn btn-lottery" id="btnLotteryGame" onclick="playGame('제비뽑기')">🎫 두근두근 제비뽑기</button>
+            <button class="game-btn btn-dice" id="btnDiceGame" onclick="playGame('주사위')">🎲 주사위 굴리기</button>
+
+            <div id="diceRewardInfo" class="game-btn"
+                style="background:#fff; border:2px dashed #3498db; cursor:default; margin-bottom:15px; text-align:left; color:#2c3e50; font-weight:normal; display:none;">
+                상품 정보를 불러오는 중입니다...</div>
+
+            <button class="game-btn btn-quiz" id="btnQuizGame" onclick="playGame('퀴즈')">🤔 넌센스 아재개그</button>
+            <button class="game-btn btn-math" id="btnMathGame" onclick="playGame('수학')">📐 수학문제 도전</button>
+            <button class="game-btn btn-common" id="btnCommonGame" onclick="playGame('상식')">🌍 상식에 도전</button>
+            <button class="game-btn btn-idiom" id="btnIdiomGame" onclick="playGame('사자성어')">📜 사자성어 도전</button>
+            <button class="game-btn btn-challenge" id="btnChallengeGame" onclick="playGame('도전(스피드 설명)')">⏱️ 스피드 설명 (검색
+                찬스)</button>
+
+            <div id="mathGridSection" style="display: none;">
+                <h4 style="margin: 10px 0; color: #2c3e50;">📚 도전할 단원을 선택하세요</h4>
+                <div id="mathTopics" class="math-grid"></div>
+                <button class="btn-back" onclick="cancelMathGame()"
+                    style="background:#95a5a6; padding:10px; margin-top:15px;">이전으로</button>
+            </div>
+
+            <div id="mathProblemSection" class="math-problem-container" style="display: none;">
+                <div id="mathQuestionText"
+                    style="font-size: 15px; font-weight: bold; color: #2c3e50; margin-bottom: 15px;"></div>
+                <div id="mathAnswerArea"></div>
+                <button onclick="submitMathAnswer()"
+                    style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; margin-top: 15px; cursor: pointer; box-sizing: border-box;">정답
+                    제출</button>
+                <button onclick="cancelMathGame()"
+                    style="width: 100%; padding: 10px; background: transparent; color: #7f8c8d; border: none; margin-top: 5px; cursor: pointer; text-decoration: underline; box-sizing: border-box;">포기하기</button>
+            </div>
+
+            <div id="quizProblemSection" class="math-problem-container" style="display: none; border-color: #e67e22;">
+                <div id="quizQuestionText"
+                    style="font-size: 15px; font-weight: bold; color: #2c3e50; margin-bottom: 15px;"></div>
+                <div id="quizAnswerArea"></div>
+                <button id="btnSubmitQuizAnswer" onclick="submitGeneralQuizAnswer()"
+                    style="width: 100%; padding: 12px; background: #e67e22; color: white; border: none; border-radius: 6px; font-weight: bold; margin-top: 15px; cursor: pointer; box-sizing: border-box;">정답
+                    제출</button>
+                <button onclick="cancelGeneralQuizGame()"
+                    style="width: 100%; padding: 10px; background: transparent; color: #7f8c8d; border: none; margin-top: 5px; cursor: pointer; text-decoration: underline; box-sizing: border-box;">포기하기</button>
+            </div>
+
+            <button id="btnCancelGame"
+                style="width:100%; padding:10px; margin-top:10px; background:transparent; border:none; color:#7f8c8d; text-decoration:underline; cursor:pointer; box-sizing: border-box;"
+                onclick="closeGameModal()">취소</button>
+        </div>
+
+        <button class="btn-back" onclick="history.back();">🔙 발표 기록으로 돌아가기</button>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('student_id');
+        const studentName = decodeURIComponent(urlParams.get('name') || '');
+        const totalCount = parseInt(urlParams.get('total_count'));
+        const eventTypeParam = urlParams.get('event_type');
+
+        if (!studentId || isNaN(totalCount)) { alert("잘못된 접근입니다."); history.back(); }
+
+        document.getElementById('eventTitle').innerText = `🎉 ${studentName}님의 이벤트 존`;
+
+        let currentActiveMilestone = 0;
+        const maxMilestone = Math.floor(totalCount / 5) * 5;
+        let diceRewardMap = {};
+
+        let gameSettings = { lottery: true, dice: true, quiz: true, math: true, common: true, idiom: true, challenge: true };
+        let isWholeClassEventEnabled = false;
+        let isRegularEventEnabled = true;
+
+        async function loadGameSettings() {
+            try {
+                const { data } = await db.from('system_settings').select('*');
+                if (data) {
+                    data.forEach(s => {
+                        if (s.key.startsWith('event_') && s.key.endsWith('_enabled')) {
+                            const type = s.key.split('_')[1];
+                            if (gameSettings[type] !== undefined) { gameSettings[type] = (s.value === 'true'); }
+                        }
+                        if (s.key === 'whole_class_event_enabled') { isWholeClassEventEnabled = (s.value === 'true'); }
+                        if (s.key === 'regular_event_enabled') { isRegularEventEnabled = (s.value === 'true'); }
+                    });
+                }
+            } catch (e) { console.error('게임 설정 세팅 로드 에러', e); }
+        }
+
+        async function loadDiceRewards() {
+            try {
+                const { data } = await db.from('dice_rewards').select('*').order('dice_number', { ascending: true });
+                if (data && data.length > 0) {
+                    let html = '<div style="font-weight:bold; color:#2980b9; margin-bottom:12px; text-align:center;">🎁 오늘의 주사위 상품</div>';
+                    html += '<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:8px;">';
+                    data.forEach(r => {
+                        diceRewardMap[r.dice_number] = { name: r.reward_name, type: r.reward_type || 'normal' };
+                        html += `<div style="background:#ecf0f1; padding:10px 5px; border-radius:6px; font-size:13px; text-align:center; word-break:keep-all; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:45px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); box-sizing:border-box;"><b style="color:#e74c3c; margin-bottom:4px; font-size:14px;">[${r.dice_number}]</b> <span style="color:#2c3e50;">${r.reward_name}</span></div>`;
+                    });
+                    html += '</div>';
+                    document.getElementById('diceRewardInfo').innerHTML = html;
+                } else {
+                    document.getElementById('diceRewardInfo').innerHTML = '<span style="color:#e74c3c; font-weight:bold;">등록된 상품 목록이 없습니다.</span>';
+                }
+            } catch (e) { document.getElementById('diceRewardInfo').innerHTML = `<span style="color:#e74c3c;">조회 실패: ${e.message}</span>`; }
+        }
+
+        async function loadMilestones() {
+            document.getElementById('milestoneList').innerHTML = '<p>데이터 조회 중...</p>';
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+            const { data: logs } = await db.from('event_logs').select('*').eq('student_id', studentId);
+            const logMap = {};
+            let todaySpecialLog = null;
+
+            if (logs) {
+                logs.forEach(l => {
+                    if (l.milestone === 0) { if (l.created_at.startsWith(todayStr)) todaySpecialLog = l; }
+                    else { logMap[l.milestone] = l; }
+                });
+            }
+
+            let html = '';
+            if (isWholeClassEventEnabled && eventTypeParam === 'special') {
+                html += `<div style="background: #fdf5fe; padding: 15px; border-radius: 8px; border: 1px solid #d7bde2; margin-bottom: 20px; text-align: left; box-sizing: border-box;"><h3 style="margin-top: 0; margin-bottom: 15px; color: #8e44ad; font-size: 16px;">🌟 오늘의 특별 이벤트</h3>`;
+                if (todaySpecialLog) {
+                    if (todaySpecialLog.is_rewarded) { html += `<button class="milestone-btn completed" style="margin-bottom:0;"><div>🎊 오늘 이벤트 참여 완료</div><div style="font-size:12px; font-weight:normal;">✅ 상품 수령 완료 (${todaySpecialLog.result_text})</div></button>`; }
+                    else { html += `<button class="milestone-btn waiting" style="margin-bottom:0;"><div>🎊 오늘 이벤트 참여 완료</div><div style="font-size:12px; font-weight:normal;">⏳ 선생님 확인(상품 지급) 대기중</div></button>`; }
+                } else {
+                    html += `<button class="milestone-btn active" style="background-color: #f5eef8; border-color: #8e44ad; color: #8e44ad; margin-bottom:0;" onclick="openGameModal(0)"><div>🎊 오늘의 특별 이벤트 진행하기!</div><div style="font-size:12px; font-weight:normal;">여기를 눌러 특별 게임을 진행하세요</div></button>`;
+                }
+                html += `</div>`;
+            }
+
+            if (isRegularEventEnabled && maxMilestone >= 5 && eventTypeParam === 'regular') {
+                html += `<div style="background: #e8f4fd; padding: 15px; border-radius: 8px; border: 1px solid #bde0fe; text-align: left; box-sizing: border-box;"><h3 style="margin-top: 0; margin-bottom: 15px; color: #2980b9; font-size: 16px;">🎯 발표 달성 이벤트 (5회 단위)</h3>`;
+                for (let i = 5; i <= maxMilestone; i += 5) {
+                    const log = logMap[i];
+                    if (log) {
+                        if (log.is_rewarded) { html += `<button class="milestone-btn completed"><div>[ ${i}회차 ] 달성 이벤트</div><div style="font-size:12px; font-weight:normal;">✅ 상품 수령 완료 (${log.result_text})</div></button>`; }
+                        else { html += `<button class="milestone-btn waiting"><div>[ ${i}회차 ] 달성 이벤트</div><div style="font-size:12px; font-weight:normal;">⏳ 선생님 확인 대기중</div></button>`; }
+                    } else {
+                        html += `<button class="milestone-btn active" onclick="openGameModal(${i})"><div>🎉 [ ${i}회차 ] 이벤트 진행하기!</div><div style="font-size:12px; font-weight:normal;">여기를 눌러 게임을 선택하세요</div></button>`;
+                    }
+                }
+                html += `</div>`;
+            }
+
+            if (html === '') { html += `<p style="color: #7f8c8d; text-align: center; padding: 20px;">현재 참여 가능한 이벤트가 없습니다.</p>`; }
+            document.getElementById('milestoneList').innerHTML = html;
+        }
+
+        function openGameModal(milestone) {
+            currentActiveMilestone = milestone;
+            document.querySelectorAll('.game-btn').forEach(btn => { btn.style.display = 'none'; btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; });
+
+            if (gameSettings.lottery) document.getElementById('btnLotteryGame').style.display = 'block';
+            if (gameSettings.dice) { document.getElementById('btnDiceGame').style.display = 'block'; document.getElementById('diceRewardInfo').style.display = 'block'; }
+            if (gameSettings.quiz) document.getElementById('btnQuizGame').style.display = 'block';
+            if (gameSettings.math) document.getElementById('btnMathGame').style.display = 'block';
+            if (gameSettings.common) document.getElementById('btnCommonGame').style.display = 'block';
+            if (gameSettings.idiom) document.getElementById('btnIdiomGame').style.display = 'block';
+            if (gameSettings.challenge) document.getElementById('btnChallengeGame').style.display = 'block';
+
+            document.getElementById('btnCancelGame').style.display = 'block';
+            document.getElementById('lotteryBoard').style.display = 'none';
+            document.getElementById('lotteryOverlay').style.display = 'none';
+            document.getElementById('diceContainer').style.display = 'none';
+            document.getElementById('mathGridSection').style.display = 'none';
+            document.getElementById('mathProblemSection').style.display = 'none';
+            document.getElementById('quizProblemSection').style.display = 'none';
+            document.getElementById('gameSelection').style.display = 'block';
+            document.getElementById('gameTitle').innerText = milestone === 0 ? "⭐ 다함께 특별 이벤트 보상 선택 ⭐" : `⭐ ${milestone}회차 보상 선택 ⭐`;
+            document.getElementById('gameSelection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closeGameModal() { document.getElementById('gameSelection').style.display = 'none'; }
+
+        async function saveEventResult(eventType, resultMsg, dbLogMsg) {
+            document.querySelectorAll('.game-btn').forEach(btn => { btn.disabled = true; btn.style.opacity = '0.5'; btn.style.cursor = 'not-allowed'; });
+            try {
+                const { error } = await db.from('event_logs').insert([{
+                    student_id: parseInt(studentId), student_name: studentName, milestone: currentActiveMilestone, event_type: eventType, result_text: dbLogMsg, is_rewarded: false
+                }]);
+                if (error) throw error;
+                alert(`${resultMsg}\n\n(선생님께 상품 지급 요청이 전송되었습니다!)`);
+                closeGameModal(); loadMilestones();
+            } catch (err) { alert("기록 실패: " + err.message); openGameModal(currentActiveMilestone); }
+        }
+
+        async function playGame(type) {
+            document.querySelectorAll('.game-btn').forEach(btn => { btn.disabled = true; btn.style.opacity = '0.5'; btn.style.cursor = 'not-allowed'; });
+
+            if (type === '제비뽑기') {
+                document.querySelectorAll('.game-btn').forEach(btn => btn.style.display = 'none');
+                document.getElementById('btnCancelGame').style.display = 'none';
+                const board = document.getElementById('lotteryBoard');
+                const overlay = document.getElementById('lotteryOverlay');
+                const loading = document.getElementById('lotteryLoading');
+                loading.style.display = 'block';
+
+                db.from('lottery_rewards').select('*').then(({ data, error }) => {
+                    loading.style.display = 'none';
+                    if (error) { alert('설정 실패'); return openGameModal(currentActiveMilestone); }
+
+                    let pool = [];
+                    if (data && data.length > 0) {
+                        data.forEach(item => {
+                            const qty = parseInt(item.quantity, 10) || 1;
+                            for (let i = 0; i < qty; i++) { pool.push(item.reward_name); }
+                        });
+                    }
+
+                    const TOTAL_TILES = 40;
+                    while (pool.length < TOTAL_TILES) { pool.push("꽝! 다음 기회에..."); }
+                    pool = pool.slice(0, TOTAL_TILES);
+
+                    for (let i = pool.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [pool[i], pool[j]] = [pool[j], pool[i]];
+                    }
+
+                    board.innerHTML = ''; board.style.display = 'grid';
+                    let isFlipping = false;
+
+                    pool.forEach((reward, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'lottery-card';
+                        card.innerHTML = `<div class="lottery-inner"><div class="lottery-front">?</div><div class="lottery-back">${reward}</div></div>`;
+
+                        card.addEventListener('click', () => {
+                            if (isFlipping) return; isFlipping = true;
+                            overlay.style.display = 'block'; card.classList.add('flipped');
+
+                            if (!reward.includes("꽝")) { confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 }); }
+                            setTimeout(() => {
+                                board.style.display = 'none'; overlay.style.display = 'none';
+                                saveEventResult('제비뽑기', `🎫 제비뽑기 결과:\n\n[ ${reward} ]`, `제비뽑기 (${reward})`);
+                            }, 3500);
+                        });
+                        board.appendChild(card);
+                    });
+                });
+            }
+            else if (type === '주사위') {
+                document.querySelectorAll('.game-btn').forEach(btn => btn.style.display = 'none');
+                document.getElementById('btnCancelGame').style.display = 'none';
+
+                const diceContainer = document.getElementById('diceContainer');
+                const diceWrapper = document.getElementById('diceWrapper');
+                const dice3D = document.getElementById('dice3D');
+
+                diceContainer.style.display = 'block';
+                diceWrapper.classList.remove('jump-anim');
+                dice3D.style.transition = 'none';
+                dice3D.style.transform = 'rotateX(-15deg) rotateY(15deg)';
+                void dice3D.offsetWidth;
+
+                const num = Math.floor(Math.random() * 6) + 1;
+                let endX = 0, endY = 0;
+                switch (num) {
+                    case 1: endX = 0; endY = 0; break;
+                    case 2: endX = -90; endY = 0; break;
+                    case 3: endX = 0; endY = -90; break;
+                    case 4: endX = 0; endY = 90; break;
+                    case 5: endX = 90; endY = 0; break;
+                    case 6: endX = 180; endY = 0; break;
+                }
+
+                const spinsX = Math.floor(Math.random() * 3) + 4;
+                const spinsY = Math.floor(Math.random() * 3) + 4;
+                const finalRotateX = endX + (spinsX * 360);
+                const finalRotateY = endY + (spinsY * 360);
+
+                diceWrapper.classList.add('jump-anim');
+                dice3D.style.transition = 'transform 2s cubic-bezier(0.1, 0.8, 0.2, 1)';
+                dice3D.style.transform = `rotateX(${finalRotateX}deg) rotateY(${finalRotateY}deg)`;
+
+                setTimeout(() => {
+                    const rewardInfo = diceRewardMap[num] || { name: "상품 미정", type: "normal" };
+                    if (rewardInfo.type === 'jackpot') {
+                        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 9999 });
+                        setTimeout(() => { saveEventResult('주사위', `🎉 대박 당첨!! 🎉\n\n나온 숫자: [ ${num} ]\n당첨 상품: ${rewardInfo.name}`, `주사위 ${num} (${rewardInfo.name} - 대박)`); }, 1000);
+                    } else if (rewardInfo.type === 'boom') {
+                        document.body.classList.add('shake-animation');
+                        setTimeout(() => {
+                            document.body.classList.remove('shake-animation');
+                            saveEventResult('주사위', `💣 꽝입니다!! 💣\n\n나온 숫자: [ ${num} ]\n당첨 상품: ${rewardInfo.name}`, `주사위 ${num} (${rewardInfo.name} - 꽝)`);
+                        }, 1000);
+                    } else {
+                        saveEventResult('주사위', `🎲 주사위를 굴렸습니다!\n\n나온 숫자: [ ${num} ]\n당첨 상품: 🎉 ${rewardInfo.name} 🎉`, `주사위 ${num} (${rewardInfo.name})`);
+                    }
+                }, 2500);
+            }
+            else if (type === '수학') { openMathGrid(); }
+            else if (type === '퀴즈' || type === '상식' || type === '사자성어' || type === '도전(스피드 설명)') {
+                try {
+                    const { data } = await db.from('quiz_bank').select('*').eq('category', type);
+                    if (!data || data.length === 0) { alert(`등록된 ${type} 문제가 없습니다.`); openGameModal(currentActiveMilestone); return; }
+                    const randomQuiz = data[Math.floor(Math.random() * data.length)];
+                    if (type === '도전(스피드 설명)') { showChallengeProblem(randomQuiz); } else { showGeneralQuizProblem(type, randomQuiz); }
+                } catch (err) { alert("문제 로드 실패: " + err.message); openGameModal(currentActiveMilestone); }
+            }
+        }
+
+        let currentMathQuiz = null;
+
+        async function openMathGrid() {
+            document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => btn.style.display = 'none');
+            document.getElementById('btnCancelGame').style.display = 'none';
+            const grid = document.getElementById('mathTopics');
+            grid.innerHTML = '<p style="grid-column: span 2; text-align: center;">로딩 중...</p>';
+            document.getElementById('mathGridSection').style.display = 'block';
+
+            try {
+                const { data } = await db.from('quiz_bank').select('*').eq('category', '수학');
+                if (!data || data.length === 0) { grid.innerHTML = '<p style="grid-column: span 2; text-align: center;">등록된 수학 문제가 없습니다.</p>'; return; }
+
+                const mathQuizData = {};
+                data.forEach(q => {
+                    const topic = q.topic || '기타';
+                    if (!mathQuizData[topic]) mathQuizData[topic] = [];
+                    mathQuizData[topic].push({ type: q.question_type, q: q.question, a: q.answer, options: q.options });
+                });
+
+                grid.innerHTML = '';
+                Object.keys(mathQuizData).forEach(topic => {
+                    const btn = document.createElement('button');
+                    btn.className = 'math-topic-btn'; btn.innerText = topic;
+                    btn.onclick = () => showMathProblem(topic, mathQuizData[topic]);
+                    grid.appendChild(btn);
+                });
+            } catch (err) { grid.innerHTML = `<p style="grid-column: span 2; text-align: center; color: red;">에러: ${err.message}</p>`; }
+        }
+
+        function showMathProblem(topic, questions) {
+            document.getElementById('mathGridSection').style.display = 'none';
+            document.getElementById('mathProblemSection').style.display = 'block';
+            currentMathQuiz = questions[Math.floor(Math.random() * questions.length)];
+            document.getElementById('mathQuestionText').innerText = `[${topic}]\nQ. ${currentMathQuiz.q}`;
+
+            const answerArea = document.getElementById('mathAnswerArea'); answerArea.innerHTML = '';
+            if (currentMathQuiz.type === 'short' || !currentMathQuiz.options || currentMathQuiz.options.length === 0) {
+                answerArea.innerHTML = `<input type="text" id="mathShortAnswer" class="math-input" placeholder="정답을 입력하세요">`;
+            } else {
+                let html = '<div class="math-options">';
+                currentMathQuiz.options.forEach(opt => { html += `<label class="math-option-label"><input type="radio" name="mathMultipleAnswer" value="${opt}"> ${opt}</label>`; });
+                answerArea.innerHTML = html + '</div>';
+            }
+        }
+
+        function submitMathAnswer() {
+            let userAns = "";
+            if (currentMathQuiz.type === 'short' || !currentMathQuiz.options || currentMathQuiz.options.length === 0) {
+                userAns = document.getElementById('mathShortAnswer').value.trim();
+                if (!userAns) return alert("정답을 써주세요.");
+            } else {
+                const sel = document.querySelector('input[name="mathMultipleAnswer"]:checked');
+                if (!sel) return alert("보기를 고르세요."); userAns = sel.value;
+            }
+
+            const cleanUser = String(userAns).replace(/\s/g, '');
+            const correctAnswers = String(currentMathQuiz.a).split(',').map(a => a.replace(/\s/g, ''));
+            document.getElementById('mathProblemSection').style.display = 'none';
+
+            if (correctAnswers.includes(cleanUser)) { saveEventResult('수학', "정답입니다! 👏👏👏", `정답 맞춤 (${userAns})`); }
+            else { saveEventResult('수학', `틀렸습니다! 😝\n\n제출한 답: ${userAns}\n정답은 '${currentMathQuiz.a}' 입니다.`, `오답 제출 (${userAns})`); }
+        }
+
+        function cancelMathGame() {
+            document.getElementById('mathGridSection').style.display = 'none';
+            document.getElementById('mathProblemSection').style.display = 'none';
+            openGameModal(currentActiveMilestone);
+        }
+
+        let currentGeneralQuiz = null;
+        let currentGeneralQuizType = '';
+
+        function showChallengeProblem(quiz) {
+            document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => btn.style.display = 'none');
+            document.getElementById('btnCancelGame').style.display = 'none';
+            const section = document.getElementById('quizProblemSection');
+            section.style.display = 'block'; section.style.borderColor = '#d35400';
+
+            document.getElementById('quizQuestionText').innerHTML = `
+                <div style="font-size:14px; color:#d35400; margin-bottom:8px;">[스피드 설명 도전]</div>
+                <div style="font-size:16px; margin-bottom:12px; line-height:1.4;"><b>Q.</b> ${quiz.question}</div>
+                <div style="font-size:16px; color:#128c46; background:#eafaf1; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #2ecc71;"><b>A. 키워드:</b> ${quiz.answer}</div>
+                <div style="font-size:13px; color:#7f8c8d; text-align:center; padding-top:10px; border-top:1px dashed #bdc3c7;">인터넷 검색을 적극 활용해 보세요!<br><b>정답 조건의 배경 원리나 명확한 이유를 요약해</b><br>선생님과 친구들에게 멋지게 브리핑해 보세요.</div>`;
+
+            document.getElementById('quizAnswerArea').innerHTML = '';
+            const btnSubmit = document.getElementById('btnSubmitQuizAnswer');
+            btnSubmit.style.backgroundColor = '#d35400'; btnSubmit.innerText = "🎉 멋지게 설명 완료!";
+            btnSubmit.onclick = () => {
+                document.getElementById('quizProblemSection').style.display = 'none';
+                saveEventResult('도전(스피드 설명)', "선생님과 친구들에게 성공적으로 원리를 브리핑했습니다!", `스피드 설명 성공`);
+            };
+        }
+
+        function showGeneralQuizProblem(type, quiz) {
+            document.querySelectorAll('#gameSelection > .game-btn').forEach(btn => btn.style.display = 'none');
+            document.getElementById('btnCancelGame').style.display = 'none';
+            const section = document.getElementById('quizProblemSection'); section.style.display = 'block';
+
+            let themeColor = '#9b59b6';
+            if (type === '상식') themeColor = '#e67e22';
+            else if (type === '사자성어') themeColor = '#34495e';
+            section.style.borderColor = themeColor;
+
+            currentGeneralQuiz = quiz; currentGeneralQuizType = type;
+            document.getElementById('quizQuestionText').innerHTML = `[${type} 문제]<br>Q. ${quiz.question}`;
+
+            const answerArea = document.getElementById('quizAnswerArea'); answerArea.innerHTML = '';
+            if (quiz.question_type === 'short' || !quiz.options || quiz.options.length === 0) {
+                answerArea.innerHTML = `<input type="text" id="quizShortAnswer" class="math-input" placeholder="정답 입력">`;
+            } else {
+                let html = '<div class="math-options">';
+                quiz.options.forEach((opt, idx) => { html += `<label class="math-option-label"><input type="radio" name="quizMultipleAnswer" value="${opt}"> <b>${idx + 1}.</b> ${opt}</label>`; });
+                answerArea.innerHTML = html + '</div>';
+            }
+
+            const btnSubmit = document.getElementById('btnSubmitQuizAnswer');
+            btnSubmit.style.backgroundColor = themeColor; btnSubmit.innerText = "정답 제출";
+            btnSubmit.onclick = submitGeneralQuizAnswer;
+        }
+
+        function submitGeneralQuizAnswer() {
+            let userAns = "";
+            if (currentGeneralQuiz.question_type === 'short' || !currentGeneralQuiz.options || currentGeneralQuiz.options.length === 0) {
+                userAns = document.getElementById('quizShortAnswer').value.trim(); if (!userAns) return alert("정답을 기입해 주세요.");
+            } else {
+                const sel = document.querySelector('input[name="quizMultipleAnswer"]:checked'); if (!sel) return alert("항목을 고르세요."); userAns = sel.value;
+            }
+
+            const cleanUser = String(userAns).replace(/\s/g, '');
+            const correctAnswers = String(currentGeneralQuiz.answer).split(',').map(a => a.replace(/\s/g, ''));
+            document.getElementById('quizProblemSection').style.display = 'none';
+
+            if (correctAnswers.includes(cleanUser)) { saveEventResult(currentGeneralQuizType, "정답입니다! 👏👏👏", `정답 맞춤 (${userAns})`); }
+            else { saveEventResult(currentGeneralQuizType, `틀렸습니다! 😝\n\n제출한 답: ${userAns}\n정답은 '${currentGeneralQuiz.answer.replace(/,/g, ' 또는 ')}' 입니다.`, `오답 제출 (${userAns})`); }
+        }
+
+        function cancelGeneralQuizGame() { document.getElementById('quizProblemSection').style.display = 'none'; openGameModal(currentActiveMilestone); }
+
+        async function initializeEventZone() { await loadGameSettings(); loadMilestones(); loadDiceRewards(); }
+        initializeEventZone(); 
+    </script>
+</body>
+
+</html>

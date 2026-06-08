@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1·2학년 진학 상담 조회 (교사용)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="common.js"></script>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .nav-btn {
+            padding: 8px 15px;
+            background-color: #f8f9fa;
+            color: #495057;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        .print-btn {
+            background-color: #cce5ff;
+            font-weight: bold;
+            color: #004085;
+            border-color: #b8daff;
+            margin-left: auto;
+        }
+
+        h1 {
+            color: #28a745;
+            text-align: center;
+            font-size: 1.6em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        select {
+            padding: 10px 15px;
+            font-size: 1.1em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        select:focus {
+            border-color: #28a745;
+        }
+
+        .action-btn {
+            padding: 10px 25px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .action-btn:hover {
+            background-color: #218838;
+        }
+
+        #loadingMsg {
+            text-align: center;
+            color: #0056b3;
+            font-weight: bold;
+            display: none;
+            margin: 20px 0;
+        }
+
+        /* 테이블 스타일 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.95em;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        th,
+        td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #e2ece9;
+            color: #155724;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+
+        tr:hover {
+            background-color: #f0fdf4;
+        }
+
+        /* 비밀번호 오버레이 스타일 */
+        #passwordOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f4f7f6;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .password-box {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .password-box input {
+            padding: 12px;
+            font-size: 1.2em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 80%;
+            text-align: center;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        .password-box input:focus {
+            border-color: #28a745;
+        }
+
+        /* 입력 상태 구분 뱃지 스타일 */
+        .status-entered {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+
+        .status-missing {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+
+        /* 모달창 스타일 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #fff;
+            width: 850px;
+            max-width: 90%;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.4em;
+            color: white;
+        }
+
+        .close-btn {
+            font-size: 1.8em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: #e9ecef;
+        }
+
+        .modal-body {
+            display: flex;
+            height: 450px;
+        }
+
+        .subject-list {
+            width: 35%;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .subject-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: white;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: 0.2s;
+            word-break: keep-all;
+        }
+
+        /* ✨ 학기별 배경색 및 포인트 테두리 구분 ✨ */
+        .subject-btn.sem-1 {
+            background-color: #f0f8ff;
+            /* 연한 파란색 */
+            border-left: 4px solid #4a90e2;
+        }
+
+        .subject-btn.sem-2 {
+            background-color: #f9f0ff;
+            /* 연한 보라색 */
+            border-left: 4px solid #6f42c1;
+        }
+
+        .subject-btn.sem-lib {
+            background-color: #fff9e6;
+            /* 연한 노란색 */
+            border-left: 4px solid #ffc107;
+        }
+
+        .subject-btn:hover,
+        .subject-btn.active {
+            background: #e2ece9 !important;
+            /* 클릭/호버 시 덮어쓰기 위해 !important 사용 */
+            border-color: #28a745 !important;
+            color: #155724;
+            font-weight: bold;
+        }
+
+        .semester-badge {
+            font-size: 0.8em;
+            color: #555;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .subject-detail {
+            width: 65%;
+            padding: 25px;
+            overflow-y: auto;
+            font-size: 1.05em;
+            line-height: 1.7;
+            color: #333;
+            white-space: pre-wrap;
+            background-color: #ffffff;
+        }
+
+        /* 인쇄 전용 스타일 */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                color: black;
+            }
+
+            .container {
+                box-shadow: none;
+                border: none;
+                max-width: 100%;
+                padding: 0;
+            }
+
+            .nav-buttons,
+            .controls,
+            .subtitle,
+            #passwordOverlay,
+            .modal-overlay {
+                display: none !important;
+            }
+
+            h1 {
+                color: black;
+                font-size: 1.8em;
+                margin-bottom: 20px;
+                border-bottom: 2px solid black;
+                padding-bottom: 10px;
+            }
+
+            table {
+                font-size: 11pt;
+            }
+
+            th {
+                background-color: #eee !important;
+                color: black !important;
+                -webkit-print-color-adjust: exact;
+            }
+
+            th,
+            td {
+                border: 1px solid #000;
+                color: black;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="passwordOverlay">
+        <div class="password-box">
+            <h2 style="color: #28a745; margin-top: 0; font-size: 1.8em;">👩‍🏫 교사용 페이지</h2>
+            <p style="color: #666; margin-bottom: 25px; line-height: 1.5;">학생들의 진학 상담 데이터가 포함되어 있습니다.<br>비밀번호를 입력해 주세요.
+            </p>
+            <input type="password" id="adminPassword" placeholder="비밀번호 입력"
+                onkeypress="if(event.key === 'Enter') checkPassword()">
+            <br>
+            <button class="action-btn" onclick="checkPassword()" style="width: 80%;">접속하기</button>
+            <div style="margin-top: 15px;">
+                <a href="index.html" style="color: #0056b3; text-decoration: none; font-size: 0.9em;">⬅ 메인 화면으로 돌아가기</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer" style="display: none;">
+        <div class="nav-buttons">
+            <a href="index.html" class="nav-btn">🏠 메인 화면으로</a>
+            <button type="button" class="nav-btn print-btn" onclick="window.print()">🖨️ 명단 인쇄하기</button>
+        </div>
+
+        <h1>👩‍🏫 1·2학년 진학 및 학업설계 상담 자료</h1>
+        <p class="subtitle">학생들이 학업설계서에서 직접 저장한 희망 계열 및 희망 학과 명단입니다.</p>
+
+        <div class="controls">
+            <label for="gradeFilter" style="font-weight: bold; color: #333;">학년 :</label>
+            <select id="gradeFilter" onchange="updateClassDropdown()">
+                <option value="1">1학년</option>
+                <option value="2">2학년</option>
+            </select>
+
+            <label for="classFilter" style="font-weight: bold; color: #333; margin-left: 15px;">학급 :</label>
+            <select id="classFilter" onchange="renderTable()">
+                <option value="">데이터를 불러오는 중...</option>
+            </select>
+
+            <label for="statusFilter" style="font-weight: bold; color: #333; margin-left: 15px;">상태 :</label>
+            <select id="statusFilter" onchange="renderTable()">
+                <option value="all">전체 보기</option>
+                <option value="entered">✅ 입력 완료</option>
+                <option value="missing">❌ 미입력</option>
+            </select>
+
+            <button class="action-btn" onclick="renderTable()">조회하기</button>
+        </div>
+
+        <div id="loadingMsg">⏳ 학생 데이터를 불러오고 있습니다...</div>
+
+        <div id="tableContainer" style="display: none;">
+            <div style="text-align: right; margin-bottom: 10px; font-size: 0.9em; color: #666;">
+                총 <span id="studentCount" style="font-weight: bold; color: #d9534f;">0</span>명
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">학번</th>
+                        <th style="width: 15%;">이름</th>
+                        <th style="width: 25%;">희망 계열</th>
+                        <th style="width: 30%;">희망 학과</th>
+                        <th style="width: 20%;">비고 (상담내용)</th>
+                    </tr>
+                </thead>
+                <tbody id="studentTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="studentModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalStudentName">학생 이름</h2>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="subject-list" id="modalSubjectList"></div>
+                <div class="subject-detail" id="modalSubjectContent">
+                    좌측에서 과목을 클릭하면 학생이 작성한 글(설계 이유)이 이곳에 표시됩니다.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function checkPassword() {
+            const pwdInput = document.getElementById('adminPassword').value;
+            const correctPassword = '1';
+
+            if (pwdInput === correctPassword) {
+                document.getElementById('passwordOverlay').style.display = 'none';
+                document.getElementById('mainContainer').style.display = 'block';
+                initData();
+            } else {
+                alert('비밀번호가 일치하지 않습니다.');
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('adminPassword').focus();
+            }
+        }
+
+
+
+        let allStudents = [];
+        let currentGradeStudents = [];
+        let currentDisplayedStudents = [];
+
+        async function fetchAllStudents() {
+            let allData = [];
+            let start = 0;
+            const limit = 1000;
+
+            while (true) {
+                const { data, error } = await db.from('students')
+                    .select('uid, grade1_num, grade2_num, grade3_num, name, desired_field, desired_major')
+                    .range(start, start + limit - 1);
+
+                if (error) throw error;
+                if (!data || data.length === 0) break;
+
+                allData = allData.concat(data);
+
+                if (data.length < limit) break;
+                start += limit;
+            }
+            return allData;
+        }
+
+        async function initData() {
+            const loadingMsg = document.getElementById('loadingMsg');
+            const selectEl = document.getElementById('classFilter');
+
+            loadingMsg.style.display = 'block';
+
+            try {
+                allStudents = await fetchAllStudents();
+                loadingMsg.style.display = 'none';
+                updateClassDropdown();
+            } catch (err) {
+                console.error("데이터 로드 오류:", err);
+                alert("데이터를 불러오는 중 오류가 발생했습니다.");
+                loadingMsg.style.display = 'none';
+                selectEl.innerHTML = '<option value="">불러오기 실패</option>';
+            }
+        }
+
+        function updateClassDropdown() {
+            const gradeFilter = document.getElementById('gradeFilter').value;
+
+            if (gradeFilter === '1') {
+                currentGradeStudents = allStudents.filter(s => {
+                    const g1 = s.grade1_num ? String(s.grade1_num).trim() : '';
+                    const g2 = s.grade2_num ? String(s.grade2_num).trim() : '';
+                    return g1.startsWith('1') && !g2.startsWith('2');
+                });
+                currentGradeStudents.sort((a, b) => String(a.grade1_num || '').trim().localeCompare(String(b.grade1_num || '').trim()));
+            } else if (gradeFilter === '2') {
+                currentGradeStudents = allStudents.filter(s => {
+                    const g2 = s.grade2_num ? String(s.grade2_num).trim() : '';
+                    const g3 = s.grade3_num ? String(s.grade3_num).trim() : '';
+                    return g2.startsWith('2') && !g3.startsWith('3');
+                });
+                currentGradeStudents.sort((a, b) => String(a.grade2_num || '').trim().localeCompare(String(b.grade2_num || '').trim()));
+            }
+
+            const classSet = new Set();
+            currentGradeStudents.forEach(s => {
+                const rawId = gradeFilter === '1' ? s.grade1_num : s.grade2_num;
+                const stuId = rawId ? String(rawId).trim() : "";
+
+                if (stuId) {
+                    if (stuId.length === 5) {
+                        classSet.add(stuId.substring(1, 3));
+                    } else if (stuId.length === 4) {
+                        classSet.add('0' + stuId.substring(1, 2));
+                    }
+                }
+            });
+
+            const classArray = Array.from(classSet).sort();
+            const selectEl = document.getElementById('classFilter');
+            let optionsHtml = '<option value="all">전체 반 보기</option>';
+            classArray.forEach(cls => {
+                optionsHtml += `<option value="${cls}">${parseInt(cls, 10)}반</option>`;
+            });
+
+            selectEl.innerHTML = optionsHtml;
+            renderTable();
+        }
+
+        function renderTable() {
+            const gradeFilter = document.getElementById('gradeFilter').value;
+            const classFilter = document.getElementById('classFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const tbody = document.getElementById('studentTableBody');
+            const tableContainer = document.getElementById('tableContainer');
+            const countSpan = document.getElementById('studentCount');
+
+            let filteredStudents = currentGradeStudents;
+
+            if (classFilter !== 'all' && classFilter !== '') {
+                filteredStudents = filteredStudents.filter(s => {
+                    const rawId = gradeFilter === '1' ? s.grade1_num : s.grade2_num;
+                    const stuId = rawId ? String(rawId).trim() : "";
+
+                    let studentClass = "";
+                    if (stuId.length === 5) {
+                        studentClass = stuId.substring(1, 3);
+                    } else if (stuId.length === 4) {
+                        studentClass = '0' + stuId.substring(1, 2);
+                    }
+                    return studentClass === classFilter;
+                });
+            }
+
+            if (statusFilter === 'entered') {
+                filteredStudents = filteredStudents.filter(s => s.desired_field && s.desired_field.trim() !== '');
+            } else if (statusFilter === 'missing') {
+                filteredStudents = filteredStudents.filter(s => !s.desired_field || s.desired_field.trim() === '');
+            }
+
+            currentDisplayedStudents = filteredStudents;
+
+            if (filteredStudents.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5">해당 조건에 맞는 학생 데이터가 없습니다.</td></tr>`;
+                tableContainer.style.display = 'block';
+                countSpan.innerText = 0;
+                return;
+            }
+
+            let html = '';
+            filteredStudents.forEach((student, index) => {
+                const rawId = gradeFilter === '1' ? student.grade1_num : student.grade2_num;
+                const stuId = rawId ? String(rawId).trim() : "";
+
+                const isFieldEntered = student.desired_field && student.desired_field.trim() !== '';
+                const isMajorEntered = student.desired_major && student.desired_major.trim() !== '';
+
+                const fieldHtml = isFieldEntered
+                    ? `<span class="status-entered">${student.desired_field}</span>`
+                    : `<span class="status-missing">미입력</span>`;
+
+                const majorHtml = isMajorEntered
+                    ? `<span class="status-entered">${student.desired_major}</span>`
+                    : `<span class="status-missing">미입력</span>`;
+
+                html += `
+            <tr>
+                <td style="font-weight: bold; color: #495057;">${stuId}</td>
+                <td style="font-weight: bold; color: #0056b3; text-decoration: underline; cursor: pointer;" 
+                    onclick="openModal(${index})">
+                    ${student.name}
+                </td>
+                <td>${fieldHtml}</td>
+                <td>${majorHtml}</td>
+                <td></td> 
+            </tr>
+        `;
+            });
+
+            tbody.innerHTML = html;
+            countSpan.innerText = filteredStudents.length;
+            tableContainer.style.display = 'block';
+        }
+
+        async function openModal(studentIndex) {
+            const student = currentDisplayedStudents[studentIndex];
+
+            document.getElementById('modalStudentName').innerText = `${student.name} 학생의 과목 설계 현황`;
+            const subjectListDiv = document.getElementById('modalSubjectList');
+            const subjectContentDiv = document.getElementById('modalSubjectContent');
+
+            subjectListDiv.innerHTML = '<div style="padding:15px; font-weight:bold; color:#0056b3;">데이터를 불러오는 중... ⏳</div>';
+            subjectContentDiv.innerHTML = '좌측에서 과목을 클릭하면 학생이 작성한 글(설계 이유)이 이곳에 표시됩니다.';
+
+            document.getElementById('studentModal').style.display = 'flex';
+
+            try {
+                const { data: selections, error } = await db.from('course_selections')
+                    .select('semester, subject_name, reason')
+                    .eq('student_uid', student.uid)
+                    .order('semester', { ascending: true });
+
+                if (error) throw error;
+
+                if (!selections || selections.length === 0) {
+                    subjectListDiv.innerHTML = '<div style="padding:15px; color:#d9534f; font-weight:bold;">장바구니에 담은 과목이 없습니다.</div>';
+                    return;
+                }
+
+                subjectListDiv.innerHTML = '';
+
+                selections.forEach((sel) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'subject-btn';
+
+                    // ✨ 학기별로 텍스트와 배경색 클래스를 적용합니다. ✨
+                    let semesterText = sel.semester;
+
+                    if (semesterText === '2-1') {
+                        semesterText = '2학년 1학기';
+                        btn.classList.add('sem-1'); // 1학기 파란색 클래스 부여
+                    }
+                    else if (semesterText === '2-2') {
+                        semesterText = '2학년 2학기';
+                        btn.classList.add('sem-2'); // 2학기 보라색 클래스 부여
+                    }
+                    else if (semesterText === '교양') {
+                        btn.classList.add('sem-lib'); // 교양 노란색 클래스 부여
+                    }
+
+                    // 뱃지 색상을 클래스별로 다르게 지정해주기 위해 뱃지 코드에 인라인 스타일 제거
+                    btn.innerHTML = `<span class="semester-badge">[${semesterText}]</span> ${sel.subject_name}`;
+
+                    btn.onclick = () => {
+                        document.querySelectorAll('.subject-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+
+                        const reasonText = (sel.reason && sel.reason.trim() !== '' && sel.reason !== 'none' && sel.reason !== 'sem1' && sel.reason !== 'sem2')
+                            ? sel.reason
+                            : "<span style='color:#999; font-style:italic;'>작성된 설계 이유가 없습니다. (또는 교양 선택 과목)</span>";
+
+                        subjectContentDiv.innerHTML = reasonText;
+                    };
+                    subjectListDiv.appendChild(btn);
+                });
+
+            } catch (err) {
+                console.error("과목 상세 정보 로드 오류:", err);
+                subjectListDiv.innerHTML = '<div style="padding:15px; color:red; font-weight:bold;">데이터를 불러오는 중 오류가 발생했습니다.</div>';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('studentModal').style.display = 'none';
+        }
+
+        window.onclick = function (event) {
+            const modal = document.getElementById('studentModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+
+</html>
